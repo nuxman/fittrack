@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .btn {
+    @apply inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 text-lg font-semibold transition active:scale-[0.98] disabled:opacity-50;
+  }
+  .btn-primary { @apply btn bg-primary-400 text-neutral-950 active:bg-primary-500; }
+  .btn-secondary { @apply btn bg-surface-raised text-neutral-100 active:bg-neutral-700; }
+  .card { @apply rounded-2xl bg-surface p-4; }
+  .input { @apply min-h-14 w-full rounded-xl bg-surface-raised px-4 text-lg text-neutral-100 outline-none ring-primary-400 focus:ring-2; }
+}
