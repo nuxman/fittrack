@@ -2,11 +2,11 @@ import { Page } from '../components/Page';
 import { useAsync } from '../useAsync';
 import { workoutPlansRepository } from '../db/repositories/workoutPlans';
 import { exercisesRepository } from '../db/repositories/exercises';
+import { DIAS } from '../dias';
 
-const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
 export function Inicio() {
-  const data = useAsync(async () => {
+  const [data] = useAsync(async () => {
     const [planos, exercicios] = await Promise.all([workoutPlansRepository.list(), exercisesRepository.list()]);
     return { planos: planos.sort((a, b) => a.diaSemana - b.diaSemana), nomes: new Map(exercicios.map((e) => [e.id, e.nome])) };
   });

@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-/** Carrega um valor assíncrono (ex.: de um repository). */
-export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []): T | undefined {
+/** Carrega um valor assíncrono (ex.: de um repository); reload() busca de novo. */
+export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []): [T | undefined, () => void] {
   const [value, setValue] = useState<T>();
+  const [versao, setVersao] = useState(0);
   useEffect(() => {
     let alive = true;
     fn().then((v) => alive && setValue(v));
@@ -10,6 +11,6 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []): T | und
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-  return value;
+  }, [...deps, versao]);
+  return [value, useCallback(() => setVersao((v) => v + 1), [])];
 }

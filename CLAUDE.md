@@ -23,14 +23,16 @@ Sem servidor, sem APIs externas, nenhuma imagem ou vídeo carregado da internet 
 - Ao abrir o app, chamar navigator.storage.persist() e mostrar em Configurações se o armazenamento é persistente.
 - Interface em português brasileiro, tema escuro padrão, cor principal amarelo/dourado, mobile-first (Samsung Galaxy S24 Ultra), botões grandes, navegação inferior: Início, Treinar, Histórico, Evolução, Configurações.
 - Semana = segunda a domingo em todo o app.
+- Grupos musculares: lista fixa em union type (GrupoMuscular): peito, costas, ombros, bíceps, tríceps, antebraço, quadríceps, posterior de coxa, glúteos, adutores, panturrilha, abdômen, core, lombar. Nada de strings soltas.
+- Confirmações e escolhas usam o componente ConfirmDialog do app (com suporte a múltiplas opções). Nunca window.confirm/alert/prompt.
 - Campos novos: opcionais podem ser adicionados sem migração e devem ser lidos com valor padrão (ex.: exerciciosPulados ?? []). Campo novo obrigatório ou índice novo exige nova versão do schema com upgrade() preenchendo os registros existentes, e teste da migração.
 
 ## Modelos de dados
 - Equipment: nome, observacoes.
 - Exercise: nome, tipo ('carga' | 'peso_corporal' | 'tempo'), unidadeCarga ('kg' | 'placa'), equipmentId opcional, grupoPrincipal (string, um único valor), gruposSecundarios (string[]), porLado (boolean), videoUrl opcional (Zod: apenas https://, qualquer domínio; seed sem links), anotacoes opcional (texto livre).
-- ExerciseImage: exerciseId, blob, mimeType, largura, altura. No máximo uma por exercício (substituir ao adicionar nova).
+- ExerciseImage: exerciseId, blob, mimeType, largura, altura. No máximo uma por exercício (substituir ao adicionar nova). Imagem substituída ou removida: soft delete e blob esvaziado (libera espaço).
 - WorkoutPlan: nome, diaSemana (0–6), itens: [{ exerciseId, series, repsMin, repsMax, descansoSeg, ordem }].
-- WorkoutSession: planId, planSnapshot (cópia completa do plano no início; editar a ficha nunca altera sessões passadas), status ('em_andamento' | 'pausada' | 'concluida' | 'abandonada'), iniciadaEm, finalizadaEm, duracaoAtivaSeg, rpe (0–10), observacoes, restTimerEndsAt (timestamp ou null), exerciciosPulados (exerciseId[]).
+- WorkoutSession: planId, planSnapshot (cópia completa do plano no início; cada item guarda também nome, tipo, unidadeCarga e grupoPrincipal do exercício naquele momento, para o histórico sobreviver a renomear ou excluir o exercício; editar a ficha nunca altera sessões passadas), status ('em_andamento' | 'pausada' | 'concluida' | 'abandonada'), iniciadaEm, finalizadaEm, duracaoAtivaSeg, rpe (0–10), observacoes, restTimerEndsAt (timestamp ou null), exerciciosPulados (exerciseId[]).
 - ExerciseSet: sessionId, exerciseId, numeroSerie, carga (null para peso corporal), reps, lado ('esq' | 'dir' | null), concluidaEm. Salvar cada série imediatamente ao concluir.
 - CardioSession: modalidade ('esteira' | 'bicicleta' | 'caminhada'), duracaoMin, velocidadeKmh, inclinacaoNivel (número + rótulo livre; "nível 7" NÃO equivale a 7%), distanciaKm, fcMedia opcional, rpe, observacoes, data.
 - BodyMeasurement: data, pesoKg, cinturaCm, observacoes.
@@ -51,6 +53,8 @@ Schema Dexie versionado desde a versão 1.
 - Sem recursos sociais, QR code ou renovação de ficha.
 - Cada ficha tem exatamente um diaSemana e não pode haver duas fichas no mesmo dia. Mover uma ficha para um dia ocupado troca as duas de dia, com confirmação.
 - Reordenar exercícios com botões subir/descer. Sem arrastar e soltar e sem bibliotecas novas.
+- Exercício usado em alguma ficha não pode ser excluído (mostrar em quais fichas). Criar exercício cujo nome normalizado bate com um excluído oferece "Restaurar 'X'" em vez de criar outro.
+- Limites da ficha: séries 1–10; reps 1–100 com repsMin ≤ repsMax; descanso 0–600 s; nome obrigatório. Para tipo 'tempo', repsMin/repsMax são segundos (1–600).
 
 ## Regra de sugestão
 - Ficha "feita" na semana = existe WorkoutSession 'concluida' daquela ficha nesta semana, em qualquer dia. Sessões abandonadas não contam.

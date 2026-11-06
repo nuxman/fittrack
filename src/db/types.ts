@@ -12,19 +12,28 @@ export interface Equipment extends BaseRecord {
   observacoes: string;
 }
 
-export type TipoExercicio = 'carga' | 'peso_corporal' | 'tempo';
-export type UnidadeCarga = 'kg' | 'placa';
+export const GRUPOS_MUSCULARES = [
+  'peito', 'costas', 'ombros', 'bíceps', 'tríceps', 'antebraço', 'quadríceps',
+  'posterior de coxa', 'glúteos', 'adutores', 'panturrilha', 'abdômen', 'core', 'lombar',
+] as const;
+export type GrupoMuscular = (typeof GRUPOS_MUSCULARES)[number];
+
+export const TIPOS_EXERCICIO = ['carga', 'peso_corporal', 'tempo'] as const;
+export type TipoExercicio = (typeof TIPOS_EXERCICIO)[number];
+export const UNIDADES_CARGA = ['kg', 'placa'] as const;
+export type UnidadeCarga = (typeof UNIDADES_CARGA)[number];
 
 export interface Exercise extends BaseRecord {
   nome: string;
   tipo: TipoExercicio;
   unidadeCarga: UnidadeCarga;
   equipmentId?: string;
-  /** Usado no aviso de mesmo grupo em dias consecutivos. */
-  grupoPrincipal: string;
-  gruposSecundarios: string[];
+  /** Único grupo considerado no aviso de dias consecutivos. */
+  grupoPrincipal: GrupoMuscular;
+  gruposSecundarios: GrupoMuscular[];
   porLado: boolean;
   videoUrl?: string;
+  anotacoes?: string;
 }
 
 export interface ExerciseImage extends BaseRecord {
@@ -50,11 +59,23 @@ export interface WorkoutPlan extends BaseRecord {
   itens: WorkoutPlanItem[];
 }
 
+/** Item da ficha congelado no início da sessão, com os dados do exercício naquele momento. */
+export interface SnapshotItem extends WorkoutPlanItem {
+  nome: string;
+  tipo: TipoExercicio;
+  unidadeCarga: UnidadeCarga;
+  grupoPrincipal: GrupoMuscular;
+}
+
+export interface PlanSnapshot extends Omit<WorkoutPlan, 'itens'> {
+  itens: SnapshotItem[];
+}
+
 export type StatusSessao = 'em_andamento' | 'pausada' | 'concluida' | 'abandonada';
 
 export interface WorkoutSession extends BaseRecord {
   planId: string;
-  planSnapshot: WorkoutPlan;
+  planSnapshot: PlanSnapshot;
   status: StatusSessao;
   iniciadaEm: string;
   finalizadaEm: string | null;

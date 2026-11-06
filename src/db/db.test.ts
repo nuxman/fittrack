@@ -46,6 +46,8 @@ describe('repositório (CRUD + soft delete)', () => {
 
   it('exercício excluído some da listagem e do findByName', async () => {
     const remada = (await exercisesRepository.findByName('Remada baixa'))!;
+    const quarta = (await workoutPlansRepository.list()).find((p) => p.diaSemana === 3)!;
+    await workoutPlansRepository.update(quarta.id, { itens: quarta.itens.filter((i) => i.exerciseId !== remada.id) });
     await exercisesRepository.remove(remada.id);
     expect((await exercisesRepository.list()).some((e) => e.id === remada.id)).toBe(false);
     expect(await exercisesRepository.findByName('Remada baixa')).toBeUndefined();
@@ -54,7 +56,7 @@ describe('repositório (CRUD + soft delete)', () => {
   it('valida videoUrl: só https://', async () => {
     const base = {
       nome: 'Teste', tipo: 'carga' as const, unidadeCarga: 'kg' as const,
-      grupoPrincipal: 'peito', gruposSecundarios: [], porLado: false,
+      grupoPrincipal: 'peito' as const, gruposSecundarios: [], porLado: false,
     };
     await expect(exercisesRepository.create({ ...base, videoUrl: 'http://x.com' })).rejects.toThrow();
     await expect(exercisesRepository.create({ ...base, videoUrl: 'javascript:alert(1)' })).rejects.toThrow();

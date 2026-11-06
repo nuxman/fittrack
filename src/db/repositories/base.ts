@@ -1,7 +1,7 @@
 import type { Table } from 'dexie';
 import type { BaseRecord, NewRecord } from '../types';
 
-const now = () => new Date().toISOString();
+export const now = () => new Date().toISOString();
 
 /** Adiciona id e timestamps a um registro novo. */
 export function stamp<T extends BaseRecord>(data: NewRecord<T>): T {
@@ -9,7 +9,7 @@ export function stamp<T extends BaseRecord>(data: NewRecord<T>): T {
   return { ...data, id: crypto.randomUUID(), createdAt: ts, updatedAt: ts, deletedAt: null } as T;
 }
 
-const ativo = (r: BaseRecord | undefined) => r !== undefined && r.deletedAt === null;
+export const ativo = (r: BaseRecord | undefined) => r !== undefined && r.deletedAt === null;
 
 export function createRepository<T extends BaseRecord>(table: Table<T, string>) {
   return {
