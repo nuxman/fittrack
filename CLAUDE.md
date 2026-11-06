@@ -23,6 +23,7 @@ Sem servidor, sem APIs externas, nenhuma imagem ou vídeo carregado da internet 
 - Ao abrir o app, chamar navigator.storage.persist() e mostrar em Configurações se o armazenamento é persistente.
 - Interface em português brasileiro, tema escuro padrão, cor principal amarelo/dourado, mobile-first (Samsung Galaxy S24 Ultra), botões grandes, navegação inferior: Início, Treinar, Histórico, Evolução, Configurações.
 - Semana = segunda a domingo em todo o app.
+- Campos novos: opcionais podem ser adicionados sem migração e devem ser lidos com valor padrão (ex.: exerciciosPulados ?? []). Campo novo obrigatório ou índice novo exige nova versão do schema com upgrade() preenchendo os registros existentes, e teste da migração.
 
 ## Modelos de dados
 - Equipment: nome, observacoes.
@@ -48,6 +49,8 @@ Schema Dexie versionado desde a versão 1.
 - Sem diagnóstico médico. Orientação para não prender a respiração e lista de sintomas para interromper o treino (dor no peito, tontura, falta de ar desproporcional, dor articular aguda).
 - Imagem do exercício: galeria ou câmera (input accept="image/*"). Redimensionar via canvas para no máximo 1024 px no maior lado, WebP qualidade 0.8 (fallback JPEG). Nunca salvar o original.
 - Sem recursos sociais, QR code ou renovação de ficha.
+- Cada ficha tem exatamente um diaSemana e não pode haver duas fichas no mesmo dia. Mover uma ficha para um dia ocupado troca as duas de dia, com confirmação.
+- Reordenar exercícios com botões subir/descer. Sem arrastar e soltar e sem bibliotecas novas.
 
 ## Regra de sugestão
 - Ficha "feita" na semana = existe WorkoutSession 'concluida' daquela ficha nesta semana, em qualquer dia. Sessões abandonadas não contam.
@@ -72,10 +75,10 @@ De cima para baixo:
 - Acesso a "Editar ficha" a partir do card.
 
 ## Visão geral da sessão
-Lista dos exercícios da sessão: foto (ou ícone do grupo principal), nome, "séries× repsMin a repsMax | última carga", status (pendente, parcial "2/3", concluído, pulado). Status calculado pelas séries registradas, NUNCA marcado à mão. Tocar abre a tela de execução. Botão "Pular" registra em exerciciosPulados. Botão fixo "Finalizar treino" no rodapé.
+Lista dos exercícios da sessão: foto (ou ícone do grupo principal), nome, "séries× repsMin a repsMax | última carga", status (pendente, parcial "2/3", concluído, pulado). Status calculado pelas séries registradas, NUNCA marcado à mão. Tocar abre a tela de execução. Botão "Pular" registra em exerciciosPulados. Progresso geral do treino (X de Y exercícios concluídos). Botão fixo "Finalizar treino" no rodapé.
 
 ## Tela de execução e detalhe do exercício
-Foto grande (toque para ampliar em tela cheia) ou ícone genérico pelo grupo principal; nome; botão "Ver execução" só com videoUrl, abrindo com target="_blank" e rel="noopener noreferrer", sem player embutido (offline: avisar que precisa de internet); séries/reps planejadas; última carga; campos de carga e reps; "Concluir série"; indicador de séries (1, 2, 3); cronômetro de descanso grande; cronômetro total; progresso da sessão; pausar/abandonar/retomar (sessão 'em_andamento' ou 'pausada' retomada ao abrir o app); "Finalizar treino" com RPE e observações.
+Foto grande (toque para ampliar em tela cheia) ou ícone genérico pelo grupo principal; nome; botão "Ver execução" só com videoUrl, abrindo com target="_blank" e rel="noopener noreferrer", sem player embutido (offline: avisar que precisa de internet); séries/reps planejadas; última carga; campos de carga e reps; "Concluir série"; indicador de séries (1, 2, 3); cronômetro de descanso grande; cronômetro total; progresso geral do treino (X de Y exercícios concluídos); pausar/abandonar/retomar (sessão 'em_andamento' ou 'pausada' retomada ao abrir o app); "Finalizar treino" com RPE e observações.
 Seções recolhíveis: Evolução de carga (mini gráfico, Etapa 4); Minhas anotações (Exercise.anotacoes, editável a qualquer momento); Grupos trabalhados (texto, sem diagrama do corpo).
 
 ## Mudanças durante a sessão
