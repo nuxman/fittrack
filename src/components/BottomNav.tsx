@@ -13,7 +13,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Navegação principal"
-      className="fixed inset-x-0 bottom-0 z-10 border-t border-neutral-800 bg-surface pb-[env(safe-area-inset-bottom)]"
+      className="fixed inset-x-0 bottom-0 z-10 border-t border-neutral-800 bg-surface safe-bottom"
     >
       <ul className="mx-auto grid max-w-xl grid-cols-5">
         {ITENS.map(({ to, label, Icon }) => (
@@ -22,7 +22,7 @@ export function BottomNav() {
               to={to}
               end={to === '/'}
               className={({ isActive }) =>
-                `flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-medium ${
+                `flex h-[var(--nav-h)] flex-col items-center justify-center gap-1 text-xs font-medium ${
                   isActive ? 'text-primary-400' : 'text-neutral-400'
                 }`
               }

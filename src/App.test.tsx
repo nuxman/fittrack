@@ -15,4 +15,15 @@ it('abre com a navegação inferior e mostra a ficha', async () => {
     expect(nav).toHaveTextContent(label);
   }
   expect(await screen.findByText(/Segunda — Peito e tríceps/)).toBeInTheDocument();
+  expect(screen.getByText(/Bird dog · 2×10 por lado/)).toBeInTheDocument();
+  expect(screen.getByText(/Supino máquina · 3×10–12/)).toBeInTheDocument();
+});
+
+it('Histórico e Evolução vazios explicam o que vai aparecer', async () => {
+  window.location.hash = '#/historico';
+  const { unmount } = render(<App />);
+  expect(await screen.findByText(/Seus treinos concluídos aparecem aqui/)).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Ir para Treinar' })).toHaveAttribute('href', '#/treinar');
+  unmount();
+  window.location.hash = '#/';
 });

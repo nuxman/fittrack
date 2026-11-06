@@ -1,13 +1,13 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { AppRoutes } from '../App';
+import { AppRoutes, ROUTER_FUTURE } from '../App';
 import { db } from '../db/db';
 import { exercisesRepository } from '../db/repositories/exercises';
 import { ordenarItens, workoutPlansRepository } from '../db/repositories/workoutPlans';
 
 const segunda = async () => (await workoutPlansRepository.list()).find((p) => p.diaSemana === 1)!;
-const abrir = (rota: string) => render(<MemoryRouter initialEntries={[rota]}><AppRoutes /></MemoryRouter>);
+const abrir = (rota: string) => render(<MemoryRouter initialEntries={[rota]} future={ROUTER_FUTURE}><AppRoutes /></MemoryRouter>);
 
 beforeEach(async () => {
   await db.delete();
@@ -42,7 +42,9 @@ describe('editor de ficha', () => {
     expect(dlg).toHaveTextContent('Quarta já tem "Costas e bíceps"');
     fireEvent.click(within(dlg).getByRole('button', { name: 'Trocar os dias' }));
 
-    await waitFor(async () => expect((await workoutPlansRepository.get(seg.id))!.diaSemana).toBe(3));
+    // Espera a navegação para Treinar terminar de carregar antes de consultar o banco.
+    await screen.findAllByText(/exercícios$/);
+    expect((await workoutPlansRepository.get(seg.id))!.diaSemana).toBe(3);
     expect((await workoutPlansRepository.list()).find((p) => p.nome === 'Costas e bíceps')!.diaSemana).toBe(1);
   });
 
@@ -53,6 +55,13 @@ describe('editor de ficha', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('séries entre 1 e 10');
     expect((await segunda()).itens[0]!.series).toBe(3);
+  });
+
+  it('mostra "por lado" na prescrição do editor e na lista', async () => {
+    const qui = (await workoutPlansRepository.list()).find((p) => p.diaSemana === 4)!;
+    abrir(`/fichas/${qui.id}`);
+    const bird = (await screen.findAllByTestId('item-ficha')).find((li) => li.textContent?.includes('Bird dog'))!;
+    expect(bird).toHaveTextContent('2×10 por lado');
   });
 
   it('tocar no exercício abre o editor dele', async () => {

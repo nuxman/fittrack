@@ -20,8 +20,8 @@ export function AppRoutes() {
         <Route path="/exercicios" element={<Exercicios />} />
         <Route path="/exercicios/novo" element={<ExercicioEditor />} />
         <Route path="/exercicios/:id" element={<ExercicioEditor />} />
-        <Route path="/historico" element={<Vazia title="Histórico" />} />
-        <Route path="/evolucao" element={<Vazia title="Evolução" />} />
+        <Route path="/historico" element={<Vazia title="Histórico" mensagem="Seus treinos concluídos aparecem aqui, com data, duração e volume. Comece pela aba Treinar." />} />
+        <Route path="/evolucao" element={<Vazia title="Evolução" mensagem="Aqui você vai ver a evolução de carga, volume e recordes de cada exercício depois dos primeiros treinos. Comece pela aba Treinar." />} />
         <Route path="/configuracoes" element={<Configuracoes />} />
       </Routes>
       <BottomNav />
@@ -29,9 +29,12 @@ export function AppRoutes() {
   );
 }
 
+/** Ativa já o comportamento do React Router v7 (remove os avisos do console). */
+export const ROUTER_FUTURE = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
+
 export function App() {
   return (
-    <HashRouter>
+    <HashRouter future={ROUTER_FUTURE}>
       <AppRoutes />
     </HashRouter>
   );

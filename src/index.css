@@ -2,7 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Altura da navegação inferior (sem a área de gestos). */
+:root { --nav-h: 4rem; }
+
 @layer components {
+  /* Área de gestos do Android: usa o inset do sistema, com mínimo de 8 px. */
+  .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 8px); }
+  /* Conteúdo termina acima da barra inferior. */
+  .pb-nav { padding-bottom: calc(var(--nav-h) + max(env(safe-area-inset-bottom), 8px) + 1.5rem); }
+
   .btn {
     @apply inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 text-lg font-semibold transition active:scale-[0.98] disabled:opacity-50;
   }

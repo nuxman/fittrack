@@ -12,6 +12,7 @@ import {
   DiaOcupadoError, faixaReps, FichaInvalidaError, moverItem, ordenarItens, validarFicha, workoutPlansRepository,
 } from '../db/repositories/workoutPlans';
 import { DIAS, SEMANA } from '../dias';
+import { formatarPrescricao } from '../format';
 
 type Campo = 'series' | 'repsMin' | 'repsMax' | 'descansoSeg';
 
@@ -151,7 +152,11 @@ export function FichaEditor() {
             <li key={it.exerciseId} className="card space-y-3" data-testid="item-ficha">
               <div className="flex items-center gap-1">
                 <button type="button" className="flex min-h-12 flex-1 items-center gap-1 text-left text-lg font-semibold" onClick={() => abrirExercicio(it.exerciseId)}>
-                  {ex?.nome ?? 'Exercício removido'} <ChevronRight size={20} className="text-neutral-500" />
+                  <span>
+                    {ex?.nome ?? 'Exercício removido'}
+                    <span className="block text-sm font-normal text-neutral-400">{formatarPrescricao(it, ex)}</span>
+                  </span>
+                  <ChevronRight size={20} className="text-neutral-500" />
                 </button>
                 <button type="button" aria-label="Subir" className="p-3 disabled:opacity-30" disabled={i === 0} onClick={() => mudar(() => setItens((xs) => moverItem(xs, i, -1)))}>
                   <ArrowUp size={24} />

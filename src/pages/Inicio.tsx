@@ -3,12 +3,12 @@ import { useAsync } from '../useAsync';
 import { workoutPlansRepository } from '../db/repositories/workoutPlans';
 import { exercisesRepository } from '../db/repositories/exercises';
 import { DIAS } from '../dias';
-
+import { formatarPrescricao } from '../format';
 
 export function Inicio() {
   const [data] = useAsync(async () => {
     const [planos, exercicios] = await Promise.all([workoutPlansRepository.list(), exercisesRepository.list()]);
-    return { planos: planos.sort((a, b) => a.diaSemana - b.diaSemana), nomes: new Map(exercicios.map((e) => [e.id, e.nome])) };
+    return { planos: planos.sort((a, b) => a.diaSemana - b.diaSemana), exercicios: new Map(exercicios.map((e) => [e.id, e])) };
   });
   const hoje = new Date().getDay();
 
@@ -25,8 +25,8 @@ export function Inicio() {
           <ul className="mt-2 space-y-1 text-neutral-300">
             {[...p.itens].sort((a, b) => a.ordem - b.ordem).map((i) => (
               <li key={i.ordem}>
-                {data.nomes.get(i.exerciseId) ?? 'Exercício removido'} · {i.series}×
-                {i.repsMin === i.repsMax ? i.repsMin : `${i.repsMin}–${i.repsMax}`}
+                {data.exercicios.get(i.exerciseId)?.nome ?? 'Exercício removido'} ·{' '}
+                {formatarPrescricao(i, data.exercicios.get(i.exerciseId))}
               </li>
             ))}
           </ul>

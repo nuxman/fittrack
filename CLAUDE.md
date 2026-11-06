@@ -111,12 +111,17 @@ Cardio padrão: esteira, 15 min, inclinação "nível 7".
 - CSV de séries e de medidas.
 - Aviso permanente em Configurações: dados locais se perdem ao limpar o navegador ou trocar de aparelho sem backup.
 
+## Pendências
+- Aviso de alterações não salvas nos editores de ficha e de exercício (botão Voltar e navegação inferior) — entra na Etapa 3b, junto com a revisão da aba Treinar.
+- Tela de Equipment (cadastro e vínculo opcional ao exercício) — entra na Etapa 5.
+
 ## Etapas e critérios de aceite
 1. CONCLUÍDA (inclui 1.1 e 1.2).
-2. Ficha editável. Aceite: criar, editar, reordenar e excluir exercícios e dias; adicionar, trocar e remover foto, link e anotações de cada exercício; foto salva com no máximo 1024 px; sessões antigas inalteradas após editar.
-3. Execução do treino: aba Treinar, regra de sugestão, visão geral da sessão, tela de execução, cronômetro, mudanças durante a sessão e dashboard (cardio e peso com estado vazio até a Etapa 5). Aceite: fechar o app no meio da sessão e reabrir retoma na série certa; testes do cronômetro com fake timers; testes da regra de sugestão: semana sem faltas, falta na terça com sugestão na quarta, duas faltas, treino de sexta feito adiantado, virada de semana zerando pendências, sessão abandonada não contando.
+2. CONCLUÍDA (inclui 2.1). Ficha editável. Aceite: criar, editar, reordenar e excluir exercícios e dias; adicionar, trocar e remover foto, link e anotações de cada exercício; foto salva com no máximo 1024 px; sessões antigas inalteradas após editar.
+3a. Execução: botão "Iniciar" como ação primária (amarela) em cada card da aba Treinar, com "Nova ficha" como botão secundário no fim da lista; visão geral da sessão; tela de execução; cronômetro; Wake Lock; pular exercício; pausar/abandonar/retomar; finalizar com RPE. Aceite: fechar o app no meio e reabrir retoma na série certa; testes do cronômetro com fake timers.
+3b. Planejamento: regra de sugestão, aba Treinar completa, mudanças durante a sessão com "Aplicar também na ficha?", dashboard (cardio e peso com estado vazio até a Etapa 5). Aceite: testes da regra de sugestão: semana sem faltas, falta na terça com sugestão na quarta, duas faltas, treino de sexta feito adiantado, virada de semana zerando pendências, sessão abandonada não contando.
 4. Histórico, recordes, gráficos e mini gráfico no detalhe do exercício. Aceite: testes de volume, incluindo peso corporal e placa.
 5. Cardio, medidas e fotos corporais.
 6. Backup e restauração. Aceite: exportar, apagar banco, importar, dados idênticos (incluindo imagens de exercício).
-7. PWA e offline. Aceite: instala no Chrome Android, abre offline, ícones 192 e 512.
+7. PWA e offline. Aceite: instala no Chrome Android, abre offline, ícones 192 e 512; conferir "Armazenamento persistente" em Configurações com o app instalado no celular.
 8. Publicação. Workflow .github/workflows/deploy.yml: npm ci → tsc --noEmit → lint → vitest run → build → deploy no GitHub Pages. README com instalação no S24 Ultra. Comandos PowerShell 7 em linha única para criar o repositório "fittrack" com gh CLI, commit e push, mais o passo manual: Settings → Pages → Source: GitHub Actions. URL final: https://nuxman.github.io/fittrack/

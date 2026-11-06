@@ -13,7 +13,7 @@ export function useVoltar(padrao = '/') {
 export function Page({ title, children, voltar }: { title: string; children: ReactNode; voltar?: boolean }) {
   const irVoltar = useVoltar();
   return (
-    <main className="mx-auto max-w-xl px-4 pb-28 pt-6">
+    <main className="mx-auto max-w-xl px-4 pb-nav pt-6">
       <div className="mb-4 flex items-center gap-2">
         {voltar && (
           <button type="button" aria-label="Voltar" className="-ml-2 p-2 text-neutral-300" onClick={irVoltar}>

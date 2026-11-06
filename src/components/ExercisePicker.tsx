@@ -45,7 +45,7 @@ export function ExercisePicker({ excluirIds, onEscolher, onFechar }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-20 overflow-y-auto bg-surface-base p-4 pb-28" role="dialog" aria-label="Adicionar exercício">
+    <div className="fixed inset-0 z-20 overflow-y-auto bg-surface-base p-4 pb-nav" role="dialog" aria-label="Adicionar exercício">
       <div className="mx-auto max-w-xl space-y-3">
         <div className="flex items-center gap-2">
           <input autoFocus className="input" placeholder="Buscar ou criar exercício" value={busca} onChange={(e) => { setBusca(e.target.value); setErro(undefined); }} />
