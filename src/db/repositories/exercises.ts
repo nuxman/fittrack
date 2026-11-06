@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { db } from '../db';
 import type { Exercise, NewRecord } from '../types';
 import { createRepository } from './base';
+import { normalizeNome } from '../normalize';
 
 export const videoUrlSchema = z
   .string()
@@ -11,8 +12,6 @@ export const videoUrlSchema = z
   .optional();
 
 const base = createRepository<Exercise>(db.exercises);
-
-const normalize = (nome: string) => nome.trim().toLocaleLowerCase('pt-BR');
 
 export const exercisesRepository = {
   ...base,
@@ -26,9 +25,9 @@ export const exercisesRepository = {
     return base.update(id, changes);
   },
 
-  /** Mesmo nome = mesmo exercício (histórico compartilhado entre dias). */
+  /** Mesmo nome = mesmo exercício (ignora espaços extras, maiúsculas e acentos). */
   async findByName(nome: string): Promise<Exercise | undefined> {
-    const alvo = normalize(nome);
-    return (await base.list()).find((e) => normalize(e.nome) === alvo);
+    const alvo = normalizeNome(nome);
+    return (await base.list()).find((e) => normalizeNome(e.nome) === alvo);
   },
 };

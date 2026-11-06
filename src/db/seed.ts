@@ -1,71 +1,76 @@
-import { db } from './db';
-import { exercisesRepository } from './repositories/exercises';
-import { settingsRepository } from './repositories/settings';
-import { workoutPlansRepository } from './repositories/workoutPlans';
-import type { NewRecord, Exercise, WorkoutPlanItem } from './types';
+import type { Exercise, NewRecord, UserSettings, WorkoutPlan, WorkoutPlanItem } from './types';
+import { stamp } from './repositories/base';
+import { normalizeNome } from './normalize';
 
-type Ex = Pick<Exercise, 'nome' | 'gruposMusculares'> & Partial<Pick<Exercise, 'tipo' | 'porLado'>>;
+export const DEFAULT_SETTINGS: NewRecord<UserSettings> = {
+  descansoPadraoSeg: 90,
+  cardioPadrao: { modalidade: 'esteira', duracaoMin: 15, inclinacaoNivel: { valor: 7, rotulo: 'nível 7' } },
+  interface: { tema: 'escuro', vibrar: true },
+};
+
+type Ex = Pick<Exercise, 'nome' | 'grupoPrincipal'> &
+  Partial<Pick<Exercise, 'gruposSecundarios' | 'tipo' | 'porLado'>>;
 type Linha = [ex: Ex, series: number, repsMin: number, repsMax: number];
 
 const corpo = { tipo: 'peso_corporal', porLado: true } as const;
 
-const FICHA: { nome: string; diaSemana: number; itens: Linha[] }[] = [
+const SUPINO: Ex = { nome: 'Supino máquina', grupoPrincipal: 'peito', gruposSecundarios: ['tríceps', 'ombros'] };
+const LEG: Ex = { nome: 'Leg press', grupoPrincipal: 'quadríceps', gruposSecundarios: ['glúteos'] };
+const FLEXORA: Ex = { nome: 'Cadeira flexora', grupoPrincipal: 'posterior de coxa' };
+const REMADA_APOIO: Ex = { nome: 'Remada com apoio no peito', grupoPrincipal: 'costas', gruposSecundarios: ['bíceps', 'ombros'] };
+
+export const FICHA: { nome: string; diaSemana: number; itens: Linha[] }[] = [
   { nome: 'Peito e tríceps', diaSemana: 1, itens: [
-    [{ nome: 'Supino máquina', gruposMusculares: ['peito', 'tríceps'] }, 3, 10, 12],
-    [{ nome: 'Supino inclinado articulado', gruposMusculares: ['peito', 'ombros'] }, 3, 10, 12],
-    [{ nome: 'Crucifixo máquina', gruposMusculares: ['peito'] }, 2, 12, 15],
-    [{ nome: 'Tríceps polia barra reta', gruposMusculares: ['tríceps'] }, 3, 10, 15],
-    [{ nome: 'Tríceps corda', gruposMusculares: ['tríceps'] }, 2, 12, 15],
+    [SUPINO, 3, 10, 12],
+    [{ nome: 'Supino inclinado articulado', grupoPrincipal: 'peito', gruposSecundarios: ['ombros', 'tríceps'] }, 3, 10, 12],
+    [{ nome: 'Crucifixo máquina', grupoPrincipal: 'peito' }, 2, 12, 15],
+    [{ nome: 'Tríceps polia barra reta', grupoPrincipal: 'tríceps' }, 3, 10, 15],
+    [{ nome: 'Tríceps corda', grupoPrincipal: 'tríceps' }, 2, 12, 15],
   ] },
   { nome: 'Pernas A e abdômen', diaSemana: 2, itens: [
-    [{ nome: 'Leg press', gruposMusculares: ['quadríceps', 'glúteos'] }, 3, 10, 12],
-    [{ nome: 'Cadeira extensora', gruposMusculares: ['quadríceps'] }, 3, 12, 15],
-    [{ nome: 'Cadeira flexora', gruposMusculares: ['posterior de coxa'] }, 3, 10, 15],
-    [{ nome: 'Panturrilha máquina', gruposMusculares: ['panturrilha'] }, 3, 12, 15],
-    [{ nome: 'Abdominal máquina', gruposMusculares: ['abdômen'] }, 2, 12, 15],
+    [LEG, 3, 10, 12],
+    [{ nome: 'Cadeira extensora', grupoPrincipal: 'quadríceps' }, 3, 12, 15],
+    [FLEXORA, 3, 10, 15],
+    [{ nome: 'Panturrilha máquina', grupoPrincipal: 'panturrilha' }, 3, 12, 15],
+    [{ nome: 'Abdominal máquina', grupoPrincipal: 'abdômen' }, 2, 12, 15],
   ] },
   { nome: 'Costas e bíceps', diaSemana: 3, itens: [
-    [{ nome: 'Puxada frontal', gruposMusculares: ['costas', 'bíceps'] }, 3, 10, 12],
-    [{ nome: 'Remada baixa', gruposMusculares: ['costas'] }, 3, 10, 12],
-    [{ nome: 'Remada com apoio no peito', gruposMusculares: ['costas'] }, 2, 12, 12],
-    [{ nome: 'Rosca martelo', gruposMusculares: ['bíceps', 'antebraço'] }, 3, 10, 12],
-    [{ nome: 'Rosca barra W', gruposMusculares: ['bíceps'] }, 2, 12, 12],
+    [{ nome: 'Puxada frontal', grupoPrincipal: 'costas', gruposSecundarios: ['bíceps'] }, 3, 10, 12],
+    [{ nome: 'Remada baixa', grupoPrincipal: 'costas', gruposSecundarios: ['bíceps'] }, 3, 10, 12],
+    [REMADA_APOIO, 2, 12, 12],
+    [{ nome: 'Rosca martelo', grupoPrincipal: 'bíceps', gruposSecundarios: ['antebraço'] }, 3, 10, 12],
+    [{ nome: 'Rosca barra W', grupoPrincipal: 'bíceps' }, 2, 12, 12],
   ] },
   { nome: 'Ombros e core', diaSemana: 4, itens: [
-    [{ nome: 'Desenvolvimento máquina', gruposMusculares: ['ombros', 'tríceps'] }, 3, 10, 12],
-    [{ nome: 'Elevação lateral', gruposMusculares: ['ombros'] }, 3, 12, 15],
-    [{ nome: 'Crucifixo inverso', gruposMusculares: ['ombros', 'costas'] }, 3, 12, 15],
-    [{ nome: 'Bird dog', gruposMusculares: ['core'], ...corpo }, 2, 10, 10],
-    [{ nome: 'Dead bug', gruposMusculares: ['core'], ...corpo }, 2, 10, 10],
+    [{ nome: 'Desenvolvimento máquina', grupoPrincipal: 'ombros', gruposSecundarios: ['tríceps'] }, 3, 10, 12],
+    [{ nome: 'Elevação lateral', grupoPrincipal: 'ombros' }, 3, 12, 15],
+    [{ nome: 'Crucifixo inverso', grupoPrincipal: 'ombros', gruposSecundarios: ['costas'] }, 3, 12, 15],
+    [{ nome: 'Bird dog', grupoPrincipal: 'core', gruposSecundarios: ['glúteos'], ...corpo }, 2, 10, 10],
+    [{ nome: 'Dead bug', grupoPrincipal: 'core', ...corpo }, 2, 10, 10],
   ] },
   { nome: 'Pernas B e corpo inteiro', diaSemana: 5, itens: [
-    [{ nome: 'Cadeira flexora', gruposMusculares: ['posterior de coxa'] }, 3, 10, 12],
-    [{ nome: 'Leg press', gruposMusculares: ['quadríceps', 'glúteos'] }, 3, 12, 12],
-    [{ nome: 'Cadeira abdutora', gruposMusculares: ['glúteos'] }, 2, 12, 15],
-    [{ nome: 'Supino máquina', gruposMusculares: ['peito', 'tríceps'] }, 2, 12, 12],
-    [{ nome: 'Remada com apoio no peito', gruposMusculares: ['costas'] }, 2, 12, 12],
+    [FLEXORA, 3, 10, 12],
+    [LEG, 3, 12, 12],
+    [{ nome: 'Cadeira abdutora', grupoPrincipal: 'glúteos' }, 2, 12, 15],
+    [SUPINO, 2, 12, 12],
+    [REMADA_APOIO, 2, 12, 12],
   ] },
 ];
 
-/** Carrega a ficha inicial apenas em banco vazio (nunca recria o que o usuário apagou). */
-export async function seedIfEmpty(): Promise<boolean> {
-  return db.transaction('rw', db.exercises, db.workoutPlans, db.settings, async () => {
-    if ((await db.exercises.count()) > 0 || (await db.workoutPlans.count()) > 0) return false;
-
-    const { descansoPadraoSeg } = await settingsRepository.get();
-
-    for (const dia of FICHA) {
-      const itens: WorkoutPlanItem[] = [];
-      for (const [ex, series, repsMin, repsMax] of dia.itens) {
-        const existente = await exercisesRepository.findByName(ex.nome);
-        const novo: NewRecord<Exercise> = {
-          tipo: 'carga', unidadeCarga: 'kg', porLado: false, ...ex,
-        };
-        const exercise = existente ?? (await exercisesRepository.create(novo));
-        itens.push({ exerciseId: exercise.id, series, repsMin, repsMax, descansoSeg: descansoPadraoSeg, ordem: itens.length });
+/** Monta os registros da ficha inicial; nomes iguais (normalizados) viram um único Exercise. */
+export function buildSeed() {
+  const exercicios = new Map<string, Exercise>();
+  const workoutPlans = FICHA.map((dia) => {
+    const itens: WorkoutPlanItem[] = dia.itens.map(([ex, series, repsMin, repsMax], ordem) => {
+      const chave = normalizeNome(ex.nome);
+      let exercise = exercicios.get(chave);
+      if (!exercise) {
+        exercise = stamp<Exercise>({ tipo: 'carga', unidadeCarga: 'kg', porLado: false, gruposSecundarios: [], ...ex });
+        exercicios.set(chave, exercise);
       }
-      await workoutPlansRepository.create({ nome: dia.nome, diaSemana: dia.diaSemana, itens });
-    }
-    return true;
+      return { exerciseId: exercise.id, series, repsMin, repsMax, descansoSeg: DEFAULT_SETTINGS.descansoPadraoSeg, ordem };
+    });
+    return stamp<WorkoutPlan>({ nome: dia.nome, diaSemana: dia.diaSemana, itens });
   });
+  return { exercises: [...exercicios.values()], workoutPlans, settings: stamp<UserSettings>(DEFAULT_SETTINGS) };
 }

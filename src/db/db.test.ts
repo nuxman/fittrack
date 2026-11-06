@@ -1,14 +1,15 @@
+import Dexie from 'dexie';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { db } from './db';
+import { db, FitTrackDB } from './db';
+import { normalizeNome } from './normalize';
 import { equipmentRepository } from './repositories/equipment';
 import { exercisesRepository } from './repositories/exercises';
 import { settingsRepository } from './repositories/settings';
 import { workoutPlansRepository } from './repositories/workoutPlans';
-import { seedIfEmpty } from './seed';
 
 beforeEach(async () => {
   await db.delete();
-  await db.open();
+  await db.open(); // dispara o populate (ficha inicial)
 });
 
 describe('repositório (CRUD + soft delete)', () => {
@@ -30,7 +31,7 @@ describe('repositório (CRUD + soft delete)', () => {
     expect((await equipmentRepository.get(e.id))?.nome).toBe('B');
   });
 
-  it('soft delete esconde da listagem mas mantém no banco', async () => {
+  it('itens excluídos não aparecem em list() nem get(), mas continuam no banco', async () => {
     const a = await equipmentRepository.create({ nome: 'A', observacoes: '' });
     const b = await equipmentRepository.create({ nome: 'B', observacoes: '' });
     await equipmentRepository.remove(a.id);
@@ -38,12 +39,23 @@ describe('repositório (CRUD + soft delete)', () => {
     expect((await equipmentRepository.list()).map((x) => x.id)).toEqual([b.id]);
     expect(await equipmentRepository.get(a.id)).toBeUndefined();
     const raw = await db.equipment.get(a.id);
-    expect(raw?.deletedAt).not.toBeNull();
+    expect(raw?.deletedAt).toEqual(expect.any(String));
+    expect(await db.equipment.count()).toBe(2);
     await expect(equipmentRepository.update(a.id, { nome: 'X' })).rejects.toThrow();
   });
 
+  it('exercício excluído some da listagem e do findByName', async () => {
+    const remada = (await exercisesRepository.findByName('Remada baixa'))!;
+    await exercisesRepository.remove(remada.id);
+    expect((await exercisesRepository.list()).some((e) => e.id === remada.id)).toBe(false);
+    expect(await exercisesRepository.findByName('Remada baixa')).toBeUndefined();
+  });
+
   it('valida videoUrl: só https://', async () => {
-    const base = { nome: 'Teste', tipo: 'carga' as const, unidadeCarga: 'kg' as const, gruposMusculares: [], porLado: false };
+    const base = {
+      nome: 'Teste', tipo: 'carga' as const, unidadeCarga: 'kg' as const,
+      grupoPrincipal: 'peito', gruposSecundarios: [], porLado: false,
+    };
     await expect(exercisesRepository.create({ ...base, videoUrl: 'http://x.com' })).rejects.toThrow();
     await expect(exercisesRepository.create({ ...base, videoUrl: 'javascript:alert(1)' })).rejects.toThrow();
     const ok = await exercisesRepository.create({ ...base, videoUrl: 'https://qualquer.dominio/v' });
@@ -55,14 +67,30 @@ describe('repositório (CRUD + soft delete)', () => {
     const s1 = await settingsRepository.get();
     const s2 = await settingsRepository.get();
     expect(s1.id).toBe(s2.id);
+    expect(await db.settings.count()).toBe(1);
     expect(s1.cardioPadrao.inclinacaoNivel).toEqual({ valor: 7, rotulo: 'nível 7' });
     expect((await settingsRepository.update({ descansoPadraoSeg: 60 })).descansoPadraoSeg).toBe(60);
   });
 });
 
-describe('seed', () => {
+describe('findByName', () => {
+  it('normaliza espaços, maiúsculas e acentos', () => {
+    expect(normalizeNome('  Remada   COM apóio no PEITO ')).toBe('remada com apoio no peito');
+    expect(normalizeNome('Elevação lateral')).toBe(normalizeNome('elevacao LATERAL'));
+  });
+
+  it('encontra o mesmo exercício por variações do nome', async () => {
+    const alvo = (await exercisesRepository.findByName('Remada com apoio no peito'))!;
+    for (const variante of ['  remada com apoio no peito  ', 'REMADA COM APOIO NO PEITO', 'Remada  com apóio no peito']) {
+      expect((await exercisesRepository.findByName(variante))?.id).toBe(alvo.id);
+    }
+    expect((await exercisesRepository.findByName('elevacao lateral'))?.nome).toBe('Elevação lateral');
+    expect(await exercisesRepository.findByName('Remada')).toBeUndefined();
+  });
+});
+
+describe('seed (populate)', () => {
   it('carrega a ficha de segunda a sexta', async () => {
-    expect(await seedIfEmpty()).toBe(true);
     const planos = (await workoutPlansRepository.list()).sort((a, b) => a.diaSemana - b.diaSemana);
     expect(planos.map((p) => p.diaSemana)).toEqual([1, 2, 3, 4, 5]);
     expect(planos.every((p) => p.itens.length === 5)).toBe(true);
@@ -70,26 +98,37 @@ describe('seed', () => {
   });
 
   it('exercícios repetidos entre dias são o mesmo Exercise', async () => {
-    await seedIfEmpty();
     const exercicios = await exercisesRepository.list();
     expect(exercicios).toHaveLength(21); // 25 itens − 4 repetidos (flexora, leg press, supino máquina, remada c/ apoio)
     const remada = exercicios.filter((e) => e.nome === 'Remada com apoio no peito');
     expect(remada).toHaveLength(1);
-    const planos = await workoutPlansRepository.list();
-    const usos = planos.flatMap((p) => p.itens).filter((i) => i.exerciseId === remada[0]!.id);
+    const usos = (await workoutPlansRepository.list()).flatMap((p) => p.itens).filter((i) => i.exerciseId === remada[0]!.id);
     expect(usos).toHaveLength(2);
-    expect(exercicios.every((e) => e.videoUrl === undefined)).toBe(true);
+    expect(exercicios.every((e) => e.videoUrl === undefined && e.grupoPrincipal.length > 0)).toBe(true);
   });
 
   it('peso corporal e por lado em Bird dog / Dead bug', async () => {
-    await seedIfEmpty();
-    const bird = await exercisesRepository.findByName('bird dog');
-    expect(bird).toMatchObject({ tipo: 'peso_corporal', porLado: true });
+    expect(await exercisesRepository.findByName('bird dog')).toMatchObject({ tipo: 'peso_corporal', porLado: true, grupoPrincipal: 'core' });
   });
 
-  it('não roda duas vezes', async () => {
-    await seedIfEmpty();
-    expect(await seedIfEmpty()).toBe(false);
-    expect(await workoutPlansRepository.list()).toHaveLength(5);
+  it('não repopula ao reabrir, mesmo após o usuário excluir tudo', async () => {
+    for (const p of await workoutPlansRepository.list()) await workoutPlansRepository.remove(p.id);
+    db.close();
+    await db.open();
+    expect(await workoutPlansRepository.list()).toHaveLength(0);
+  });
+
+  it('duas aberturas em paralelo não duplicam a ficha', async () => {
+    const nome = `fittrack-paralelo-${crypto.randomUUID()}`;
+    const a = new FitTrackDB(nome);
+    const b = new FitTrackDB(nome);
+    await Promise.all([a.open(), b.open()]);
+    expect(await a.workoutPlans.count()).toBe(5);
+    expect(await b.exercises.count()).toBe(21);
+    expect(await b.settings.count()).toBe(1);
+    a.close();
+    b.close();
+    await Dexie.delete(nome);
   });
 });
+

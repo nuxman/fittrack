@@ -2,12 +2,10 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 import { App } from './App';
 import { db } from './db/db';
-import { seedIfEmpty } from './db/seed';
 
 beforeEach(async () => {
   await db.delete();
   await db.open();
-  await seedIfEmpty();
 });
 
 it('abre com a navegação inferior e mostra a ficha', async () => {

@@ -20,7 +20,9 @@ export interface Exercise extends BaseRecord {
   tipo: TipoExercicio;
   unidadeCarga: UnidadeCarga;
   equipmentId?: string;
-  gruposMusculares: string[];
+  /** Usado no aviso de mesmo grupo em dias consecutivos. */
+  grupoPrincipal: string;
+  gruposSecundarios: string[];
   porLado: boolean;
   videoUrl?: string;
 }
