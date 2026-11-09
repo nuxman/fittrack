@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(kubectl:*)",
+      "Bash(helm:*)",
+      "Bash(aws:*)",
+      "Bash(vault:*)"
+    ]
+  }
+}
