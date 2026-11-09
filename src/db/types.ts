@@ -65,6 +65,8 @@ export interface SnapshotItem extends WorkoutPlanItem {
   tipo: TipoExercicio;
   unidadeCarga: UnidadeCarga;
   grupoPrincipal: GrupoMuscular;
+  /** Opcional (ler com ?? false): total de reps da série = reps × 2. */
+  porLado?: boolean;
 }
 
 export interface PlanSnapshot extends Omit<WorkoutPlan, 'itens'> {
@@ -83,6 +85,12 @@ export interface WorkoutSession extends BaseRecord {
   rpe: number | null;
   observacoes: string;
   restTimerEndsAt: number | null;
+  /** Opcional: ler com ?? []. */
+  exerciciosPulados?: string[];
+  /** Timestamp da última retomada (ou do início). Tempo conta só com status 'em_andamento'. */
+  ativaDesde?: number | null;
+  /** Timestamp da pausa atual (com status 'pausada'). */
+  pausadaEm?: number | null;
 }
 
 export interface ExerciseSet extends BaseRecord {

@@ -172,10 +172,8 @@ describe('sessões antigas não mudam ao editar a ficha', () => {
     const snapshot = await workoutSessionsRepository.snapshotDaFicha(seg.id);
     expect(snapshot.itens[0]).toMatchObject({ nome: 'Supino máquina', tipo: 'carga', unidadeCarga: 'kg', grupoPrincipal: 'peito' });
 
-    const sessao = await workoutSessionsRepository.create({
-      planId: seg.id, planSnapshot: snapshot, status: 'concluida', iniciadaEm: new Date().toISOString(),
-      finalizadaEm: new Date().toISOString(), duracaoAtivaSeg: 3000, rpe: 7, observacoes: '', restTimerEndsAt: null,
-    });
+    const sessao = await workoutSessionsRepository.iniciar(seg.id);
+    await workoutSessionsRepository.finalizar(sessao.id, { rpe: 7, observacoes: '' });
     const antes = structuredClone((await db.workoutSessions.get(sessao.id))!);
 
     // Edita a ficha: nome, dia, ordem, séries, remove itens.
