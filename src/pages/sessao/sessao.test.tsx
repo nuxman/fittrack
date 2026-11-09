@@ -63,6 +63,12 @@ describe('iniciar e retomar', () => {
       abrir('/');
       const dlg = await screen.findByRole('dialog');
       expect(dlg).toHaveTextContent('mais de 3 horas');
+      expect(within(dlg).getAllByRole('button').map((b) => b.textContent)).toEqual([
+        'Finalizar no horário da última série', 'Retomar', 'Abandonar',
+      ]);
+      // Esc não fecha: a escolha é obrigatória.
+      fireEvent(dlg, new Event('cancel', { cancelable: true }));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
       fireEvent.click(within(dlg).getByRole('button', { name: 'Finalizar no horário da última série' }));
       fireEvent.click(await screen.findByRole('button', { name: '7' }));
       fireEvent.click(screen.getByRole('button', { name: 'Finalizar treino' }));

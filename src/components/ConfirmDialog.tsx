@@ -12,6 +12,8 @@ export interface DialogoConfig<T> {
   /** Botões em ordem; cancelar (fechar, Esc, tocar fora) resolve null. */
   opcoes: OpcaoDialogo<T>[];
   cancelarLabel?: string;
+  /** Escolha obrigatória: sem botão de cancelar; Esc e toque fora não fecham. */
+  semCancelar?: boolean;
 }
 
 type Pedir = <T>(c: DialogoConfig<T>) => Promise<T | null>;
@@ -57,9 +59,9 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
           aria-labelledby="dlg-titulo"
           onCancel={(e) => {
             e.preventDefault();
-            fechar(null);
+            if (!atual.config.semCancelar) fechar(null);
           }}
-          onClick={(e) => e.target === e.currentTarget && fechar(null)}
+          onClick={(e) => e.target === e.currentTarget && !atual.config.semCancelar && fechar(null)}
           className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl bg-surface p-0 text-neutral-100 backdrop:bg-black/70"
         >
           <div className="space-y-4 p-5">
@@ -73,9 +75,11 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
                   {o.label}
                 </button>
               ))}
-              <button type="button" className="btn text-neutral-400" onClick={() => fechar(null)}>
-                {atual.config.cancelarLabel ?? 'Cancelar'}
-              </button>
+              {!atual.config.semCancelar && (
+                <button type="button" className="btn text-neutral-400" onClick={() => fechar(null)}>
+                  {atual.config.cancelarLabel ?? 'Cancelar'}
+                </button>
+              )}
             </div>
           </div>
         </dialog>

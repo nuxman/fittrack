@@ -35,7 +35,7 @@ export function RetomarSessao() {
             { label: 'Retomar', value: 'retomar', variante: 'secundaria' },
             { label: 'Abandonar', value: 'abandonar', variante: 'perigo' },
           ],
-          cancelarLabel: 'Decidir depois',
+          semCancelar: true,
         });
         if (escolha === 'finalizar') return navigate(`/sessao/finalizar?fim=${fimSerie}`, { replace: true });
         if (escolha === 'abandonar') {
