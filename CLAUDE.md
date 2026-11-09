@@ -71,7 +71,7 @@ Schema Dexie versionado desde a versão 1.
 De cima para baixo:
 1. Saudação curta e data de hoje.
 2. Faixa da semana S T Q Q S S D (começando na segunda) com o número do dia; check dourado nos dias com treino concluído ou cardio; ícone diferente para RestDay; "Hoje" destacado. Ao lado: "X de Y treinos esta semana" (Y = número de fichas).
-3. Card do treino sugerido (conforme "Regra de sugestão"): nome, motivo, número de exercícios, duração estimada (média das últimas 3 sessões concluídas da ficha; sem histórico, séries × 40 s + descansos planejados), botão grande "Iniciar treino". Com sessão 'em_andamento' ou 'pausada': "Retomar treino" no lugar.
+3. Card do treino sugerido (conforme "Regra de sugestão"): nome, motivo, número de exercícios, duração estimada (média das últimas 3 sessões concluídas da ficha; sem histórico, séries × 40 s + descansos planejados), botão grande "Iniciar treino". Com sessão 'em_andamento' ou 'pausada': "Retomar treino" no lugar. Fileira de miniaturas (foto ou ícone do grupo principal) de todos os exercícios da ficha, com rolagem horizontal; tocar numa miniatura abre o detalhe do exercício.
 4. Resumo da semana: minutos de musculação e de cardio.
 5. Peso atual e variação em relação à medição de cerca de 7 dias antes (estado vazio com "Registrar peso").
 6. Último treino: data, ficha, duração e volume.
@@ -80,12 +80,16 @@ De cima para baixo:
 - Todas as fichas em cards: nome, grupos principais, número de exercícios, duração estimada.
 - Card "Sugerido" conforme a regra. Qualquer ficha pode ser iniciada em qualquer dia.
 - Acesso a "Editar ficha" a partir do card.
+- Cada card tem a mesma fileira de miniaturas do card sugerido do Início.
+
+## Detalhe do exercício (fora da sessão)
+Aberto pelas miniaturas do Início e da aba Treinar. Somente leitura: foto grande (toque para ampliar), nome, prescrição da ficha, última carga, "Ver execução" (mesmas regras da tela de execução), Minhas anotações, Grupos trabalhados e botão "Editar exercício". Sem campos de série nem cronômetro.
 
 ## Visão geral da sessão
-Lista dos exercícios da sessão: foto (ou ícone do grupo principal), nome, "séries× repsMin a repsMax | última carga", status (pendente, parcial "2/3", concluído, pulado). Status calculado pelas séries registradas, NUNCA marcado à mão. Tocar abre a tela de execução. Botão "Pular" registra em exerciciosPulados. Progresso geral do treino (X de Y exercícios concluídos). Botão fixo "Finalizar treino" no rodapé. Card recolhível "Durante o treino": não prender a respiração e sintomas para parar.
+Lista dos exercícios da sessão: foto (ou ícone do grupo principal), nome, "séries× repsMin a repsMax | última carga", status (pendente, parcial "2/3", concluído, pulado). Status calculado pelas séries registradas, NUNCA marcado à mão. Tocar abre a tela de execução. Botão "Pular" registra em exerciciosPulados. Progresso geral do treino (X de Y exercícios concluídos). Botão fixo "Finalizar treino" no rodapé. Botão "Editar exercício" (foto, link, anotações) em cada exercício. Card recolhível "Durante o treino": não prender a respiração e sintomas para parar.
 
 ## Tela de execução e detalhe do exercício
-Foto grande (toque para ampliar em tela cheia) ou ícone genérico pelo grupo principal; nome; botão "Ver execução" só com videoUrl, abrindo com target="_blank" e rel="noopener noreferrer", sem player embutido (offline: avisar que precisa de internet); séries/reps planejadas; última carga; campos de carga e reps; "Concluir série"; indicador de séries (1, 2, 3); cronômetro de descanso grande; cronômetro total; progresso geral do treino (X de Y exercícios concluídos); pausar/abandonar/retomar (sessão 'em_andamento' ou 'pausada' retomada ao abrir o app); "Finalizar treino" com RPE e observações; botão "Desfazer última série" (soft delete); uma linha fixa de alerta de sintomas para parar o treino.
+Foto grande (toque para ampliar em tela cheia) ou ícone genérico pelo grupo principal; nome; botão "Ver execução" só com videoUrl, abrindo com target="_blank" e rel="noopener noreferrer", sem player embutido (offline: avisar que precisa de internet); séries/reps planejadas; última carga; campos de carga e reps; "Concluir série"; indicador de séries (1, 2, 3); cronômetro de descanso grande; cronômetro total; progresso geral do treino (X de Y exercícios concluídos); pausar/abandonar/retomar (sessão 'em_andamento' ou 'pausada' retomada ao abrir o app); "Finalizar treino" com RPE e observações; botão "Desfazer última série" (soft delete); uma linha fixa de alerta de sintomas para parar o treino; botão "Editar exercício" (abre o editor de exercício: foto, link, anotações).
 Seções recolhíveis: Evolução de carga (mini gráfico, Etapa 4); Minhas anotações (Exercise.anotacoes, editável a qualquer momento); Grupos trabalhados (texto, sem diagrama do corpo).
 
 ## Pausa
@@ -134,7 +138,7 @@ Cardio padrão: esteira, 15 min, inclinação "nível 7".
 1. CONCLUÍDA (inclui 1.1 e 1.2).
 2. CONCLUÍDA (inclui 2.1). Ficha editável. Aceite: criar, editar, reordenar e excluir exercícios e dias; adicionar, trocar e remover foto, link e anotações de cada exercício; foto salva com no máximo 1024 px; sessões antigas inalteradas após editar.
 3a. Execução: botão "Iniciar" como ação primária (amarela) em cada card da aba Treinar, com "Nova ficha" como botão secundário no fim da lista; visão geral da sessão; tela de execução; cronômetro; Wake Lock; pular exercício; pausar/abandonar/retomar; finalizar com RPE. Aceite: fechar o app no meio e reabrir retoma na série certa; testes do cronômetro com fake timers.
-3b. Planejamento: regra de sugestão, aba Treinar completa, aviso informativo de mesmo grupoPrincipal em dias consecutivos com RPE ≥ 8, mudanças durante a sessão com "Aplicar também na ficha?", dashboard (cardio e peso com estado vazio até a Etapa 5). Aceite: testes da regra de sugestão: semana sem faltas, falta na terça com sugestão na quarta, duas faltas, treino de sexta feito adiantado, virada de semana zerando pendências, sessão abandonada não contando.
+3b. Planejamento: regra de sugestão, aba Treinar completa (com miniaturas), miniaturas no card sugerido do Início, detalhe do exercício fora da sessão, botão "Editar exercício" no detalhe e na visão geral da sessão, aviso informativo de mesmo grupoPrincipal em dias consecutivos com RPE ≥ 8, mudanças durante a sessão com "Aplicar também na ficha?", dashboard (cardio e peso com estado vazio até a Etapa 5). Aceite: testes da regra de sugestão: semana sem faltas, falta na terça com sugestão na quarta, duas faltas, treino de sexta feito adiantado, virada de semana zerando pendências, sessão abandonada não contando.
 4. Histórico, recordes, gráficos e mini gráfico no detalhe do exercício. Aceite: testes de volume, incluindo peso corporal e placa.
 5. Cardio, medidas e fotos corporais.
 6. Backup e restauração. Aceite: exportar, apagar banco, importar, dados idênticos (incluindo imagens de exercício).
