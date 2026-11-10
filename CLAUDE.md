@@ -90,7 +90,10 @@ Aberto pelas miniaturas do Início e da aba Treinar. Somente leitura: foto grand
 Lista dos exercícios da sessão: foto (ou ícone do grupo principal), nome, "séries× repsMin a repsMax | última carga", status (pendente, parcial "2/3", concluído, pulado). Status calculado pelas séries registradas, NUNCA marcado à mão. Tocar abre a tela de execução. Botão "Pular" registra em exerciciosPulados. Progresso geral do treino (X de Y exercícios concluídos). Botão fixo "Finalizar treino" no rodapé. Botão "Editar exercício" (foto, link, anotações) em cada exercício. Card recolhível "Durante o treino": não prender a respiração e sintomas para parar.
 
 ## Tela de execução e detalhe do exercício
-Foto grande (toque para ampliar em tela cheia) ou ícone genérico pelo grupo principal; nome; botão "Ver execução" só com videoUrl, abrindo com target="_blank" e rel="noopener noreferrer", sem player embutido (offline: avisar que precisa de internet); séries/reps planejadas; última carga; campos de carga e reps; "Concluir série"; indicador de séries (1, 2, 3); cronômetro de descanso grande; cronômetro total; progresso geral do treino (X de Y exercícios concluídos); pausar/abandonar/retomar (sessão 'em_andamento' ou 'pausada' retomada ao abrir o app); "Finalizar treino" com RPE e observações; botão "Desfazer última série" (soft delete); uma linha fixa de alerta de sintomas para parar o treino; botão "Editar exercício" (abre o editor de exercício: foto, link, anotações).
+Layout (S24 Ultra, viewport ~384×832): tudo que se usa a cada série visível sem rolar, com ou sem descanso ativo; conferido por npm run test:viewport (Chrome headless, também no CI).
+Ordem: cabeçalho compacto em uma linha (nome da ficha, "X de Y", tempo total; Pausar/Retomar e Abandonar no menu "⋮"); nome + miniatura + prescrição + última carga; linha pequena de alerta de sintomas (sem fundo vermelho; o card completo fica na visão geral); indicador de séries; campos de carga e reps com − e +; linha "Descanso: 90 s · Alterar"; "Ver execução"; seções recolhíveis.
+Durante a sessão a navegação inferior some; no lugar, rodapé fixo (respeitando a área de gestos) com "Concluir série" grande (na visão geral: "Finalizar treino").
+Sem foto: ícone pequeno do grupo ao lado do nome. Com foto: miniatura de no máximo 120 px de altura (toque para ampliar em tela cheia); botão "Ver execução" só com videoUrl, abrindo com target="_blank" e rel="noopener noreferrer", sem player embutido (offline: avisar que precisa de internet); séries/reps planejadas; última carga; campos de carga e reps; "Concluir série"; indicador de séries (1, 2, 3); cronômetro de descanso grande; cronômetro total; progresso geral do treino (X de Y exercícios concluídos); pausar/abandonar/retomar (sessão 'em_andamento' ou 'pausada' retomada ao abrir o app); "Finalizar treino" com RPE e observações; botão "Desfazer última série" (soft delete); uma linha fixa de alerta de sintomas para parar o treino; botão "Editar exercício" (abre o editor de exercício: foto, link, anotações).
 Seções recolhíveis: Evolução de carga (mini gráfico, Etapa 4); Minhas anotações (Exercise.anotacoes, editável a qualquer momento); Grupos trabalhados (texto, sem diagrama do corpo).
 
 ## Pausa
@@ -109,11 +112,13 @@ Ao abrir o app, se a sessão ativa ('em_andamento' ou 'pausada') tiver a última
 - Ao finalizar, se houve mudanças, listar e perguntar "Aplicar também na ficha?", com escolha por mudança.
 
 ## Cronômetro de descanso
-- Opções: 45, 60, 90, 120, 180 s e personalizado; botões -15 s e +15 s.
+- Sem descanso ativo, o painel não aparece: só a linha "Descanso: <s> s · Alterar".
+- Com descanso ativo: contagem grande no rodapé, logo acima de "Concluir série", só com −15 s, Pular e +15 s.
+- "Alterar" abre uma folha inferior com 45, 60, 90, 120, 180 s e personalizado (5–600 s); vale para o exercício nesta sessão (planSnapshot), nunca para a ficha.
 - Contagem a partir de restTimerEndsAt salvo no banco (sobrevive a tela bloqueada e recarregamento).
 - Wake Lock API ativa durante a sessão (reativar ao voltar ao app).
 - Vibração e notificação só se o app estiver visível ou o navegador permitir; deixar claro que não há alerta garantido em segundo plano.
-- Botão "Permitir notificações" dentro do cronômetro, só enquanto a permissão não foi decidida (Notification.permission === 'default').
+- "Permitir notificações" e a explicação ficam em Configurações → "Alertas de descanso" (o botão só enquanto Notification.permission === 'default'). Na execução, no máximo um aviso pequeno, uma única vez (UserSettings.interface.avisoNotificacoesVisto, opcional), enquanto a permissão não foi decidida.
 
 ## Ficha inicial (seed, totalmente editável)
 Segunda — Peito e tríceps: Supino máquina 3×10–12; Supino inclinado articulado 3×10–12; Crucifixo máquina 2×12–15; Tríceps polia barra reta 3×10–15; Tríceps corda 2×12–15.

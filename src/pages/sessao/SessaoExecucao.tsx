@@ -1,13 +1,15 @@
-import { useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Check, ChevronLeft, ExternalLink, Minus, Plus, Undo2, X } from 'lucide-react';
-import { useSessao } from './SessaoLayout';
+import { EstadoTela, useSessao } from './SessaoLayout';
 import { FotoExercicio } from '../../components/FotoExercicio';
-import { RestTimer } from '../../components/RestTimer';
+import { GrupoIcone } from '../../components/GrupoIcone';
+import { ContagemDescanso, FolhaDescanso } from '../../components/RestTimer';
 import { useDialog } from '../../components/ConfirmDialog';
 import { exerciseSetsRepository } from '../../db/repositories/exerciseSets';
 import { workoutSessionsRepository } from '../../db/repositories/workoutSessions';
 import { exercisesRepository } from '../../db/repositories/exercises';
+import { settingsRepository } from '../../db/repositories/settings';
 import type { SnapshotItem } from '../../db/types';
 import {
   exercicioAtual, formatarSerie, parseNumero, prescricaoSessao, pulados, seriesFeitas, usaCarga, validarSerie,
@@ -24,8 +26,12 @@ export function SessaoExecucao() {
   return <Execucao key={item.exerciseId} item={item} />;
 }
 
+/**
+ * Layout: conteúdo rolável (nome, séries, campos, extras) + rodapé fixo com a contagem do
+ * descanso (só quando ativa) e "Concluir série". O que se usa a cada série cabe sem rolar.
+ */
 function Execucao({ item }: { item: SnapshotItem }) {
-  const { sessao, sets, exercicios, imagens, ultimas, vibrar, agir, recarregar } = useSessao();
+  const { sessao, sets, exercicios, imagens, ultimas, vibrar, settings, agir, recarregar } = useSessao();
   const { confirmar } = useDialog();
   const exercicio = exercicios.get(item.exerciseId);
   const ultima = ultimas.get(item.exerciseId);
@@ -39,6 +45,20 @@ function Execucao({ item }: { item: SnapshotItem }) {
   // O estado só desabilita o botão no próximo render; o ref barra o segundo toque no mesmo instante.
   const gravandoRef = useRef(false);
   const [ampliada, setAmpliada] = useState(false);
+  const [folha, setFolha] = useState(false);
+
+  const sessionId = sessao.id;
+  const definirDescanso = useCallback(
+    (t: number | null) => void workoutSessionsRepository.setDescanso(sessionId, t).then(recarregar),
+    [sessionId, recarregar],
+  );
+
+  // Aviso de notificações: uma única vez, enquanto a permissão não foi decidida.
+  const mostrarAviso =
+    typeof Notification !== 'undefined' && Notification.permission === 'default' && !(settings.interface.avisoNotificacoesVisto ?? false);
+  useEffect(() => {
+    if (mostrarAviso) void settingsRepository.update({ interface: { ...settings.interface, avisoNotificacoesVisto: true } });
+  }, [mostrarAviso, settings.interface]);
 
   const daSessao = sets.filter((s) => s.exerciseId === item.exerciseId);
   const feitas = seriesFeitas(sets, item.exerciseId);
@@ -80,68 +100,70 @@ function Execucao({ item }: { item: SnapshotItem }) {
     await agir((s) => exerciseSetsRepository.desfazerUltima(s.id, item.exerciseId));
   };
 
+  const escolherDescanso = async (seg: number) => {
+    setFolha(false);
+    await agir((s) => workoutSessionsRepository.setDescansoItem(s.id, item.exerciseId, seg));
+  };
+
   const rotuloReps = item.tipo === 'tempo' ? 'Segundos' : item.porLado ? 'Reps por lado' : 'Repetições';
 
   return (
     <>
-      <p role="note" className="rounded-xl bg-red-950/60 px-3 py-2 text-sm text-red-200">
-        Pare se sentir dor no peito, tontura, falta de ar desproporcional ou dor articular aguda.
-      </p>
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3" data-testid="conteudo-execucao">
+        <Link to="/sessao" className="inline-flex items-center gap-1 text-sm text-neutral-300">
+          <ChevronLeft size={18} /> Visão geral
+        </Link>
 
-      <Link to="/sessao" className="inline-flex items-center gap-1 text-neutral-300">
-        <ChevronLeft size={22} /> Visão geral
-      </Link>
-
-      <button type="button" className="block w-full" aria-label="Ampliar foto" disabled={!foto} onClick={() => setAmpliada(true)}>
-        <FotoExercicio blob={foto} grupo={item.grupoPrincipal} className="aspect-video w-full" iconeSize={72} />
-      </button>
-      {ampliada && foto && (
-        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black" role="dialog" aria-label="Foto ampliada" onClick={() => setAmpliada(false)}>
-          <FotoExercicio blob={foto} grupo={item.grupoPrincipal} className="h-full w-full bg-black" />
-          <button type="button" aria-label="Fechar foto" className="absolute right-4 top-4 rounded-full bg-neutral-800 p-3">
-            <X size={28} />
-          </button>
-        </div>
-      )}
-
-      <section className="space-y-1">
-        <h2 className="text-2xl font-bold">{item.nome}</h2>
-        <p className="text-lg text-neutral-300">{prescricaoSessao(item)}</p>
-        <p className="text-neutral-400">Última carga: {ultima ? formatarSerie(ultima, item) : 'sem registro'}</p>
-        {exercicio?.videoUrl && (
-          <>
-            <a href={exercicio.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary mt-2 w-full">
-              <ExternalLink size={20} /> Ver execução
-            </a>
-            {!navigator.onLine && <p className="text-sm text-neutral-400">Sem conexão: o vídeo precisa de internet.</p>}
-          </>
+        <section className="flex items-start gap-3">
+          {foto ? (
+            <button type="button" className="shrink-0" aria-label="Ampliar foto" onClick={() => setAmpliada(true)}>
+              <FotoExercicio blob={foto} grupo={item.grupoPrincipal} className="h-[120px] w-[120px]" />
+            </button>
+          ) : (
+            <span className="mt-1 shrink-0">
+              <GrupoIcone grupo={item.grupoPrincipal} size={28} />
+            </span>
+          )}
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold leading-tight">{item.nome}</h2>
+            <p className="text-neutral-300">{prescricaoSessao(item)}</p>
+            <p className="text-sm text-neutral-400">Última carga: {ultima ? formatarSerie(ultima, item) : 'sem registro'}</p>
+          </div>
+        </section>
+        {ampliada && foto && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black" role="dialog" aria-label="Foto ampliada" onClick={() => setAmpliada(false)}>
+            <FotoExercicio blob={foto} grupo={item.grupoPrincipal} className="h-full w-full bg-black" />
+            <button type="button" aria-label="Fechar foto" className="absolute right-4 top-4 rounded-full bg-neutral-800 p-3">
+              <X size={28} />
+            </button>
+          </div>
         )}
-      </section>
 
-      <ol className="flex gap-2" aria-label="Séries">
-        {Array.from({ length: Math.max(item.series, feitas) }, (_, k) => (
-          <li
-            key={k}
-            aria-label={`Série ${k + 1}${k < feitas ? ' concluída' : ''}`}
-            className={`flex h-11 w-11 items-center justify-center rounded-full text-lg font-bold ${
-              k < feitas ? 'bg-primary-400 text-neutral-950' : 'bg-surface-raised text-neutral-300'
-            }`}
-          >
-            {k + 1}
-          </li>
-        ))}
-      </ol>
-      {daSessao.length > 0 && (
-        <ul className="text-neutral-300">
-          {daSessao.map((s) => (
-            <li key={s.id}>
-              Série {s.numeroSerie}: {formatarSerie(s, item)}
-            </li>
-          ))}
-        </ul>
-      )}
+        <p role="note" className="text-xs text-red-300">
+          Pare se sentir dor no peito, tontura, falta de ar desproporcional ou dor articular aguda.
+        </p>
 
-      <section className="card space-y-3">
+        <div className="flex items-center gap-2">
+          <ol className="flex gap-2" aria-label="Séries">
+            {Array.from({ length: Math.max(item.series, feitas) }, (_, k) => (
+              <li
+                key={k}
+                aria-label={`Série ${k + 1}${k < feitas ? ' concluída' : ''}`}
+                className={`flex h-9 w-9 items-center justify-center rounded-full font-bold ${
+                  k < feitas ? 'bg-primary-400 text-neutral-950' : 'bg-surface-raised text-neutral-300'
+                }`}
+              >
+                {k + 1}
+              </li>
+            ))}
+          </ol>
+          {daSessao.length > 0 && (
+            <button type="button" className="ml-auto inline-flex min-h-11 items-center gap-1 px-2 text-sm text-neutral-300" disabled={gravando} onClick={desfazer}>
+              <Undo2 size={16} /> Desfazer última série
+            </button>
+          )}
+        </div>
+
         {comCarga && (
           <Campo
             rotulo={`Carga (${item.unidadeCarga === 'kg' ? 'kg' : 'placa'})`}
@@ -165,38 +187,55 @@ function Execucao({ item }: { item: SnapshotItem }) {
             {erro}
           </p>
         )}
-        {pausada && <p className="text-primary-400">Retome o treino para registrar séries.</p>}
-        <button type="button" className="btn-primary w-full" disabled={gravando || pausada} onClick={concluir}>
-          <Check size={22} /> Concluir série
-        </button>
-        {daSessao.length > 0 && (
-          <button type="button" className="btn-secondary w-full" disabled={gravando} onClick={desfazer}>
-            <Undo2 size={20} /> Desfazer última série
+
+        <p className="text-sm text-neutral-400" data-testid="linha-descanso">
+          Descanso: {item.descansoSeg} s ·{' '}
+          <button type="button" className="min-h-11 px-1 font-semibold text-primary-400 underline" disabled={pausada} onClick={() => setFolha(true)}>
+            Alterar
           </button>
+        </p>
+        {mostrarAviso && (
+          <p className="text-xs text-neutral-500" data-testid="aviso-notificacao">
+            Para ser avisado no fim do descanso, permita notificações em Configurações → Alertas de descanso.
+          </p>
         )}
+
         {proximoItem && feitas >= item.series && (
           <Link to={`/sessao/${proximoItem.exerciseId}`} className="btn-secondary w-full">
             Próximo: {proximoItem.nome}
           </Link>
         )}
-      </section>
 
-      <RestTimer
-        endsAt={sessao.restTimerEndsAt}
-        desabilitado={pausada}
-        vibrar={vibrar}
-        onDefinir={(t) => void agir((s) => workoutSessionsRepository.setDescanso(s.id, t))}
-      />
-
-      {exercicio && <Anotacoes exerciseId={exercicio.id} inicial={exercicio.anotacoes ?? ''} onSalvo={recarregar} />}
-
-      <details className="card">
-        <summary className="cursor-pointer text-lg font-semibold">Grupos trabalhados</summary>
-        <p className="mt-2 text-neutral-300">Principal: {item.grupoPrincipal}</p>
-        {exercicio && exercicio.gruposSecundarios.length > 0 && (
-          <p className="text-neutral-300">Secundários: {exercicio.gruposSecundarios.join(', ')}</p>
+        {exercicio?.videoUrl && (
+          <div>
+            <a href={exercicio.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary w-full">
+              <ExternalLink size={20} /> Ver execução
+            </a>
+            {!navigator.onLine && <p className="mt-1 text-sm text-neutral-400">Sem conexão: o vídeo precisa de internet.</p>}
+          </div>
         )}
-      </details>
+
+        {exercicio && <Anotacoes exerciseId={exercicio.id} inicial={exercicio.anotacoes ?? ''} onSalvo={recarregar} />}
+
+        <details className="card">
+          <summary className="cursor-pointer text-lg font-semibold">Grupos trabalhados</summary>
+          <p className="mt-2 text-neutral-300">Principal: {item.grupoPrincipal}</p>
+          {exercicio && exercicio.gruposSecundarios.length > 0 && (
+            <p className="text-neutral-300">Secundários: {exercicio.gruposSecundarios.join(', ')}</p>
+          )}
+        </details>
+        <EstadoTela />
+      </div>
+
+      <footer className="safe-bottom shrink-0 space-y-2 border-t border-neutral-800 bg-surface px-4 pt-2" data-testid="rodape-execucao">
+        <ContagemDescanso endsAt={sessao.restTimerEndsAt} desabilitado={pausada} vibrar={vibrar} onDefinir={definirDescanso} />
+        {pausada && <p className="text-center text-sm text-primary-400">Treino pausado. Retome para registrar séries.</p>}
+        <button type="button" className="btn-primary min-h-16 w-full text-xl" disabled={gravando || pausada} onClick={concluir}>
+          <Check size={24} /> Concluir série
+        </button>
+      </footer>
+
+      {folha && <FolhaDescanso atualSeg={item.descansoSeg} onEscolher={escolherDescanso} onFechar={() => setFolha(false)} />}
     </>
   );
 }
@@ -214,7 +253,7 @@ function Campo({ rotulo, valor, inputMode, onChange, onMenos, onMais }: CampoPro
   const id = useId();
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-neutral-300">
+      <label htmlFor={id} className="mb-1 block text-sm text-neutral-300">
         {rotulo}
       </label>
       <div className="flex gap-2">

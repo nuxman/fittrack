@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { beforeEach, expect, it } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { beforeEach, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { db } from './db/db';
 
@@ -31,7 +31,25 @@ it('Histórico e Evolução vazios explicam o que vai aparecer', async () => {
 it('Configurações mostra a versão (dev no lugar do hash fora do build)', async () => {
   window.location.hash = '#/configuracoes';
   const { unmount } = render(<App />);
-  expect(await screen.findByTestId('versao')).toHaveTextContent(/^Versão 0\.3\.1 · dev · \d{2}\/\d{2}\/\d{4}$/);
+  const versao = (await screen.findByTestId('versao')).textContent!;
+  expect(versao.startsWith(`Versão ${__APP_VERSION__} · dev · `)).toBe(true);
+  expect(__APP_VERSION__).toBe('0.3.2');
+  expect(versao).toMatch(/· \d{2}\/\d{2}\/\d{4}$/);
   unmount();
+  window.location.hash = '#/';
+});
+
+it('Configurações → Alertas de descanso: explicação e "Permitir notificações" só com permissão pendente', async () => {
+  const requestPermission = vi.fn(async () => 'granted' as NotificationPermission);
+  vi.stubGlobal('Notification', { permission: 'default', requestPermission });
+  window.location.hash = '#/configuracoes';
+  const { unmount } = render(<App />);
+  const secao = (await screen.findByRole('heading', { name: 'Alertas de descanso' })).closest('section')!;
+  expect(secao).toHaveTextContent('o alerta não é garantido');
+  fireEvent.click(within(secao).getByRole('button', { name: /Permitir notificações/ }));
+  await waitFor(() => expect(within(secao).getByTestId('permissao-notificacao')).toHaveTextContent('Notificações permitidas.'));
+  expect(within(secao).queryByRole('button')).not.toBeInTheDocument();
+  unmount();
+  vi.unstubAllGlobals();
   window.location.hash = '#/';
 });

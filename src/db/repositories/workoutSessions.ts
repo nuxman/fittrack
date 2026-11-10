@@ -1,6 +1,7 @@
 import { db } from '../db';
 import type { PlanSnapshot, WorkoutSession } from '../types';
 import { ativo, createRepository } from './base';
+import { LIMITES } from './workoutPlans';
 import { ATIVOS, pulados, tempoAtivoEm } from '../../sessao';
 
 const base = createRepository<WorkoutSession>(db.workoutSessions);
@@ -99,6 +100,16 @@ export const workoutSessionsRepository = {
 
   setDescanso: (id: string, restTimerEndsAt: number | null) =>
     alterar(id, (s) => (s.status === 'em_andamento' ? { restTimerEndsAt } : {})),
+
+  /** Descanso do exercício só nesta sessão (muda o planSnapshot, nunca a ficha). */
+  setDescansoItem: (id: string, exerciseId: string, descansoSeg: number) =>
+    alterar(id, (s) => {
+      exigirAtiva(s);
+      const [min, max] = LIMITES.descansoSeg;
+      if (!Number.isInteger(descansoSeg) || descansoSeg < min || descansoSeg > max) throw new Error(`Descanso deve ser de ${min} a ${max} s`);
+      const itens = s.planSnapshot.itens.map((i) => (i.exerciseId === exerciseId ? { ...i, descansoSeg } : i));
+      return { planSnapshot: { ...s.planSnapshot, itens } };
+    }),
 
   pular: (id: string, exerciseId: string) =>
     alterar(id, (s) => ({ exerciciosPulados: [...new Set([...pulados(s), exerciseId])] })),

@@ -6,6 +6,7 @@ import { db } from '../../db/db';
 import { workoutPlansRepository } from '../../db/repositories/workoutPlans';
 import { workoutSessionsRepository as sessoes } from '../../db/repositories/workoutSessions';
 import { exerciseSetsRepository as series } from '../../db/repositories/exerciseSets';
+import { settingsRepository } from '../../db/repositories/settings';
 
 const doDia = async (d: number) => (await workoutPlansRepository.list()).find((p) => p.diaSemana === d)!;
 const abrir = (rota = '/') => render(<MemoryRouter initialEntries={[rota]} future={ROUTER_FUTURE}><AppRoutes /></MemoryRouter>);
@@ -21,7 +22,8 @@ describe('iniciar e retomar', () => {
     abrir('/treinar');
     fireEvent.click(await screen.findByRole('button', { name: 'Iniciar Peito e tríceps' }));
     expect(await screen.findAllByTestId('item-sessao')).toHaveLength(5);
-    expect(screen.getByTestId('progresso')).toHaveTextContent('0 de 5 exercícios concluídos');
+    expect(screen.getByTestId('progresso')).toHaveTextContent('0 de 5');
+    expect(screen.queryByRole('navigation', { name: 'Navegação principal' })).not.toBeInTheDocument();
     expect(screen.getAllByTestId('item-sessao')[0]).toHaveTextContent('3× 10 a 12 | sem registro');
   });
 
@@ -120,6 +122,45 @@ describe('tela de execução', () => {
     expect(screen.getByRole('note')).toHaveTextContent('dor no peito');
   });
 
+  it('sem descanso: só a linha "Descanso: 90 s · Alterar"; Alterar muda só o snapshot', async () => {
+    const s = await sessoes.iniciar((await doDia(1)).id);
+    const ex = s.planSnapshot.itens[0]!.exerciseId;
+    abrir(`/sessao/${ex}`);
+    await titulo('Supino máquina');
+    expect(screen.queryByRole('region', { name: 'Cronômetro de descanso' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('linha-descanso')).toHaveTextContent('Descanso: 90 s · Alterar');
+    fireEvent.click(screen.getByRole('button', { name: 'Alterar' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Tempo de descanso' })).getByRole('button', { name: '60s' }));
+    await waitFor(() => expect(screen.getByTestId('linha-descanso')).toHaveTextContent('Descanso: 60 s'));
+    expect((await sessoes.get(s.id))!.planSnapshot.itens[0]!.descansoSeg).toBe(60);
+    expect((await doDia(1)).itens.find((i) => i.exerciseId === ex)!.descansoSeg).toBe(90);
+
+    // Concluir a série mostra a contagem no rodapé com o descanso escolhido.
+    fireEvent.change(screen.getByLabelText('Carga (kg)'), { target: { value: '40' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Concluir série' }));
+    const contagem = await screen.findByRole('region', { name: 'Cronômetro de descanso' });
+    expect(within(screen.getByTestId('rodape-execucao')).getByTestId('descanso')).toHaveTextContent(/^(1:01|1:00|0:59)$/);
+    expect(within(contagem).getAllByRole('button').map((b) => b.textContent)).toEqual(['−15 s', 'Pular', '+15 s']);
+  });
+
+  it('aviso de notificações aparece uma única vez, só com a permissão pendente', async () => {
+    vi.stubGlobal('Notification', { permission: 'default', requestPermission: vi.fn() });
+    try {
+      const s = await sessoes.iniciar((await doDia(1)).id);
+      const ex = s.planSnapshot.itens[0]!.exerciseId;
+      const { unmount } = abrir(`/sessao/${ex}`);
+      expect(await screen.findByTestId('aviso-notificacao')).toHaveTextContent('Configurações → Alertas de descanso');
+      expect(screen.queryByRole('button', { name: /Permitir notificações/ })).not.toBeInTheDocument();
+      await waitFor(async () => expect((await settingsRepository.get()).interface.avisoNotificacoesVisto).toBe(true));
+      unmount();
+      abrir(`/sessao/${ex}`);
+      await titulo('Supino máquina');
+      expect(screen.queryByTestId('aviso-notificacao')).not.toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('pular na visão geral marca "Pulado" e conta no exercício atual', async () => {
     await sessoes.iniciar((await doDia(1)).id);
     abrir('/sessao');
@@ -159,12 +200,14 @@ describe('Wake Lock', () => {
     act(() => void document.dispatchEvent(new Event('visibilitychange')));
     await waitFor(() => expect(request).toHaveBeenCalledTimes(2));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Pausar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mais opções' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Pausar' }));
     await waitFor(() => expect(travas[1]!.release).toHaveBeenCalled());
     expect(await screen.findByText('Tela sempre ligada: desligada')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Retomar' }));
     await waitFor(() => expect(request).toHaveBeenCalledTimes(3));
+    await screen.findByText('Tela sempre ligada: ativa');
 
     fireEvent.click(screen.getByRole('button', { name: 'Finalizar treino' }));
     fireEvent.click(await screen.findByRole('button', { name: '8' }));

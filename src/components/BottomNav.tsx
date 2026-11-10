@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Dumbbell, History, House, Settings, TrendingUp } from 'lucide-react';
 
 const ITENS = [
@@ -10,6 +10,8 @@ const ITENS = [
 ];
 
 export function BottomNav() {
+  // Durante a sessão a barra inferior dá lugar ao rodapé da sessão ("Concluir série", "Finalizar treino").
+  if (useLocation().pathname.startsWith('/sessao')) return null;
   return (
     <nav
       aria-label="Navegação principal"

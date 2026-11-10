@@ -150,5 +150,6 @@ export interface UserSettings extends BaseRecord {
   descansoPadraoSeg: number;
   metaPesoKg?: number;
   cardioPadrao: CardioPadrao;
-  interface: { tema: 'escuro' | 'claro'; vibrar: boolean };
+  /** avisoNotificacoesVisto: opcional (ler com ?? false); aviso de notificações já mostrado na execução. */
+  interface: { tema: 'escuro' | 'claro'; vibrar: boolean; avisoNotificacoesVisto?: boolean };
 }

@@ -32,7 +32,7 @@ export function SessaoFinalizar() {
   };
 
   return (
-    <section className="space-y-4">
+    <section className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6 pt-4 safe-bottom">
       <h1 className="text-3xl font-bold text-primary-400">Finalizar treino</h1>
       <div className="card text-neutral-300">
         <p className="text-lg font-semibold text-neutral-100">{sessao.planSnapshot.nome}</p>

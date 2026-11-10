@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Flag, SkipForward, Undo2 } from 'lucide-react';
-import { useSessao } from './SessaoLayout';
+import { EstadoTela, useSessao } from './SessaoLayout';
 import { FotoExercicio } from '../../components/FotoExercicio';
 import { workoutSessionsRepository } from '../../db/repositories/workoutSessions';
 import { formatarSerie, prescricaoSessao, pulados, seriesFeitas, statusExercicio, type StatusExercicio } from '../../sessao';
@@ -15,6 +15,7 @@ export function SessaoVisao() {
 
   return (
     <>
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
       <ul className="space-y-2">
         {itens.map((i) => {
           const st = statusExercicio(i, sets, pul);
@@ -63,12 +64,13 @@ export function SessaoVisao() {
         </div>
       </details>
 
-      <div className="fixed inset-x-0 bottom-above-nav z-10 px-4">
-        <button type="button" className="btn-primary mx-auto flex w-full max-w-xl" onClick={() => navigate('/sessao/finalizar')}>
+      <EstadoTela />
+      </div>
+      <footer className="safe-bottom shrink-0 border-t border-neutral-800 bg-surface px-4 pt-2">
+        <button type="button" className="btn-primary w-full" onClick={() => navigate('/sessao/finalizar')}>
           <Flag size={22} /> Finalizar treino
         </button>
-      </div>
-      <div className="h-16" aria-hidden />
+      </footer>
     </>
   );
 }

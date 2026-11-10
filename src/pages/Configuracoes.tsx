@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import { Page } from '../components/Page';
 import { useAsync } from '../useAsync';
 import { isPersisted } from '../storage';
+import { AlertasDescanso } from '../components/AlertasDescanso';
 
 export function Configuracoes() {
   const [persistente] = useAsync(isPersisted);
@@ -24,6 +25,7 @@ export function Configuracoes() {
                 : 'Não persistente: o navegador pode apagar os dados se faltar espaço.'}
         </p>
       </section>
+      <AlertasDescanso />
       <p className="text-center text-sm text-neutral-500" data-testid="versao">
         Versão {__APP_VERSION__} · {__APP_COMMIT__} · {new Date(__APP_BUILD_DATE__).toLocaleDateString('pt-BR')}
       </p>

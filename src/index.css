@@ -11,9 +11,6 @@
   /* Conteúdo termina acima da barra inferior. */
   .pb-nav { padding-bottom: calc(var(--nav-h) + max(env(safe-area-inset-bottom), 8px) + 1.5rem); }
 
-  /* Rodapé fixo logo acima da navegação inferior. */
-  .bottom-above-nav { bottom: calc(var(--nav-h) + max(env(safe-area-inset-bottom), 8px) + 0.5rem); }
-
   .btn {
     @apply inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 text-lg font-semibold transition active:scale-[0.98] disabled:opacity-50;
   }

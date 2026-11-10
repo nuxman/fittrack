@@ -1,7 +1,7 @@
 {
   "name": "fittrack",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.3.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:viewport": "node scripts/viewport.mjs && node scripts/viewport.mjs --com-foto"
   },
   "dependencies": {
     "dexie": "^4.4.7",

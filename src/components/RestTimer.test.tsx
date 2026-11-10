@@ -1,27 +1,31 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { RestTimer } from './RestTimer';
+import { ContagemDescanso, FolhaDescanso } from './RestTimer';
 
 const vibrate = vi.fn();
 let visibilidade: DocumentVisibilityState = 'visible';
 
-/** Simula o banco: endsAt fica fora do componente, como restTimerEndsAt. */
+/** Simula o banco: endsAt fica fora do componente, como restTimerEndsAt. "Iniciar 90" faz o papel de concluir uma série. */
 let salvo: number | null = null;
 function ComBanco() {
   const [endsAt, setEndsAt] = useState<number | null>(salvo);
+  const definir = (t: number | null) => {
+    salvo = t;
+    setEndsAt(t);
+  };
   return (
-    <RestTimer
-      endsAt={endsAt}
-      vibrar
-      onDefinir={(t) => {
-        salvo = t;
-        setEndsAt(t);
-      }}
-    />
+    <>
+      {[45, 60, 90].map((s) => (
+        <button key={s} type="button" onClick={() => definir(Date.now() + s * 1000)}>
+          iniciar {s}
+        </button>
+      ))}
+      <ContagemDescanso endsAt={endsAt} vibrar onDefinir={definir} />
+    </>
   );
 }
-const visor = () => screen.getByTestId('descanso').textContent;
+const visor = () => screen.queryByTestId('descanso')?.textContent ?? null;
 const avancar = (ms: number) => act(() => void vi.advanceTimersByTime(ms));
 
 beforeEach(() => {
@@ -43,8 +47,9 @@ afterEach(() => {
 describe('cronômetro de descanso', () => {
   it('conta a partir do horário final, com ±15 s', () => {
     render(<ComBanco />);
-    expect(visor()).toBe('—');
-    fireEvent.click(screen.getByRole('button', { name: '90s' }));
+    // Sem descanso ativo, o painel não aparece.
+    expect(screen.queryByRole('region', { name: 'Cronômetro de descanso' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'iniciar 90' }));
     expect(visor()).toBe('1:30');
     avancar(10_000);
     expect(visor()).toBe('1:20');
@@ -57,27 +62,16 @@ describe('cronômetro de descanso', () => {
 
   it('sobrevive a recarregar: remontar lê o horário salvo', () => {
     const { unmount } = render(<ComBanco />);
-    fireEvent.click(screen.getByRole('button', { name: '60s' }));
+    fireEvent.click(screen.getByRole('button', { name: 'iniciar 60' }));
     unmount();
     vi.advanceTimersByTime(25_000); // app fechado / tela bloqueada
     render(<ComBanco />);
     expect(visor()).toBe('0:35');
   });
 
-  it('personalizado aceita de 5 a 600 s', () => {
-    render(<ComBanco />);
-    const campo = screen.getByLabelText('Descanso personalizado (segundos)');
-    const iniciar = screen.getByRole('button', { name: 'Iniciar' });
-    fireEvent.change(campo, { target: { value: '700' } });
-    expect(iniciar).toBeDisabled();
-    fireEvent.change(campo, { target: { value: '75' } });
-    fireEvent.click(iniciar);
-    expect(visor()).toBe('1:15');
-  });
-
   it('vibra uma única vez no zero e limpa o descanso', () => {
     render(<ComBanco />);
-    fireEvent.click(screen.getByRole('button', { name: '45s' }));
+    fireEvent.click(screen.getByRole('button', { name: 'iniciar 45' }));
     avancar(44_000);
     expect(vibrate).not.toHaveBeenCalled();
     avancar(1_000);
@@ -85,29 +79,39 @@ describe('cronômetro de descanso', () => {
     avancar(10_000);
     expect(vibrate).toHaveBeenCalledTimes(1);
     expect(salvo).toBeNull();
-    expect(visor()).toBe('—');
+    expect(visor()).toBeNull();
   });
 
   it('não vibra com o app oculto', () => {
     render(<ComBanco />);
-    fireEvent.click(screen.getByRole('button', { name: '45s' }));
+    fireEvent.click(screen.getByRole('button', { name: 'iniciar 45' }));
     visibilidade = 'hidden';
     avancar(46_000);
     expect(vibrate).not.toHaveBeenCalled();
   });
 
-  it('"Permitir notificações" só enquanto a permissão não foi decidida', async () => {
-    const requestPermission = vi.fn(async () => 'granted' as NotificationPermission);
-    vi.stubGlobal('Notification', { permission: 'default', requestPermission });
-    const { unmount } = render(<ComBanco />);
-    fireEvent.click(screen.getByRole('button', { name: /Permitir notificações/ }));
-    await act(async () => {});
-    expect(requestPermission).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole('button', { name: /Permitir notificações/ })).not.toBeInTheDocument();
-    unmount();
-
-    vi.stubGlobal('Notification', { permission: 'denied', requestPermission });
+  it('Pular encerra o descanso', () => {
     render(<ComBanco />);
-    expect(screen.queryByRole('button', { name: /Permitir notificações/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'iniciar 60' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pular' }));
+    expect(salvo).toBeNull();
+    expect(visor()).toBeNull();
+  });
+});
+
+describe('folha de descanso', () => {
+  it('opções fixas e personalizado de 5 a 600 s', () => {
+    const escolher = vi.fn();
+    render(<FolhaDescanso atualSeg={90} onEscolher={escolher} onFechar={() => {}} />);
+    expect(screen.getByRole('button', { name: '90s' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: '120s' }));
+    expect(escolher).toHaveBeenLastCalledWith(120);
+    const campo = screen.getByLabelText('Descanso personalizado (segundos)');
+    const usar = screen.getByRole('button', { name: 'Usar' });
+    fireEvent.change(campo, { target: { value: '700' } });
+    expect(usar).toBeDisabled();
+    fireEvent.change(campo, { target: { value: '75' } });
+    fireEvent.click(usar);
+    expect(escolher).toHaveBeenLastCalledWith(75);
   });
 });
