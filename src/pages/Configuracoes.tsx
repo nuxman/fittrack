@@ -24,6 +24,9 @@ export function Configuracoes() {
                 : 'Não persistente: o navegador pode apagar os dados se faltar espaço.'}
         </p>
       </section>
+      <p className="text-center text-sm text-neutral-500" data-testid="versao">
+        Versão {__APP_VERSION__} · {__APP_COMMIT__} · {new Date(__APP_BUILD_DATE__).toLocaleDateString('pt-BR')}
+      </p>
     </Page>
   );
 }

@@ -27,3 +27,11 @@ it('Histórico e Evolução vazios explicam o que vai aparecer', async () => {
   unmount();
   window.location.hash = '#/';
 });
+
+it('Configurações mostra a versão (dev no lugar do hash fora do build)', async () => {
+  window.location.hash = '#/configuracoes';
+  const { unmount } = render(<App />);
+  expect(await screen.findByTestId('versao')).toHaveTextContent(/^Versão 0\.3\.1 · dev · \d{2}\/\d{2}\/\d{4}$/);
+  unmount();
+  window.location.hash = '#/';
+});

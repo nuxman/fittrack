@@ -9,6 +9,7 @@
 - Decisões fora desta spec: perguntar antes ou listar explicitamente no relatório.
 - Comandos que eu precisar rodar manualmente: PowerShell 7, cada um em uma única linha.
 - Nunca encerrar processos por nome (taskkill /IM, pkill, killall ou similar); só pelo PID de processos que você mesmo iniciou.
+- Versão (package.json, mostrada em Configurações): a cada etapa concluída, subir para 0.<etapa>.0; a cada correção, subir o último número.
 - Evitar capturas de tela e leitura de imagens; usar só quando indispensável, porque elas acumulam e travam a sessão.
 
 ## Stack (versões fixas)
