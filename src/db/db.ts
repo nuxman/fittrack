@@ -3,7 +3,8 @@ import type {
   BodyMeasurement, BodyPhoto, CardioSession, Equipment, Exercise, ExerciseImage,
   ExerciseSet, RestDay, UserSettings, WorkoutPlan, WorkoutSession,
 } from './types';
-import { buildSeed } from './seed';
+import { buildSeed, LINKS_DO_SEED } from './seed';
+import { normalizeNome } from './normalize';
 
 export class FitTrackDB extends Dexie {
   equipment!: Table<Equipment, string>;
@@ -34,6 +35,14 @@ export class FitTrackDB extends Dexie {
       restDays: 'id, data',
       settings: 'id',
     });
+    // v2: links de busca no YouTube para os exercícios da ficha inicial que ainda não têm link.
+    // Banco novo não passa por aqui (o populate já cria com link).
+    this.version(2).stores({}).upgrade((tx) =>
+      tx.table<Exercise, string>('exercises').toCollection().modify((e) => {
+        const link = LINKS_DO_SEED.get(normalizeNome(e.nome));
+        if (link && !e.videoUrl) e.videoUrl = link;
+      }),
+    );
     // Roda só na criação do banco, dentro da transação de upgrade: atômico,
     // aberturas concorrentes (outras abas/instâncias) não duplicam a ficha.
     this.on('populate', async (tx) => {

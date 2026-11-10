@@ -80,7 +80,7 @@ describe('editor de exercício', () => {
     fireEvent.change(await screen.findByLabelText('Link do vídeo de execução (https://)'), { target: { value: 'http://x.com' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('https://');
-    expect((await exercisesRepository.get(ex.id))!.videoUrl).toBeUndefined();
+    expect((await exercisesRepository.get(ex.id))!.videoUrl).toBe(ex.videoUrl);
   });
 
   it('excluir exercício em uso mostra em quais fichas', async () => {

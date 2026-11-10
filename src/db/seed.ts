@@ -57,6 +57,13 @@ export const FICHA: { nome: string; diaSemana: number; itens: Linha[] }[] = [
   ] },
 ];
 
+/** Link de busca no YouTube: "como fazer <nome>". */
+export const linkDeBusca = (nome: string) =>
+  `https://www.youtube.com/results?search_query=${encodeURIComponent(`como fazer ${nome}`)}`;
+
+/** Nome normalizado → link, para todos os exercícios da ficha inicial. */
+export const LINKS_DO_SEED = new Map(FICHA.flatMap((d) => d.itens.map(([ex]) => [normalizeNome(ex.nome), linkDeBusca(ex.nome)] as const)));
+
 /** Monta os registros da ficha inicial; nomes iguais (normalizados) viram um único Exercise. */
 export function buildSeed() {
   const exercicios = new Map<string, Exercise>();
@@ -65,7 +72,7 @@ export function buildSeed() {
       const chave = normalizeNome(ex.nome);
       let exercise = exercicios.get(chave);
       if (!exercise) {
-        exercise = stamp<Exercise>({ tipo: 'carga', unidadeCarga: 'kg', porLado: false, gruposSecundarios: [], ...ex });
+        exercise = stamp<Exercise>({ tipo: 'carga', unidadeCarga: 'kg', porLado: false, gruposSecundarios: [], ...ex, videoUrl: linkDeBusca(ex.nome) });
         exercicios.set(chave, exercise);
       }
       return { exerciseId: exercise.id, series, repsMin, repsMax, descansoSeg: DEFAULT_SETTINGS.descansoPadraoSeg, ordem };

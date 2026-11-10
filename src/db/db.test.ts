@@ -2,6 +2,7 @@ import Dexie from 'dexie';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db, FitTrackDB } from './db';
 import { normalizeNome } from './normalize';
+import { buildSeed, linkDeBusca } from './seed';
 import { equipmentRepository } from './repositories/equipment';
 import { exercisesRepository } from './repositories/exercises';
 import { settingsRepository } from './repositories/settings';
@@ -106,7 +107,7 @@ describe('seed (populate)', () => {
     expect(remada).toHaveLength(1);
     const usos = (await workoutPlansRepository.list()).flatMap((p) => p.itens).filter((i) => i.exerciseId === remada[0]!.id);
     expect(usos).toHaveLength(2);
-    expect(exercicios.every((e) => e.videoUrl === undefined && e.grupoPrincipal.length > 0)).toBe(true);
+    expect(exercicios.every((e) => e.grupoPrincipal.length > 0)).toBe(true);
   });
 
   it('peso corporal e por lado em Bird dog / Dead bug', async () => {
@@ -134,3 +135,47 @@ describe('seed (populate)', () => {
   });
 });
 
+
+describe('migração v2: links de busca no YouTube', () => {
+  const V1 = {
+    equipment: 'id, nome', exercises: 'id, nome, grupoPrincipal, equipmentId', exerciseImages: 'id, exerciseId',
+    workoutPlans: 'id, diaSemana', workoutSessions: 'id, planId, status, iniciadaEm', exerciseSets: 'id, sessionId, exerciseId, concluidaEm',
+    cardioSessions: 'id, data', bodyMeasurements: 'id, data', bodyPhotos: 'id, measurementId', restDays: 'id, data', settings: 'id',
+  };
+
+  it('banco novo já vem com os links', async () => {
+    const supino = (await exercisesRepository.findByName('Supino máquina'))!;
+    expect(supino.videoUrl).toBe('https://www.youtube.com/results?search_query=como%20fazer%20Supino%20m%C3%A1quina');
+    expect((await exercisesRepository.list()).every((e) => e.videoUrl === linkDeBusca(e.nome))).toBe(true);
+  });
+
+  it('banco v1 recebe os links; link existente e exercício fora do seed não mudam', async () => {
+    const nome = `fittrack-v1-${crypto.randomUUID()}`;
+    const antigo = new Dexie(nome);
+    antigo.version(1).stores(V1);
+    const seed = buildSeed();
+    const semLink = seed.exercises.map((e) => {
+      const copia = { ...e };
+      delete copia.videoUrl;
+      return copia;
+    });
+    const leg = semLink.find((e) => e.nome === 'Leg press')!;
+    const proprio = { ...semLink.find((e) => e.nome === 'Rosca martelo')!, videoUrl: 'https://exemplo.com/rosca' };
+    const extra = { ...leg, id: crypto.randomUUID(), nome: 'Pullover' };
+    await antigo.table('exercises').bulkAdd([...semLink.filter((e) => e !== leg && e.nome !== 'Rosca martelo'), leg, proprio, extra]);
+    antigo.close();
+
+    const novo = new FitTrackDB(nome);
+    await novo.open();
+    expect(novo.verno).toBe(2);
+    const porNome = new Map((await novo.exercises.toArray()).map((e) => [e.nome, e]));
+    expect(porNome.get('Leg press')!.videoUrl).toBe(linkDeBusca('Leg press'));
+    expect(porNome.get('Rosca martelo')!.videoUrl).toBe('https://exemplo.com/rosca');
+    expect(porNome.get('Pullover')!.videoUrl).toBeUndefined();
+    expect([...porNome.values()].filter((e) => e.videoUrl === undefined)).toHaveLength(1);
+    // Migração não dispara o populate: nenhuma ficha criada.
+    expect(await novo.workoutPlans.count()).toBe(0);
+    novo.close();
+    await Dexie.delete(nome);
+  });
+});
