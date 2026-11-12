@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowDown, ArrowUp, ChevronRight, Plus, Trash2, X } from 'lucide-react';
 import { Page } from '../components/Page';
 import { ExercisePicker } from '../components/ExercisePicker';
 import { useDialog } from '../components/ConfirmDialog';
 import { useAsync } from '../useAsync';
-import type { Exercise, WorkoutPlanItem } from '../db/types';
+import { LOCAIS_TREINO, type Exercise, type LocalTreino, type WorkoutPlanItem } from '../db/types';
 import { exercisesRepository } from '../db/repositories/exercises';
 import { settingsRepository } from '../db/repositories/settings';
 import {
-  DiaOcupadoError, faixaReps, FichaInvalidaError, moverItem, ordenarItens, validarFicha, workoutPlansRepository,
+  DiaOcupadoError, faixaReps, FichaInvalidaError, localDe, moverItem, NOME_LOCAL, ordenarItens, validarFicha, workoutPlansRepository,
 } from '../db/repositories/workoutPlans';
 import { DIAS, SEMANA } from '../dias';
 import { formatarPrescricao } from '../format';
@@ -23,6 +23,7 @@ export function FichaEditor() {
   const { id } = useParams();
   const nova = id === undefined;
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const { confirmar, escolher } = useDialog();
 
   const [dados] = useAsync(async () => {
@@ -34,6 +35,8 @@ export function FichaEditor() {
 
   const [nome, setNome] = useState('');
   const [dia, setDia] = useState<number>();
+  // Nova ficha: local vem da aba Treinar (?local=casa).
+  const [local, setLocal] = useState<LocalTreino>(params.get('local') === 'casa' ? 'casa' : 'academia');
   const [itens, setItens] = useState<WorkoutPlanItem[]>([]);
   const [extras, setExtras] = useState(new Map<string, Exercise>());
   const [sujo, setSujo] = useState(false);
@@ -42,16 +45,17 @@ export function FichaEditor() {
   const [salvando, setSalvando] = useState(false);
 
   const plano = dados?.planos.find((p) => p.id === id);
-  const ocupados = new Map(dados?.planos.filter((p) => p.id !== id).map((p) => [p.diaSemana, p]));
+  const ocupados = new Map(dados?.planos.filter((p) => p.id !== id && localDe(p) === local).map((p) => [p.diaSemana, p]));
 
   useEffect(() => {
     if (!dados) return;
     if (plano) {
       setNome(plano.nome);
       setDia(plano.diaSemana);
+      setLocal(localDe(plano));
       setItens(ordenarItens(plano.itens));
     } else if (nova) {
-      setDia(SEMANA.find((d) => !dados.planos.some((p) => p.diaSemana === d)));
+      setDia(SEMANA.find((d) => !dados.planos.some((p) => p.diaSemana === d && localDe(p) === local)));
     }
     setSujo(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -72,7 +76,7 @@ export function FichaEditor() {
   /** Salva; retorna o id da ficha ou undefined se não salvou. */
   async function salvar(): Promise<string | undefined> {
     if (dia === undefined) return setErros(['Escolha o dia da semana']), undefined;
-    const ficha = { nome, diaSemana: dia, itens };
+    const ficha = { nome, diaSemana: dia, local, itens };
     const locais = validarFicha(ficha, exercicio);
     if (locais.length) return setErros(locais), undefined;
 
@@ -83,9 +87,11 @@ export function FichaEditor() {
         await workoutPlansRepository.update(id, ficha);
       } catch (e) {
         if (!(e instanceof DiaOcupadoError)) throw e;
+        // Com mudança de local, o texto diz o local de cada lado.
+        const comLocal = (d: number, l: LocalTreino) => (localDe(plano!) === local ? DIAS[d] : `${DIAS[d]} (${NOME_LOCAL[l]})`);
         const ok = await confirmar(
           'Trocar os dias?',
-          `${DIAS[dia]} já tem "${e.ocupante.nome}". Ela passa para ${DIAS[plano!.diaSemana]}.`,
+          `${comLocal(dia, local)} já tem "${e.ocupante.nome}". Ela passa para ${comLocal(plano!.diaSemana, localDe(plano!))}.`,
           'Trocar os dias',
         );
         if (!ok) return undefined;
@@ -132,6 +138,30 @@ export function FichaEditor() {
         <span className="text-sm text-neutral-400">Nome</span>
         <input className="input" value={nome} onChange={(e) => mudar(() => setNome(e.target.value))} />
       </label>
+      <fieldset className="space-y-1">
+        <legend className="text-sm text-neutral-400">Local</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {LOCAIS_TREINO.map((l) => (
+            <button
+              key={l}
+              type="button"
+              aria-pressed={l === local}
+              className={l === local ? 'btn-primary' : 'btn-secondary'}
+              onClick={() =>
+                mudar(() => {
+                  setLocal(l);
+                  // Nova ficha: o dia escolhido pode estar ocupado no outro local.
+                  if (nova && (dia === undefined || dados.planos.some((p) => p.diaSemana === dia && localDe(p) === l))) {
+                    setDia(SEMANA.find((d) => !dados.planos.some((p) => p.diaSemana === d && localDe(p) === l)));
+                  }
+                })
+              }
+            >
+              {NOME_LOCAL[l]}
+            </button>
+          ))}
+        </div>
+      </fieldset>
       <label className="block space-y-1">
         <span className="text-sm text-neutral-400">Dia da semana</span>
         <select className="input" value={dia ?? ''} onChange={(e) => mudar(() => setDia(Number(e.target.value)))}>

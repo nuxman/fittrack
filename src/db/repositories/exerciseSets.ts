@@ -4,7 +4,8 @@ import { ativo, createRepository } from './base';
 
 const base = createRepository<ExerciseSet>(db.exerciseSets);
 
-const porConclusao = (a: ExerciseSet, b: ExerciseSet) => a.concluidaEm.localeCompare(b.concluidaEm);
+/** Desempate por numeroSerie: duas séries no mesmo milissegundo não trocam de ordem. */
+const porConclusao = (a: ExerciseSet, b: ExerciseSet) => a.concluidaEm.localeCompare(b.concluidaEm) || a.numeroSerie - b.numeroSerie;
 
 export const exerciseSetsRepository = {
   get: base.get,

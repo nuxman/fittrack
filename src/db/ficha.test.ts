@@ -52,6 +52,33 @@ describe('fichas: dia da semana único', () => {
   });
 });
 
+describe('fichas: local do treino', () => {
+  it('fichas existentes leem como academia; casa pode usar o mesmo dia', async () => {
+    const seg = await doDia(1);
+    expect(seg.local).toBe('academia'); // seed grava o local; registro antigo sem local também é academia
+    const ex = await novoEx('Flexão');
+    const casa = await workoutPlansRepository.create({ nome: 'Casa A', diaSemana: 1, local: 'casa', itens: [item(ex.id)] });
+    expect(casa.local).toBe('casa');
+    await expect(workoutPlansRepository.create({ nome: 'Casa B', diaSemana: 1, local: 'casa', itens: [] })).rejects.toBeInstanceOf(DiaOcupadoError);
+  });
+
+  it('registro antigo sem local conta como academia na unicidade do dia', async () => {
+    const seg = await doDia(1);
+    await db.workoutPlans.update(seg.id, { local: undefined });
+    await expect(workoutPlansRepository.create({ nome: 'Extra', diaSemana: 1, local: 'academia', itens: [] })).rejects.toBeInstanceOf(DiaOcupadoError);
+  });
+
+  it('mudar o local para um dia ocupado nesse local troca dia e local das duas fichas', async () => {
+    const ex = await novoEx('Flexão');
+    const casa = await workoutPlansRepository.create({ nome: 'Casa', diaSemana: 3, local: 'casa', itens: [item(ex.id)] });
+    const seg = await doDia(1);
+    await expect(workoutPlansRepository.update(seg.id, { diaSemana: 3, local: 'casa' })).rejects.toBeInstanceOf(DiaOcupadoError);
+    await workoutPlansRepository.update(seg.id, { diaSemana: 3, local: 'casa' }, { trocarDia: true });
+    expect(await workoutPlansRepository.get(seg.id)).toMatchObject({ diaSemana: 3, local: 'casa' });
+    expect(await workoutPlansRepository.get(casa.id)).toMatchObject({ diaSemana: 1, local: 'academia' });
+  });
+});
+
 describe('fichas: itens', () => {
   it('moverItem sobe, desce e ignora os extremos', () => {
     expect(moverItem(['a', 'b', 'c'], 1, -1)).toEqual(['b', 'a', 'c']);

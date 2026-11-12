@@ -53,9 +53,14 @@ export interface WorkoutPlanItem {
   ordem: number;
 }
 
+export const LOCAIS_TREINO = ['academia', 'casa'] as const;
+export type LocalTreino = (typeof LOCAIS_TREINO)[number];
+
 export interface WorkoutPlan extends BaseRecord {
   nome: string;
   diaSemana: number; // 0 = domingo … 6 = sábado
+  /** Opcional: ler com localDe() (?? 'academia'). Um diaSemana por local. */
+  local?: LocalTreino;
   itens: WorkoutPlanItem[];
 }
 
@@ -161,5 +166,7 @@ export interface UserSettings extends BaseRecord {
     somDescanso?: boolean;
     avisoAntecipadoSeg?: 0 | 5 | 10;
     contagem321?: boolean;
+    /** Local escolhido no Início, válido só no dia `data` (chaveDia); em outro dia, volta para academia. */
+    localHoje?: { local: LocalTreino; data: string };
   };
 }

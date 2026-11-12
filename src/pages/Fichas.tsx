@@ -19,7 +19,7 @@ export function Fichas() {
 
   const { planos, ativa } = dados;
   const ordenados = [...planos].sort((a, b) => SEMANA.indexOf(a.diaSemana) - SEMANA.indexOf(b.diaSemana));
-  const haDiaLivre = planos.length < 7;
+  const haDiaLivre = planos.length < 14; // 7 dias × 2 locais; o filtro por local entra na 3b.2
 
   const iniciar = async (planId: string) => {
     prepararAudio(); // gesto do usuário: libera o som do descanso

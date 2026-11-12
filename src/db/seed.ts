@@ -77,7 +77,7 @@ export function buildSeed() {
       }
       return { exerciseId: exercise.id, series, repsMin, repsMax, descansoSeg: DEFAULT_SETTINGS.descansoPadraoSeg, ordem };
     });
-    return stamp<WorkoutPlan>({ nome: dia.nome, diaSemana: dia.diaSemana, itens });
+    return stamp<WorkoutPlan>({ nome: dia.nome, diaSemana: dia.diaSemana, local: 'academia', itens });
   });
   return { exercises: [...exercicios.values()], workoutPlans, settings: stamp<UserSettings>(DEFAULT_SETTINGS) };
 }

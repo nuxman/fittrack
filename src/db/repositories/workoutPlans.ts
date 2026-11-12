@@ -1,9 +1,12 @@
 import { db } from '../db';
-import type { Exercise, NewRecord, WorkoutPlan, WorkoutPlanItem } from '../types';
+import { LOCAIS_TREINO, type Exercise, type LocalTreino, type NewRecord, type WorkoutPlan, type WorkoutPlanItem } from '../types';
 import { createRepository } from './base';
 import { DIAS } from '../../dias';
 
-type DadosFicha = Pick<WorkoutPlan, 'nome' | 'diaSemana' | 'itens'>;
+type DadosFicha = Pick<WorkoutPlan, 'nome' | 'diaSemana' | 'itens' | 'local'>;
+
+export const localDe = (p: Pick<WorkoutPlan, 'local'>): LocalTreino => p.local ?? 'academia';
+export const NOME_LOCAL: Record<LocalTreino, string> = { academia: 'Academia', casa: 'Casa' };
 type Faixa = readonly [min: number, max: number];
 
 export const LIMITES = {
@@ -26,6 +29,7 @@ export function validarFicha(
   const erros: string[] = [];
   if (!f.nome.trim()) erros.push('Informe o nome da ficha');
   if (fora(f.diaSemana, [0, 6])) erros.push('Dia da semana inválido');
+  if (!LOCAIS_TREINO.includes(localDe(f))) erros.push('Local inválido');
   f.itens.forEach((it, i) => {
     const ex = exercicio(it.exerciseId);
     if (!ex) {
@@ -64,7 +68,7 @@ export class FichaInvalidaError extends Error {
 
 export class DiaOcupadoError extends Error {
   constructor(readonly ocupante: WorkoutPlan) {
-    super(`${DIAS[ocupante.diaSemana]} já tem a ficha "${ocupante.nome}"`);
+    super(`${DIAS[ocupante.diaSemana]} (${NOME_LOCAL[localDe(ocupante)]}) já tem a ficha "${ocupante.nome}"`);
   }
 }
 
@@ -76,8 +80,8 @@ async function validar(f: DadosFicha) {
   if (erros.length) throw new FichaInvalidaError(erros);
 }
 
-async function ocupanteDoDia(dia: number, ignorarId?: string) {
-  return (await base.list()).find((p) => p.diaSemana === dia && p.id !== ignorarId);
+async function ocupanteDoDia(dia: number, local: LocalTreino, ignorarId?: string) {
+  return (await base.list()).find((p) => p.diaSemana === dia && localDe(p) === local && p.id !== ignorarId);
 }
 
 export const workoutPlansRepository = {
@@ -89,25 +93,28 @@ export const workoutPlansRepository = {
   async create(data: NewRecord<WorkoutPlan>): Promise<WorkoutPlan> {
     return db.transaction('rw', db.workoutPlans, db.exercises, async () => {
       await validar(data);
-      const ocupante = await ocupanteDoDia(data.diaSemana);
+      const ocupante = await ocupanteDoDia(data.diaSemana, localDe(data));
       if (ocupante) throw new DiaOcupadoError(ocupante);
-      return base.create({ ...data, nome: data.nome.trim(), itens: renumerar(data.itens) });
+      return base.create({ ...data, nome: data.nome.trim(), local: localDe(data), itens: renumerar(data.itens) });
     });
   },
 
-  /** Dia ocupado: exige trocarDia=true, e então as duas fichas trocam de dia na mesma transação. */
+  /**
+   * Dia ocupado no local: exige trocarDia=true, e então a outra ficha vai para o dia e o local antigos
+   * desta, na mesma transação.
+   */
   async update(id: string, changes: Partial<DadosFicha>, { trocarDia = false } = {}): Promise<WorkoutPlan> {
     return db.transaction('rw', db.workoutPlans, db.exercises, async () => {
       const atual = await base.get(id);
       if (!atual) throw new Error('Ficha não encontrada');
       const next = { ...atual, ...changes };
       await validar(next);
-      const ocupante = await ocupanteDoDia(next.diaSemana, id);
+      const ocupante = await ocupanteDoDia(next.diaSemana, localDe(next), id);
       if (ocupante) {
         if (!trocarDia) throw new DiaOcupadoError(ocupante);
-        await base.update(ocupante.id, { diaSemana: atual.diaSemana });
+        await base.update(ocupante.id, { diaSemana: atual.diaSemana, local: localDe(atual) });
       }
-      return base.update(id, { nome: next.nome.trim(), diaSemana: next.diaSemana, itens: renumerar(next.itens) });
+      return base.update(id, { nome: next.nome.trim(), diaSemana: next.diaSemana, local: localDe(next), itens: renumerar(next.itens) });
     });
   },
 };

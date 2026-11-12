@@ -50,6 +50,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-01-05T10:00:00Z'));
   oscs = [];
   ctx.currentTime = 100;
+  ctx.state = 'running';
   visibilidade = 'visible';
   vi.spyOn(document, 'visibilityState', 'get').mockImplementation(() => visibilidade);
 });
@@ -98,6 +99,20 @@ describe('alerta sonoro do descanso', () => {
     iniciar();
     unmount();
     expect(ativos()).toEqual([]);
+  });
+
+  it('AudioContext suspenso com descanso ativo: "Toque para ativar o som" reagenda', async () => {
+    render(<ComBanco />);
+    iniciar();
+    ctx.state = 'suspended';
+    act(() => void vi.advanceTimersByTime(300));
+    const ativar = screen.getByRole('button', { name: 'Toque para ativar o som' });
+    ctx.state = 'running';
+    oscs = [];
+    fireEvent.click(ativar);
+    expect(ativos()).toHaveLength(5);
+    act(() => void vi.advanceTimersByTime(300));
+    expect(screen.queryByRole('button', { name: 'Toque para ativar o som' })).not.toBeInTheDocument();
   });
 
   it('som desligado: nenhum bipe', () => {

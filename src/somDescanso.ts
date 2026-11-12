@@ -31,6 +31,9 @@ export function prepararAudio(): void {
   }
 }
 
+/** Sem AudioContext rodando (ex.: app reaberto no meio do descanso, sem gesto ainda): nada toca. */
+export const audioSuspenso = () => ctx?.state !== 'running';
+
 function bipe(c: AudioContext, quando: number, { freq, dur }: { freq: number; dur: number }) {
   const osc = c.createOscillator();
   const ganho = c.createGain();

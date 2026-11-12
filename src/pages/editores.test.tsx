@@ -6,7 +6,7 @@ import { db } from '../db/db';
 import { exercisesRepository } from '../db/repositories/exercises';
 import { ordenarItens, workoutPlansRepository } from '../db/repositories/workoutPlans';
 
-const segunda = async () => (await workoutPlansRepository.list()).find((p) => p.diaSemana === 1)!;
+const segunda = async () => (await workoutPlansRepository.list()).find((p) => p.diaSemana === 1 && p.local === 'academia')!;
 const abrir = (rota: string) => render(<MemoryRouter initialEntries={[rota]} future={ROUTER_FUTURE}><AppRoutes /></MemoryRouter>);
 
 beforeEach(async () => {
@@ -62,6 +62,26 @@ describe('editor de ficha', () => {
     abrir(`/fichas/${qui.id}`);
     const bird = (await screen.findAllByTestId('item-ficha')).find((li) => li.textContent?.includes('Bird dog'))!;
     expect(bird).toHaveTextContent('2×10 por lado');
+  });
+
+  it('mudar o local para um dia ocupado em casa pede confirmação de troca', async () => {
+    const seg = await segunda();
+    const casa = await workoutPlansRepository.create({ nome: 'Casa seg', diaSemana: 1, local: 'casa', itens: [] });
+    abrir(`/fichas/${seg.id}`);
+    fireEvent.click(await screen.findByRole('button', { name: 'Casa' }));
+    expect(screen.getByRole('button', { name: 'Casa' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    const dlg = await screen.findByRole('dialog');
+    expect(dlg).toHaveTextContent('Segunda (Casa) já tem "Casa seg". Ela passa para Segunda (Academia).');
+    fireEvent.click(within(dlg).getByRole('button', { name: 'Trocar os dias' }));
+    await waitFor(async () => expect((await workoutPlansRepository.get(seg.id))!.local).toBe('casa'));
+    expect((await workoutPlansRepository.get(casa.id))!.local).toBe('academia');
+  });
+
+  it('nova ficha com ?local=casa já vem em Casa, com todos os dias livres', async () => {
+    abrir('/fichas/nova?local=casa');
+    expect(await screen.findByRole('button', { name: 'Casa' })).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() => expect(screen.getByLabelText('Dia da semana')).toHaveValue('1'));
   });
 
   it('tocar no exercício abre o editor dele', async () => {

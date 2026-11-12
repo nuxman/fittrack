@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ajustarDescanso, formatarDuracao, restanteSeg } from '../sessao';
 import { useAgora } from '../useAgora';
-import { agendarBipes, cancelarBipes, type OpcoesSom } from '../somDescanso';
+import { agendarBipes, audioSuspenso, cancelarBipes, prepararAudio, type OpcoesSom } from '../somDescanso';
 
 const OPCOES = [45, 60, 90, 120, 180];
 
@@ -66,21 +66,37 @@ export function ContagemDescanso({ endsAt, vibrar, som, desabilitado, onDefinir 
   }, [restante, endsAt, vibrar, onDefinir]);
 
   if (endsAt == null || restante <= 0) return null;
+  // Lido a cada render (useAgora re-renderiza a cada 250 ms).
+  const semSom = ligado && audioSuspenso();
   return (
-    <section aria-label="Cronômetro de descanso" className="flex items-center gap-2">
-      <button type="button" className="btn-secondary px-3" disabled={desabilitado} onClick={() => onDefinir(ajustarDescanso(endsAt, Date.now(), -15))}>
-        −15 s
-      </button>
-      <p className="flex-1 text-center text-5xl font-bold tabular-nums text-primary-400" data-testid="descanso">
-        {formatarDuracao(restante)}
-      </p>
-      <button type="button" className="btn-secondary px-3" disabled={desabilitado} onClick={() => onDefinir(null)}>
-        Pular
-      </button>
-      <button type="button" className="btn-secondary px-3" disabled={desabilitado} onClick={() => onDefinir(ajustarDescanso(endsAt, Date.now(), 15))}>
-        +15 s
-      </button>
-    </section>
+    <>
+      {semSom && (
+        <button
+          type="button"
+          className="w-full text-center text-sm font-semibold text-primary-400 underline"
+          onClick={() => {
+            prepararAudio();
+            agendarBipes(endsAt, { som: ligado, avisoSeg, contagem });
+          }}
+        >
+          Toque para ativar o som
+        </button>
+      )}
+      <section aria-label="Cronômetro de descanso" className="flex items-center gap-2">
+        <button type="button" className="btn-secondary px-3" disabled={desabilitado} onClick={() => onDefinir(ajustarDescanso(endsAt, Date.now(), -15))}>
+          −15 s
+        </button>
+        <p className="flex-1 text-center text-5xl font-bold tabular-nums text-primary-400" data-testid="descanso">
+          {formatarDuracao(restante)}
+        </p>
+        <button type="button" className="btn-secondary px-3" disabled={desabilitado} onClick={() => onDefinir(null)}>
+          Pular
+        </button>
+        <button type="button" className="btn-secondary px-3" disabled={desabilitado} onClick={() => onDefinir(ajustarDescanso(endsAt, Date.now(), 15))}>
+          +15 s
+        </button>
+      </section>
+    </>
   );
 }
 
