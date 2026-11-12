@@ -1,13 +1,11 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { AppRoutes, ROUTER_FUTURE } from '../App';
+import { abrir } from '../test/abrir';
 import { db } from '../db/db';
 import { exercisesRepository } from '../db/repositories/exercises';
 import { ordenarItens, workoutPlansRepository } from '../db/repositories/workoutPlans';
 
 const segunda = async () => (await workoutPlansRepository.list()).find((p) => p.diaSemana === 1 && p.local === 'academia')!;
-const abrir = (rota: string) => render(<MemoryRouter initialEntries={[rota]} future={ROUTER_FUTURE}><AppRoutes /></MemoryRouter>);
 
 beforeEach(async () => {
   await db.delete();

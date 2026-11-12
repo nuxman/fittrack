@@ -1,7 +1,6 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppRoutes, ROUTER_FUTURE } from '../../App';
+import { abrir } from '../../test/abrir';
 import { db } from '../../db/db';
 import { workoutPlansRepository } from '../../db/repositories/workoutPlans';
 import { workoutSessionsRepository as sessoes } from '../../db/repositories/workoutSessions';
@@ -9,7 +8,6 @@ import { exerciseSetsRepository as series } from '../../db/repositories/exercise
 import { settingsRepository } from '../../db/repositories/settings';
 
 const doDia = async (d: number) => (await workoutPlansRepository.list()).find((p) => p.diaSemana === d)!;
-const abrir = (rota = '/') => render(<MemoryRouter initialEntries={[rota]} future={ROUTER_FUTURE}><AppRoutes /></MemoryRouter>);
 const titulo = (nome: string) => screen.findByRole('heading', { level: 2, name: nome });
 
 beforeEach(async () => {
@@ -81,6 +79,26 @@ describe('iniciar e retomar', () => {
     } finally {
       vi.restoreAllMocks();
     }
+  });
+});
+
+describe('navegação', () => {
+  it('voltar (POP) entre visão geral e execução', async () => {
+    await sessoes.iniciar((await doDia(1)).id);
+    const { router } = abrir('/treinar');
+    // A retomada automática leva à execução do exercício atual.
+    expect(await titulo('Supino máquina')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: /Visão geral/ }));
+    expect(await screen.findAllByTestId('item-sessao')).toHaveLength(5);
+    fireEvent.click(within(screen.getAllByTestId('item-sessao')[1]!).getByRole('link', { name: /Supino inclinado articulado/ }));
+    expect(await titulo('Supino inclinado articulado')).toBeInTheDocument();
+
+    await act(() => router.navigate(-1));
+    expect(router.state.historyAction).toBe('POP');
+    expect(router.state.location.pathname).toBe('/sessao');
+    expect(await screen.findAllByTestId('item-sessao')).toHaveLength(5);
+    await act(() => router.navigate(-1));
+    expect(await titulo('Supino máquina')).toBeInTheDocument();
   });
 });
 
