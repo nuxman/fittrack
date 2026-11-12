@@ -50,7 +50,7 @@ Schema Dexie versionado desde a versão 1.
 - Carga sugerida = última carga e reps registradas para aquele exercício. Nunca sugerir aumento automático. A carga nunca é editada na ficha; é registrada por série.
 - Volume = soma(carga × reps) apenas para tipo 'carga' com unidade 'kg'. 'placa' mostra progressão de placa, sem volume em kg. Peso corporal: total de reps.
 - Recordes pessoais: maior carga e maior volume por exercício, separados por unidade.
-- Aviso informativo (nunca bloqueante): mesmo grupoPrincipal em dias consecutivos com RPE da sessão ≥ 8. Grupos secundários não contam. Entra na Etapa 3b.
+- Aviso informativo (nunca bloqueante): mesmo grupoPrincipal em dias consecutivos com RPE da sessão ≥ 8. Grupos secundários não contam. Entra na Etapa 3b. Compara os grupos principais da ficha a iniciar com a sessão concluída de ontem (qualquer local) com RPE ≥ 8. Aparece ao tocar em "Iniciar" (ConfirmDialog informativo: "Ontem você treinou <grupo> com esforço <RPE>. Iniciar mesmo assim?") e como linha pequena no card do treino sugerido no Início. Não aparece na tela Finalizar.
 - Consistência: treinos por semana em relação ao planejado. Proibido: contagem acumulada de semanas, ícone de fogo ou qualquer sequência ("streak").
 - Sem diagnóstico médico. Orientação para não prender a respiração e lista de sintomas para interromper o treino (dor no peito, tontura, falta de ar desproporcional, dor articular aguda).
 - Imagem do exercício: galeria ou câmera (input accept="image/*"). Redimensionar via canvas para no máximo 1024 px no maior lado, WebP qualidade 0.8 (fallback JPEG). Nunca salvar o original.
@@ -68,6 +68,8 @@ Schema Dexie versionado desde a versão 1.
 - "X de Y treinos esta semana": X conta treinos concluídos em qualquer local; Y = dias com ficha de academia.
 - Aviso de mesmo grupoPrincipal em dias seguidos considera sessões dos dois locais.
 - Aba Treinar: filtro "Academia | Casa"; "Nova ficha" cria no local selecionado.
+- Local escolhido sem nenhuma ficha: mostrar "Criar ficha de <local>" no Início e na aba Treinar.
+- Editor de ficha: seletor "Academia | Casa". Mudar o local (ou o dia) para um dia já ocupado nesse local pede a mesma confirmação de troca; a outra ficha vai para o dia e o local antigos.
 
 ## Regra de sugestão
 - Ficha "feita" na semana = existe WorkoutSession 'concluida' daquela ficha nesta semana, em qualquer dia. Sessões abandonadas não contam.
@@ -82,8 +84,8 @@ De cima para baixo:
 1. Saudação curta e data de hoje.
 2. Faixa da semana S T Q Q S S D (começando na segunda) com o número do dia; check dourado nos dias com treino concluído ou cardio; ícone diferente para RestDay; "Hoje" destacado. Ao lado: "X de Y treinos esta semana" (Y = número de fichas).
 3. Card do treino sugerido (conforme "Regra de sugestão"): nome, motivo, número de exercícios, duração estimada (média das últimas 3 sessões concluídas da ficha; sem histórico, séries × 40 s + descansos planejados), botão grande "Iniciar treino". Com sessão 'em_andamento' ou 'pausada': "Retomar treino" no lugar. Fileira de miniaturas (foto ou ícone do grupo principal) de todos os exercícios da ficha, com rolagem horizontal; tocar numa miniatura abre o detalhe do exercício.
-4. Resumo da semana: minutos de musculação e de cardio.
-5. Peso atual e variação em relação à medição de cerca de 7 dias antes (estado vazio com "Registrar peso").
+4. Resumo da semana: minutos de musculação e de cardio (cardio lido das CardioSession desde já, porque a 3c vem antes da Etapa 5).
+5. Peso atual e variação em relação à medição de cerca de 7 dias antes. Bloco não exibido até a Etapa 5 (nem texto, nem botão).
 6. Último treino: data, ficha, duração e volume.
 
 ## Aba Treinar (escolha de treino)
@@ -136,7 +138,7 @@ Ao abrir o app, se a sessão ativa ('em_andamento' ou 'pausada') tiver a última
 - Contagem a partir de restTimerEndsAt salvo no banco (sobrevive a tela bloqueada e recarregamento).
 - Wake Lock API ativa durante a sessão (reativar ao voltar ao app).
 - Vibração e notificação só se o app estiver visível ou o navegador permitir; deixar claro que não há alerta garantido em segundo plano.
-- Alerta sonoro (Etapa 3a.5), para ouvir no fone com o app visível: bipes gerados com Web Audio (OscillatorNode), sem arquivos de áudio nem dependência nova. Bipe curto de aviso antecipado; bipes curtos aos 3, 2 e 1 s; bipe final mais agudo e mais longo no zero. Agendados no relógio do AudioContext (currentTime + segundos restantes); −15 s, +15 s, Pular, Alterar, pausar ou sair da execução cancelam e reagendam. AudioContext criado/retomado num gesto ("Concluir série", "Iniciar", "Testar som"). Com o app oculto (visibilitychange), nada toca e não há áudio silencioso para manter a página viva; ao voltar, reagenda o que falta.
+- Alerta sonoro (Etapa 3a.5), para ouvir no fone com o app visível: bipes gerados com Web Audio (OscillatorNode), sem arquivos de áudio nem dependência nova. Bipe curto de aviso antecipado; bipes curtos aos 3, 2 e 1 s; bipe final mais agudo e mais longo no zero. Agendados no relógio do AudioContext (currentTime + segundos restantes); −15 s, +15 s, Pular, Alterar, pausar ou sair da execução cancelam e reagendam. AudioContext criado/retomado num gesto ("Concluir série", "Iniciar", "Testar som"). Com o app oculto (visibilitychange), nada toca e não há áudio silencioso para manter a página viva; ao voltar, reagenda o que falta. Com descanso ativo e o AudioContext suspenso (ex.: app reaberto no meio do descanso), mostrar a linha "Toque para ativar o som".
 - "Permitir notificações" e a explicação ficam em Configurações → "Alertas de descanso" (o botão só enquanto Notification.permission === 'default'). Na mesma seção: som ligado/desligado (UserSettings.interface.somDescanso ?? true), aviso antecipado desligado/5 s/10 s (avisoAntecipadoSeg ?? 10), contagem 3-2-1 (contagem321 ?? true) e "Testar som"; campos opcionais, sem migração. Na execução, no máximo um aviso pequeno, uma única vez (UserSettings.interface.avisoNotificacoesVisto, opcional), enquanto a permissão não foi decidida.
 
 ## Ficha inicial (seed, totalmente editável)
@@ -155,7 +157,7 @@ Cardio padrão: esteira, 15 min, inclinação "nível 7".
 - Aviso permanente em Configurações: dados locais se perdem ao limpar o navegador ou trocar de aparelho sem backup.
 
 ## Pendências
-- Aviso de alterações não salvas nos editores de ficha e de exercício (botão Voltar e navegação inferior) — entra na Etapa 3b, junto com a revisão da aba Treinar.
+- Aviso de alterações não salvas nos editores de ficha e de exercício (botão Voltar e navegação inferior) — entra na Etapa 3b.2. Antes de implementar, explicar como será feito com o roteador atual; não trocar o tipo de roteador sem aprovação.
 - Tela de Equipment (cadastro e vínculo opcional ao exercício) — entra na Etapa 5.
 - Editar séries antigas — entra na Etapa 4, no Histórico.
 - Fase futura, sem etapa definida: login e sincronização entre aparelhos (Supabase). Não fazer até o usuário pedir.
@@ -166,6 +168,7 @@ Cardio padrão: esteira, 15 min, inclinação "nível 7".
 3a. Execução: botão "Iniciar" como ação primária (amarela) em cada card da aba Treinar, com "Nova ficha" como botão secundário no fim da lista; visão geral da sessão; tela de execução; cronômetro; Wake Lock; pular exercício; pausar/abandonar/retomar; finalizar com RPE. Aceite: fechar o app no meio e reabrir retoma na série certa; testes do cronômetro com fake timers.
 3a.5. CONCLUÍDA. Alerta sonoro do descanso (ver "Cronômetro de descanso"). Aceite: testes com AudioContext simulado: bipes nos tempos certos, reagendamento com ±15 s e Pular, nenhum bipe com som desligado ou app oculto.
 3b. Planejamento: regra de sugestão, aba Treinar completa (com miniaturas), miniaturas no card sugerido do Início, detalhe do exercício fora da sessão (com "Minhas anotações" editável direto nele), botão "Editar exercício" no detalhe e na visão geral da sessão, aviso informativo de mesmo grupoPrincipal em dias consecutivos com RPE ≥ 8, mudanças durante a sessão com "Aplicar também na ficha?", dashboard (cardio e peso com estado vazio até a Etapa 5). Aceite: testes da regra de sugestão: semana sem faltas, falta na terça com sugestão na quarta, duas faltas, treino de sexta feito adiantado, virada de semana zerando pendências, sessão abandonada não contando; local do treino: treino em casa na terça não deixa a ficha de terça da academia pendente, contador soma os dois locais, aviso de dias seguidos cruza locais. Inclui "Local do treino" e a explicação do RPE.
+Divisão da 3b, cada parte com git push e versão própria: 3b.1 (regras, local, editor de ficha) = 0.3.4, CONCLUÍDA; 3b.2 (Início, aba Treinar, miniaturas, detalhe do exercício, alterações não salvas) = 0.3.5; 3b.3 (Editar exercício na visão geral, mudanças durante a sessão, RPE explicado, "Aplicar também na ficha?") = 0.4.0.
 3c. Cardio pós-treino (ver "Cardio pós-treino"), antecipando parte da Etapa 5.
 4. Histórico, recordes, gráficos e mini gráfico no detalhe do exercício. Aceite: testes de volume, incluindo peso corporal e placa.
 5. Cardio, medidas e fotos corporais.
