@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ajustarDescanso, formatarDuracao, restanteSeg } from '../sessao';
 import { useAgora } from '../useAgora';
+import { agendarBipes, cancelarBipes, type OpcoesSom } from '../somDescanso';
 
 const OPCOES = [45, 60, 90, 120, 180];
 
@@ -20,6 +21,8 @@ interface ContagemProps {
   /** restTimerEndsAt salvo no banco: a contagem sobrevive a tela bloqueada e recarregamento. */
   endsAt: number | null;
   vibrar: boolean;
+  /** Bipes do descanso; sem isso, não toca nada. */
+  som?: OpcoesSom;
   desabilitado?: boolean;
   onDefinir: (endsAt: number | null) => void;
 }
@@ -28,11 +31,26 @@ interface ContagemProps {
  * Contagem do descanso em curso, com −15 s / Pular / +15 s. Não renderiza nada sem descanso ativo.
  * Vibra e notifica uma vez ao chegar a zero (só se o app estiver visível), depois limpa o descanso.
  */
-export function ContagemDescanso({ endsAt, vibrar, desabilitado, onDefinir }: ContagemProps) {
+export function ContagemDescanso({ endsAt, vibrar, som, desabilitado, onDefinir }: ContagemProps) {
   const agora = useAgora(250);
   const restante = restanteSeg(endsAt, agora);
   // endsAt que vimos contando: o alerta dispara uma vez, e não dispara se o descanso acabou com o app fechado.
   const contando = useRef<number | null>(null);
+
+  // Bipes agendados no relógio do AudioContext; reagenda a cada mudança de endsAt (±15 s, Pular, pausa)
+  // e ao voltar ao app; oculto ou ao sair da execução, cancela.
+  const { som: ligado = false, avisoSeg = 0, contagem = false } = som ?? {};
+  useEffect(() => {
+    if (endsAt == null || !ligado) return;
+    const agendar = () => agendarBipes(endsAt, { som: ligado, avisoSeg, contagem });
+    const mudou = () => (document.visibilityState === 'visible' ? agendar() : cancelarBipes());
+    agendar();
+    document.addEventListener('visibilitychange', mudou);
+    return () => {
+      document.removeEventListener('visibilitychange', mudou);
+      cancelarBipes();
+    };
+  }, [endsAt, ligado, avisoSeg, contagem]);
 
   useEffect(() => {
     if (endsAt == null) return;

@@ -7,6 +7,7 @@ import { useAsync } from '../useAsync';
 import { workoutPlansRepository } from '../db/repositories/workoutPlans';
 import { SessaoAtivaError, workoutSessionsRepository } from '../db/repositories/workoutSessions';
 import { DIAS, SEMANA } from '../dias';
+import { prepararAudio } from '../somDescanso';
 
 /** Aba Treinar: fichas com "Iniciar" (ação primária) e "Editar ficha". Sugestão e duração entram na 3b. */
 export function Fichas() {
@@ -21,6 +22,7 @@ export function Fichas() {
   const haDiaLivre = planos.length < 7;
 
   const iniciar = async (planId: string) => {
+    prepararAudio(); // gesto do usuário: libera o som do descanso
     setIniciando(true);
     try {
       await workoutSessionsRepository.iniciar(planId);

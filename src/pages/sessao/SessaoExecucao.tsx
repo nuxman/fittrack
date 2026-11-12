@@ -10,6 +10,7 @@ import { exerciseSetsRepository } from '../../db/repositories/exerciseSets';
 import { workoutSessionsRepository } from '../../db/repositories/workoutSessions';
 import { exercisesRepository } from '../../db/repositories/exercises';
 import { settingsRepository } from '../../db/repositories/settings';
+import { opcoesSom, prepararAudio } from '../../somDescanso';
 import type { SnapshotItem } from '../../db/types';
 import {
   exercicioAtual, formatarSerie, parseNumero, prescricaoSessao, pulados, seriesFeitas, usaCarga, validarSerie,
@@ -74,6 +75,7 @@ function Execucao({ item }: { item: SnapshotItem }) {
 
   const concluir = async () => {
     if (gravandoRef.current) return;
+    prepararAudio(); // gesto do usuário: libera o som do descanso
     const c = comCarga ? parseNumero(carga) : null;
     const r = parseNumero(reps);
     const msg = validarSerie(item, c, r);
@@ -228,7 +230,7 @@ function Execucao({ item }: { item: SnapshotItem }) {
       </div>
 
       <footer className="safe-bottom shrink-0 space-y-2 border-t border-neutral-800 bg-surface px-4 pt-2" data-testid="rodape-execucao">
-        <ContagemDescanso endsAt={sessao.restTimerEndsAt} desabilitado={pausada} vibrar={vibrar} onDefinir={definirDescanso} />
+        <ContagemDescanso endsAt={sessao.restTimerEndsAt} desabilitado={pausada} vibrar={vibrar} som={opcoesSom(settings)} onDefinir={definirDescanso} />
         {pausada && <p className="text-center text-sm text-primary-400">Treino pausado. Retome para registrar séries.</p>}
         <button type="button" className="btn-primary min-h-16 w-full text-xl" disabled={gravando || pausada} onClick={concluir}>
           <Check size={24} /> Concluir série
