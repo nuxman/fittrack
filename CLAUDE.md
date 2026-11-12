@@ -13,11 +13,11 @@
 - Evitar capturas de tela e leitura de imagens; usar só quando indispensável, porque elas acumulam e travam a sessão.
 
 ## Stack (versões fixas)
-React 18 + TypeScript 5 (strict), Vite 5, Tailwind CSS 3.4, Lucide React, Dexie 4, Recharts 2, vite-plugin-pwa 0.20, React Router 6 com HashRouter, Zod, Vitest + fake-indexeddb + @testing-library/react, ESLint.
+React 18 + TypeScript 5 (strict), Vite 5, Tailwind CSS 3.4, Lucide React, Dexie 4, Recharts 2, vite-plugin-pwa 0.20, React Router 6 com createHashRouter, Zod, Vitest + fake-indexeddb + @testing-library/react, ESLint.
 Sem servidor, sem APIs externas, nenhuma imagem ou vídeo carregado da internet dentro do app.
 
 ## Decisões fechadas (não reinterpretar)
-- Roteamento: HashRouter.
+- Roteamento: hash (URLs com #), via createHashRouter + RouterProvider (data router, desde a 0.3.5).
 - Base do Vite: '/fittrack/'. Manifest com start_url e scope '/fittrack/'.
 - Todo registro tem: id (crypto.randomUUID), createdAt, updatedAt, deletedAt (soft delete). Acesso ao Dexie somente via src/db/repositories (um por entidade); componentes nunca acessam o Dexie diretamente. Não criar camada de abstração para Supabase.
 - Soft delete filtrado com filter() (deletedAt === null), sem índice em deletedAt, porque o IndexedDB não indexa null. list, get, update e remove ignoram registros excluídos.
@@ -157,7 +157,7 @@ Cardio padrão: esteira, 15 min, inclinação "nível 7".
 - Aviso permanente em Configurações: dados locais se perdem ao limpar o navegador ou trocar de aparelho sem backup.
 
 ## Pendências
-- Aviso de alterações não salvas nos editores de ficha e de exercício (botão Voltar e navegação inferior) — entra na Etapa 3b.2. Antes de implementar, explicar como será feito com o roteador atual; não trocar o tipo de roteador sem aprovação.
+- Aviso de alterações não salvas nos editores de ficha e de exercício (botão Voltar e navegação inferior) — entra na Etapa 3b.2. Via useBlocker (Voltar da página, navegação inferior, voltar do navegador/gesto do Android, com ConfirmDialog) e beforeunload (recarregar/fechar).
 - Tela de Equipment (cadastro e vínculo opcional ao exercício) — entra na Etapa 5.
 - Editar séries antigas — entra na Etapa 4, no Histórico.
 - Fase futura, sem etapa definida: login e sincronização entre aparelhos (Supabase). Não fazer até o usuário pedir.
@@ -168,7 +168,7 @@ Cardio padrão: esteira, 15 min, inclinação "nível 7".
 3a. Execução: botão "Iniciar" como ação primária (amarela) em cada card da aba Treinar, com "Nova ficha" como botão secundário no fim da lista; visão geral da sessão; tela de execução; cronômetro; Wake Lock; pular exercício; pausar/abandonar/retomar; finalizar com RPE. Aceite: fechar o app no meio e reabrir retoma na série certa; testes do cronômetro com fake timers.
 3a.5. CONCLUÍDA. Alerta sonoro do descanso (ver "Cronômetro de descanso"). Aceite: testes com AudioContext simulado: bipes nos tempos certos, reagendamento com ±15 s e Pular, nenhum bipe com som desligado ou app oculto.
 3b. Planejamento: regra de sugestão, aba Treinar completa (com miniaturas), miniaturas no card sugerido do Início, detalhe do exercício fora da sessão (com "Minhas anotações" editável direto nele), botão "Editar exercício" no detalhe e na visão geral da sessão, aviso informativo de mesmo grupoPrincipal em dias consecutivos com RPE ≥ 8, mudanças durante a sessão com "Aplicar também na ficha?", dashboard (cardio e peso com estado vazio até a Etapa 5). Aceite: testes da regra de sugestão: semana sem faltas, falta na terça com sugestão na quarta, duas faltas, treino de sexta feito adiantado, virada de semana zerando pendências, sessão abandonada não contando; local do treino: treino em casa na terça não deixa a ficha de terça da academia pendente, contador soma os dois locais, aviso de dias seguidos cruza locais. Inclui "Local do treino" e a explicação do RPE.
-Divisão da 3b, cada parte com git push e versão própria: 3b.1 (regras, local, editor de ficha) = 0.3.4, CONCLUÍDA; 3b.2 (Início, aba Treinar, miniaturas, detalhe do exercício, alterações não salvas) = 0.3.5; 3b.3 (Editar exercício na visão geral, mudanças durante a sessão, RPE explicado, "Aplicar também na ficha?") = 0.4.0.
+Divisão da 3b, cada parte com git push e versão própria: 3b.1 (regras, local, editor de ficha) = 0.3.4, CONCLUÍDA; refactor do roteador (createHashRouter + RouterProvider, mesmas URLs, para permitir useBlocker) = 0.3.5; 3b.2 (Início, aba Treinar, miniaturas, detalhe do exercício, alterações não salvas via useBlocker + beforeunload) = 0.3.6; 3b.3 (Editar exercício na visão geral, mudanças durante a sessão, RPE explicado, "Aplicar também na ficha?") = 0.4.0.
 3c. Cardio pós-treino (ver "Cardio pós-treino"), antecipando parte da Etapa 5.
 4. Histórico, recordes, gráficos e mini gráfico no detalhe do exercício. Aceite: testes de volume, incluindo peso corporal e placa.
 5. Cardio, medidas e fotos corporais.
