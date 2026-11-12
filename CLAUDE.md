@@ -34,11 +34,11 @@ Sem servidor, sem APIs externas, nenhuma imagem ou vídeo carregado da internet 
 - Equipment: nome, observacoes.
 - Exercise: nome, tipo ('carga' | 'peso_corporal' | 'tempo'), unidadeCarga ('kg' | 'placa'), equipmentId opcional, grupoPrincipal (string, um único valor), gruposSecundarios (string[]), porLado (boolean), videoUrl opcional (Zod: apenas https://, qualquer domínio; seed com link de busca no YouTube: https://www.youtube.com/results?search_query= + encodeURIComponent("como fazer " + nome); bancos antigos recebem o link pela versão 2 do schema, só em exercícios do seed sem link, nunca sobrescrevendo link cadastrado), anotacoes opcional (texto livre).
 - ExerciseImage: exerciseId, blob, mimeType, largura, altura. No máximo uma por exercício (substituir ao adicionar nova). Imagem substituída ou removida: soft delete e blob esvaziado (libera espaço).
-- WorkoutPlan: nome, diaSemana (0–6), itens: [{ exerciseId, series, repsMin, repsMax, descansoSeg, ordem }].
+- WorkoutPlan: nome, diaSemana (0–6), local opcional ('academia' | 'casa', ler com ?? 'academia'; fichas existentes viram academia sem migração), itens: [{ exerciseId, series, repsMin, repsMax, descansoSeg, ordem }].
 - WorkoutSession: planId, planSnapshot (cópia completa do plano no início; cada item guarda também nome, tipo, unidadeCarga, grupoPrincipal e porLado do exercício naquele momento, para o histórico sobreviver a renomear ou excluir o exercício; editar a ficha nunca altera sessões passadas), status ('em_andamento' | 'pausada' | 'concluida' | 'abandonada'), iniciadaEm, finalizadaEm, duracaoAtivaSeg, rpe (0–10), observacoes, restTimerEndsAt (timestamp ou null), exerciciosPulados (exerciseId[], opcional: ler com ?? []), ativaDesde (timestamp da última retomada, opcional), pausadaEm (timestamp da pausa atual, opcional). Tempo ativo = duracaoAtivaSeg + (agora − ativaDesde) enquanto 'em_andamento'.
 - ExerciseSet: sessionId, exerciseId, numeroSerie, carga (null para peso corporal), reps, lado ('esq' | 'dir' | null), concluidaEm. Salvar cada série imediatamente ao concluir.
 - Exercício porLado: um único campo "reps por lado" e um único registro com lado null. Total de reps da série = reps × 2.
-- CardioSession: modalidade ('esteira' | 'bicicleta' | 'caminhada'), duracaoMin, velocidadeKmh, inclinacaoNivel (número + rótulo livre; "nível 7" NÃO equivale a 7%), distanciaKm, fcMedia opcional, rpe, observacoes, data.
+- CardioSession: sessionId opcional (liga ao treino no cardio pós-treino, Etapa 3c), modalidade ('esteira' | 'bicicleta' | 'caminhada'), duracaoMin, velocidadeKmh, inclinacaoNivel (número + rótulo livre; "nível 7" NÃO equivale a 7%), distanciaKm, fcMedia opcional, rpe, observacoes, data.
 - BodyMeasurement: data, pesoKg, cinturaCm, observacoes.
 - BodyPhoto: measurementId, blob (tabela separada).
 - RestDay: data, observacoes.
@@ -55,10 +55,19 @@ Schema Dexie versionado desde a versão 1.
 - Sem diagnóstico médico. Orientação para não prender a respiração e lista de sintomas para interromper o treino (dor no peito, tontura, falta de ar desproporcional, dor articular aguda).
 - Imagem do exercício: galeria ou câmera (input accept="image/*"). Redimensionar via canvas para no máximo 1024 px no maior lado, WebP qualidade 0.8 (fallback JPEG). Nunca salvar o original.
 - Sem recursos sociais, QR code ou renovação de ficha.
-- Cada ficha tem exatamente um diaSemana e não pode haver duas fichas no mesmo dia. Mover uma ficha para um dia ocupado troca as duas de dia, com confirmação.
+- Cada ficha tem exatamente um diaSemana e não pode haver duas fichas do mesmo local no mesmo dia (uma de academia e uma de casa no mesmo dia é permitido). Mover uma ficha para um dia ocupado no mesmo local troca as duas de dia, com confirmação.
 - Reordenar exercícios com botões subir/descer. Sem arrastar e soltar e sem bibliotecas novas.
 - Exercício usado em alguma ficha não pode ser excluído (mostrar em quais fichas). Criar exercício cujo nome normalizado bate com um excluído oferece "Restaurar 'X'" em vez de criar outro.
 - Limites da ficha: séries 1–10; reps 1–100 com repsMin ≤ repsMax; descanso 0–600 s; nome obrigatório. Para tipo 'tempo', repsMin/repsMax são segundos (1–600).
+
+## Local do treino (Etapa 3b)
+- Local: 'academia' ou 'casa' (WorkoutPlan.local ?? 'academia'). Sem ficha inicial de casa: o usuário cadastra.
+- Início: seletor grande "Academia | Casa" no topo. A escolha vale para o dia: guardar local e data em UserSettings (campos opcionais); em outro dia, volta para Academia.
+- Sugestão considera só as fichas do local escolhido. Sem ficha desse local para hoje (e sem pendente), mostrar as fichas desse local para escolher.
+- Pendências: um dia em que houve qualquer treino concluído (casa ou academia) não gera pendência para a ficha daquele dia em nenhum local.
+- "X de Y treinos esta semana": X conta treinos concluídos em qualquer local; Y = dias com ficha de academia.
+- Aviso de mesmo grupoPrincipal em dias seguidos considera sessões dos dois locais.
+- Aba Treinar: filtro "Academia | Casa"; "Nova ficha" cria no local selecionado.
 
 ## Regra de sugestão
 - Ficha "feita" na semana = existe WorkoutSession 'concluida' daquela ficha nesta semana, em qualquer dia. Sessões abandonadas não contam.
@@ -95,6 +104,15 @@ Ordem: cabeçalho compacto em uma linha (nome da ficha, "X de Y", tempo total; P
 Durante a sessão a navegação inferior some; no lugar, rodapé fixo (respeitando a área de gestos) com "Concluir série" grande (na visão geral: "Finalizar treino").
 Sem foto: ícone pequeno do grupo ao lado do nome. Com foto: miniatura de no máximo 120 px de altura (toque para ampliar em tela cheia); botão "Ver execução" só com videoUrl, abrindo com target="_blank" e rel="noopener noreferrer", sem player embutido (offline: avisar que precisa de internet); séries/reps planejadas; última carga; campos de carga e reps; "Concluir série"; indicador de séries (1, 2, 3); cronômetro de descanso grande; cronômetro total; progresso geral do treino (X de Y exercícios concluídos); pausar/abandonar/retomar (sessão 'em_andamento' ou 'pausada' retomada ao abrir o app); "Finalizar treino" com RPE e observações; botão "Desfazer última série" (soft delete); uma linha fixa de alerta de sintomas para parar o treino; botão "Editar exercício" (abre o editor de exercício: foto, link, anotações).
 Seções recolhíveis: Evolução de carga (mini gráfico, Etapa 4); Minhas anotações (Exercise.anotacoes, editável a qualquer momento); Grupos trabalhados (texto, sem diagrama do corpo).
+
+## Finalizar treino: explicação do RPE (Etapa 3b)
+Ao tocar numa nota, mostrar a descrição abaixo dos botões: 0 = repouso; 1–2 = muito leve; 3–4 = leve, dava para fazer muito mais; 5–6 = moderado, sobravam 4 ou mais repetições; 7 = pesado, sobravam ~3; 8 = difícil, sobravam ~2; 9 = muito difícil, sobrava 1; 10 = máximo, não saía mais nenhuma.
+
+## Cardio pós-treino (Etapa 3c)
+- Depois de "Finalizar treino", perguntar "Fazer cardio agora?" (Sim / Hoje não).
+- Sim: tela de cardio com os valores de cardioPadrao (esteira, 15 min, "nível 7") editáveis, cronômetro da duração e "Concluir cardio" com RPE e observações. Grava CardioSession com sessionId ligando ao treino.
+- O cronômetro do cardio segue as regras do descanso: horário final salvo no banco, Wake Lock e o mesmo alerta sonoro da 3a.5, só com o app visível.
+- O módulo completo de cardio (registro avulso, gráficos) continua na Etapa 5.
 
 ## Pausa
 Pausar congela o tempo ativo e zera o descanso em curso (restTimerEndsAt = null).
@@ -140,13 +158,15 @@ Cardio padrão: esteira, 15 min, inclinação "nível 7".
 - Aviso de alterações não salvas nos editores de ficha e de exercício (botão Voltar e navegação inferior) — entra na Etapa 3b, junto com a revisão da aba Treinar.
 - Tela de Equipment (cadastro e vínculo opcional ao exercício) — entra na Etapa 5.
 - Editar séries antigas — entra na Etapa 4, no Histórico.
+- Fase futura, sem etapa definida: login e sincronização entre aparelhos (Supabase). Não fazer até o usuário pedir.
 
 ## Etapas e critérios de aceite
 1. CONCLUÍDA (inclui 1.1 e 1.2).
 2. CONCLUÍDA (inclui 2.1). Ficha editável. Aceite: criar, editar, reordenar e excluir exercícios e dias; adicionar, trocar e remover foto, link e anotações de cada exercício; foto salva com no máximo 1024 px; sessões antigas inalteradas após editar.
 3a. Execução: botão "Iniciar" como ação primária (amarela) em cada card da aba Treinar, com "Nova ficha" como botão secundário no fim da lista; visão geral da sessão; tela de execução; cronômetro; Wake Lock; pular exercício; pausar/abandonar/retomar; finalizar com RPE. Aceite: fechar o app no meio e reabrir retoma na série certa; testes do cronômetro com fake timers.
 3a.5. CONCLUÍDA. Alerta sonoro do descanso (ver "Cronômetro de descanso"). Aceite: testes com AudioContext simulado: bipes nos tempos certos, reagendamento com ±15 s e Pular, nenhum bipe com som desligado ou app oculto.
-3b. Planejamento: regra de sugestão, aba Treinar completa (com miniaturas), miniaturas no card sugerido do Início, detalhe do exercício fora da sessão (com "Minhas anotações" editável direto nele), botão "Editar exercício" no detalhe e na visão geral da sessão, aviso informativo de mesmo grupoPrincipal em dias consecutivos com RPE ≥ 8, mudanças durante a sessão com "Aplicar também na ficha?", dashboard (cardio e peso com estado vazio até a Etapa 5). Aceite: testes da regra de sugestão: semana sem faltas, falta na terça com sugestão na quarta, duas faltas, treino de sexta feito adiantado, virada de semana zerando pendências, sessão abandonada não contando.
+3b. Planejamento: regra de sugestão, aba Treinar completa (com miniaturas), miniaturas no card sugerido do Início, detalhe do exercício fora da sessão (com "Minhas anotações" editável direto nele), botão "Editar exercício" no detalhe e na visão geral da sessão, aviso informativo de mesmo grupoPrincipal em dias consecutivos com RPE ≥ 8, mudanças durante a sessão com "Aplicar também na ficha?", dashboard (cardio e peso com estado vazio até a Etapa 5). Aceite: testes da regra de sugestão: semana sem faltas, falta na terça com sugestão na quarta, duas faltas, treino de sexta feito adiantado, virada de semana zerando pendências, sessão abandonada não contando; local do treino: treino em casa na terça não deixa a ficha de terça da academia pendente, contador soma os dois locais, aviso de dias seguidos cruza locais. Inclui "Local do treino" e a explicação do RPE.
+3c. Cardio pós-treino (ver "Cardio pós-treino"), antecipando parte da Etapa 5.
 4. Histórico, recordes, gráficos e mini gráfico no detalhe do exercício. Aceite: testes de volume, incluindo peso corporal e placa.
 5. Cardio, medidas e fotos corporais.
 6. Backup e restauração. Aceite: exportar, apagar banco, importar, dados idênticos (incluindo imagens de exercício).
