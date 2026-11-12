@@ -16,6 +16,12 @@ async function descartar(exerciseId: string) {
 }
 
 export const exerciseImagesRepository = {
+  /** Imagens ativas com conteúdo, por exerciseId (miniaturas). */
+  async mapaAtivas(): Promise<Map<string, Blob>> {
+    const imgs = await db.exerciseImages.filter((i) => i.deletedAt === null && i.blob.size > 0).toArray();
+    return new Map(imgs.map((i) => [i.exerciseId, i.blob]));
+  },
+
   async getForExercise(exerciseId: string): Promise<ExerciseImage | undefined> {
     return (await ativas(exerciseId))[0];
   },

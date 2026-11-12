@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { Check, ChevronLeft, ExternalLink, Minus, Plus, Undo2, X } from 'lucide-react';
+import { Check, ChevronLeft, Minus, Plus, Undo2 } from 'lucide-react';
 import { EstadoTela, useSessao } from './SessaoLayout';
-import { FotoExercicio } from '../../components/FotoExercicio';
+import { FotoAmpliavel } from '../../components/FotoAmpliavel';
+import { Anotacoes } from '../../components/Anotacoes';
+import { VerExecucao } from '../../components/VerExecucao';
 import { GrupoIcone } from '../../components/GrupoIcone';
 import { ContagemDescanso, FolhaDescanso } from '../../components/RestTimer';
 import { useDialog } from '../../components/ConfirmDialog';
 import { exerciseSetsRepository } from '../../db/repositories/exerciseSets';
 import { workoutSessionsRepository } from '../../db/repositories/workoutSessions';
-import { exercisesRepository } from '../../db/repositories/exercises';
 import { settingsRepository } from '../../db/repositories/settings';
 import { opcoesSom, prepararAudio } from '../../somDescanso';
 import type { SnapshotItem } from '../../db/types';
@@ -45,7 +46,6 @@ function Execucao({ item }: { item: SnapshotItem }) {
   const [gravando, setGravando] = useState(false);
   // O estado só desabilita o botão no próximo render; o ref barra o segundo toque no mesmo instante.
   const gravandoRef = useRef(false);
-  const [ampliada, setAmpliada] = useState(false);
   const [folha, setFolha] = useState(false);
 
   const sessionId = sessao.id;
@@ -118,9 +118,7 @@ function Execucao({ item }: { item: SnapshotItem }) {
 
         <section className="flex items-start gap-3">
           {foto ? (
-            <button type="button" className="shrink-0" aria-label="Ampliar foto" onClick={() => setAmpliada(true)}>
-              <FotoExercicio blob={foto} grupo={item.grupoPrincipal} className="h-[120px] w-[120px]" />
-            </button>
+            <FotoAmpliavel blob={foto} grupo={item.grupoPrincipal} className="h-[120px] w-[120px]" />
           ) : (
             <span className="mt-1 shrink-0">
               <GrupoIcone grupo={item.grupoPrincipal} size={28} />
@@ -132,14 +130,6 @@ function Execucao({ item }: { item: SnapshotItem }) {
             <p className="text-sm text-neutral-400">Última carga: {ultima ? formatarSerie(ultima, item) : 'sem registro'}</p>
           </div>
         </section>
-        {ampliada && foto && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black" role="dialog" aria-label="Foto ampliada" onClick={() => setAmpliada(false)}>
-            <FotoExercicio blob={foto} grupo={item.grupoPrincipal} className="h-full w-full bg-black" />
-            <button type="button" aria-label="Fechar foto" className="absolute right-4 top-4 rounded-full bg-neutral-800 p-3">
-              <X size={28} />
-            </button>
-          </div>
-        )}
 
         <p role="note" className="text-xs text-red-300">
           Pare se sentir dor no peito, tontura, falta de ar desproporcional ou dor articular aguda.
@@ -208,14 +198,7 @@ function Execucao({ item }: { item: SnapshotItem }) {
           </Link>
         )}
 
-        {exercicio?.videoUrl && (
-          <div>
-            <a href={exercicio.videoUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary w-full">
-              <ExternalLink size={20} /> Ver execução
-            </a>
-            {!navigator.onLine && <p className="mt-1 text-sm text-neutral-400">Sem conexão: o vídeo precisa de internet.</p>}
-          </div>
-        )}
+        <VerExecucao url={exercicio?.videoUrl} />
 
         {exercicio && <Anotacoes exerciseId={exercicio.id} inicial={exercicio.anotacoes ?? ''} onSalvo={recarregar} />}
 
@@ -268,39 +251,5 @@ function Campo({ rotulo, valor, inputMode, onChange, onMenos, onMais }: CampoPro
         </button>
       </div>
     </div>
-  );
-}
-
-function Anotacoes({ exerciseId, inicial, onSalvo }: { exerciseId: string; inicial: string; onSalvo: () => void }) {
-  const [texto, setTexto] = useState(inicial);
-  const [estado, setEstado] = useState<'' | 'salvando' | 'salvo' | 'erro'>('');
-  const salvar = async () => {
-    setEstado('salvando');
-    try {
-      await exercisesRepository.update(exerciseId, { anotacoes: texto.trim() || undefined });
-      setEstado('salvo');
-      onSalvo();
-    } catch {
-      setEstado('erro');
-    }
-  };
-  return (
-    <details className="card">
-      <summary className="cursor-pointer text-lg font-semibold">Minhas anotações</summary>
-      <textarea
-        className="input mt-3 min-h-28 py-3"
-        aria-label="Minhas anotações"
-        value={texto}
-        onChange={(e) => {
-          setTexto(e.target.value);
-          setEstado('');
-        }}
-      />
-      <button type="button" className="btn-secondary mt-2 w-full" disabled={estado === 'salvando' || texto === inicial} onClick={salvar}>
-        Salvar anotações
-      </button>
-      {estado === 'salvo' && <p className="mt-1 text-sm text-primary-400">Anotações salvas.</p>}
-      {estado === 'erro' && <p role="alert" className="mt-1 text-sm text-red-400">Não foi possível salvar.</p>}
-    </details>
   );
 }

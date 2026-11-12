@@ -5,6 +5,7 @@ import { Page } from '../components/Page';
 import { ExercisePicker } from '../components/ExercisePicker';
 import { useDialog } from '../components/ConfirmDialog';
 import { useAsync } from '../useAsync';
+import { useAvisoNaoSalvo } from '../useAvisoNaoSalvo';
 import { LOCAIS_TREINO, type Exercise, type LocalTreino, type WorkoutPlanItem } from '../db/types';
 import { exercisesRepository } from '../db/repositories/exercises';
 import { settingsRepository } from '../db/repositories/settings';
@@ -43,6 +44,7 @@ export function FichaEditor() {
   const [erros, setErros] = useState<string[]>([]);
   const [escolhendo, setEscolhendo] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const liberar = useAvisoNaoSalvo(sujo);
 
   const plano = dados?.planos.find((p) => p.id === id);
   const ocupados = new Map(dados?.planos.filter((p) => p.id !== id && localDe(p) === local).map((p) => [p.diaSemana, p]));
@@ -120,8 +122,10 @@ export function FichaEditor() {
       if (r === 'salvar') {
         const salvo = await salvar();
         if (!salvo) return;
+        liberar();
         if (nova) navigate(`/fichas/${salvo}`, { replace: true });
       }
+      liberar(); // já escolheu: salvar ou abrir sem salvar
     }
     navigate(`/exercicios/${eid}`);
   }
@@ -129,6 +133,7 @@ export function FichaEditor() {
   async function excluir() {
     if (!plano || !(await confirmar('Excluir ficha?', `"${plano.nome}" será removida. Sessões já feitas continuam no histórico.`, 'Excluir', true))) return;
     await workoutPlansRepository.remove(plano.id);
+    liberar();
     navigate('/treinar', { replace: true });
   }
 
@@ -237,7 +242,9 @@ export function FichaEditor() {
 
       <button type="button" className="btn-primary w-full" disabled={salvando} onClick={async () => {
         const salvo = await salvar();
-        if (salvo) navigate('/treinar', { replace: true });
+        if (!salvo) return;
+        liberar();
+        navigate('/treinar', { replace: true });
       }}>
         Salvar
       </button>

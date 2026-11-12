@@ -88,3 +88,35 @@ export function avisoGrupoSeguido(grupos: GrupoMuscular[], sessoes: Sessao[], ag
 /** Local escolhido no Início: vale só no dia em que foi escolhido. */
 export const localEscolhido = (s: Pick<UserSettings, 'interface'>, agora: Date): LocalTreino =>
   s.interface.localHoje?.data === chaveDia(agora) ? s.interface.localHoje.local : 'academia';
+
+type Item = Pick<WorkoutPlan['itens'][number], 'exerciseId' | 'series' | 'descansoSeg'>;
+
+/**
+ * Duração estimada (s): média das últimas 3 sessões concluídas da ficha; sem histórico,
+ * séries × 40 s + descansos planejados (um por série).
+ */
+export function duracaoEstimadaSeg(plano: { id: string; itens: Item[] }, sessoes: Pick<WorkoutSession, 'planId' | 'status' | 'iniciadaEm' | 'duracaoAtivaSeg'>[]): number {
+  const ultimas = sessoes
+    .filter((s) => s.planId === plano.id && s.status === 'concluida')
+    .sort((a, b) => b.iniciadaEm.localeCompare(a.iniciadaEm))
+    .slice(0, 3);
+  if (ultimas.length) return ultimas.reduce((t, s) => t + s.duracaoAtivaSeg, 0) / ultimas.length;
+  return plano.itens.reduce((t, i) => t + i.series * (40 + i.descansoSeg), 0);
+}
+
+/** "~45 min" (mínimo 1 min). */
+export const formatarEstimativa = (seg: number) => `~${Math.max(1, Math.round(seg / 60))} min`;
+
+/** Grupos principais da ficha, sem repetição, na ordem dos exercícios. */
+export function gruposDaFicha(itens: Pick<Item, 'exerciseId'>[], grupoDe: (exerciseId: string) => GrupoMuscular | undefined): GrupoMuscular[] {
+  return [...new Set(itens.map((i) => grupoDe(i.exerciseId)).filter((g): g is GrupoMuscular => g !== undefined))];
+}
+
+/** Os 7 dias da semana de `agora` (segunda a domingo), como Date às 00:00 e chave 'AAAA-MM-DD'. */
+export function diasDaSemana(agora: Date): { data: Date; chave: string }[] {
+  const ini = inicioSemana(agora);
+  return Array.from({ length: 7 }, (_, k) => {
+    const data = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate() + k);
+    return { data, chave: chaveDia(data) };
+  });
+}

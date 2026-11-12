@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ExerciseSet } from './db/types';
 import {
-  ajustarDescanso, exercicioAtual, formatarSerie, parseNumero, restanteSeg, sessaoEsquecida, statusExercicio, tempoAtivoEm, totalReps,
+  ajustarDescanso, exercicioAtual, formatarSerie, parseNumero, restanteSeg, sessaoEsquecida, statusExercicio, tempoAtivoEm, totalReps, volumeKg,
 } from './sessao';
 
 let n = 0;
@@ -77,5 +77,24 @@ describe('descanso', () => {
     expect(ajustarDescanso(60_000, 0, 15)).toBe(75_000);
     expect(ajustarDescanso(10_000, 0, -15)).toBeNull();
     expect(ajustarDescanso(null, 1000, 15)).toBe(16_000);
+  });
+});
+
+describe('volume (último treino no Início)', () => {
+  const itens = [
+    { exerciseId: 'kg', tipo: 'carga' as const, unidadeCarga: 'kg' as const },
+    { exerciseId: 'lado', tipo: 'carga' as const, unidadeCarga: 'kg' as const, porLado: true },
+    { exerciseId: 'placa', tipo: 'carga' as const, unidadeCarga: 'placa' as const },
+    { exerciseId: 'corpo', tipo: 'peso_corporal' as const, unidadeCarga: 'kg' as const },
+  ];
+  it('soma carga × reps só em kg; por lado conta reps × 2; placa e peso corporal ficam fora', () => {
+    const sets = [
+      { exerciseId: 'kg', carga: 40, reps: 10 },
+      { exerciseId: 'lado', carga: 10, reps: 12 },
+      { exerciseId: 'placa', carga: 7, reps: 12 },
+      { exerciseId: 'corpo', carga: null, reps: 15 },
+    ];
+    expect(volumeKg(sets, itens)).toBe(400 + 240);
+    expect(volumeKg(sets.slice(2), itens)).toBeNull();
   });
 });

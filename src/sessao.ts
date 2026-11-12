@@ -65,6 +65,21 @@ export const fimDaUltimaSerie = (s: Pick<WorkoutSession, 'iniciadaEm'>, sets: Ex
 /** Exercício porLado: o registro guarda reps por lado; total da série = reps × 2. */
 export const totalReps = (set: Pick<ExerciseSet, 'reps'>, item: { porLado?: boolean }) => (item.porLado ? set.reps * 2 : set.reps);
 
+/**
+ * Volume (kg) = soma(carga × reps totais) só de exercícios 'carga' em kg; null se não houver nenhum.
+ * Placa e peso corporal não entram.
+ */
+export function volumeKg(sets: Pick<ExerciseSet, 'exerciseId' | 'carga' | 'reps'>[], itens: Pick<SnapshotItem, 'exerciseId' | 'tipo' | 'unidadeCarga' | 'porLado'>[]): number | null {
+  const porId = new Map(itens.map((i) => [i.exerciseId, i]));
+  let total: number | null = null;
+  for (const s of sets) {
+    const i = porId.get(s.exerciseId);
+    if (!i || i.tipo !== 'carga' || i.unidadeCarga !== 'kg' || s.carga == null) continue;
+    total = (total ?? 0) + s.carga * totalReps(s, i);
+  }
+  return total;
+}
+
 export const sessaoEsquecida = (s: Pick<WorkoutSession, 'iniciadaEm' | 'ativaDesde'>, sets: ExerciseSet[], agora: number) =>
   agora - ultimaAtividade(s, sets) > ESQUECIDA_MS;
 

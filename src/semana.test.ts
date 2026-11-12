@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GrupoMuscular, LocalTreino, StatusSessao } from './db/types';
-import { avisoGrupoSeguido, chaveDia, contadorSemana, inicioSemana, localEscolhido, pendentes, sugestao } from './semana';
+import { avisoGrupoSeguido, chaveDia, contadorSemana, duracaoEstimadaSeg, inicioSemana, localEscolhido, pendentes, sugestao } from './semana';
 
 // Semana de 2026-01-05 (segunda) a 2026-01-11 (domingo).
 const dia = (d: number, h = 10) => new Date(2026, 0, d, h);
@@ -102,5 +102,16 @@ describe('local do treino', () => {
     expect(localEscolhido(s, dia(QUA))).toBe('casa');
     expect(localEscolhido(s, dia(QUI))).toBe('academia');
     expect(localEscolhido({ interface: { tema: 'escuro', vibrar: true } }, dia(QUA))).toBe('academia');
+  });
+});
+
+describe('duração estimada', () => {
+  const plano = { id: 'p', itens: [{ exerciseId: 'a', series: 3, descansoSeg: 90 }, { exerciseId: 'b', series: 2, descansoSeg: 60 }] };
+  const s = (dia: number, seg: number, status: StatusSessao = 'concluida') => ({ planId: 'p', status, iniciadaEm: new Date(2026, 0, dia).toISOString(), duracaoAtivaSeg: seg });
+  it('sem histórico: séries × 40 s + descansos planejados', () => {
+    expect(duracaoEstimadaSeg(plano, [])).toBe(3 * 130 + 2 * 100);
+  });
+  it('média das últimas 3 concluídas da ficha (abandonadas fora)', () => {
+    expect(duracaoEstimadaSeg(plano, [s(1, 9999), s(2, 3000), s(3, 2400), s(4, 3600), s(5, 1, 'abandonada')])).toBe(3000);
   });
 });

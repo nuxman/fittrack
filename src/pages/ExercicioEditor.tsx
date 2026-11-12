@@ -5,6 +5,7 @@ import { Page, useVoltar } from '../components/Page';
 import { ImageField } from '../components/ImageField';
 import { useDialog } from '../components/ConfirmDialog';
 import { useAsync } from '../useAsync';
+import { useAvisoNaoSalvo } from '../useAvisoNaoSalvo';
 import { GRUPOS_MUSCULARES, type Exercise, type GrupoMuscular, type NewRecord } from '../db/types';
 import {
   ExercicioEmUsoError, exerciseSchema, exercisesRepository, NomeDuplicadoError,
@@ -35,6 +36,9 @@ export function ExercicioEditor() {
   const [form, setForm] = useState<Form>(VAZIO);
   const [erros, setErros] = useState<string[]>([]);
   const [processandoFoto, setProcessandoFoto] = useState(false);
+  // Foto é salva na hora; só os campos do formulário contam como alteração pendente.
+  const [sujo, setSujo] = useState(false);
+  const liberar = useAvisoNaoSalvo(sujo);
 
   useEffect(() => {
     if (exercicio) setForm({ ...VAZIO, ...exercicio, videoUrl: exercicio.videoUrl ?? '', anotacoes: exercicio.anotacoes ?? '' });
@@ -45,6 +49,7 @@ export function ExercicioEditor() {
   const set = <K extends keyof Form>(k: K, v: Form[K]) => {
     setForm((f) => ({ ...f, [k]: v }));
     setErros([]);
+    setSujo(true);
   };
 
   async function salvar() {
@@ -53,15 +58,18 @@ export function ExercicioEditor() {
     try {
       if (novo) {
         const criado = await exercisesRepository.create(form);
+        liberar();
         navigate(`/exercicios/${criado.id}`, { replace: true });
       } else {
         await exercisesRepository.update(id, form);
+        liberar();
         voltar();
       }
     } catch (e) {
       if (e instanceof NomeDuplicadoError && e.excluido) {
         if (await confirmar('Exercício excluído', `Já existiu "${e.existente.nome}". Restaurar em vez de criar outro? O histórico dele volta junto.`, `Restaurar "${e.existente.nome}"`)) {
           const r = await exercisesRepository.restore(e.existente.id);
+          liberar();
           navigate(`/exercicios/${r.id}`, { replace: true });
         }
         return;
@@ -75,6 +83,7 @@ export function ExercicioEditor() {
     if (!(await confirmar('Excluir exercício?', `"${exercicio.nome}" sai do catálogo. O histórico é mantido.`, 'Excluir', true))) return;
     try {
       await exercisesRepository.remove(exercicio.id);
+      liberar();
       voltar();
     } catch (e) {
       if (e instanceof ExercicioEmUsoError) await avisar('Exercício em uso', e.message);

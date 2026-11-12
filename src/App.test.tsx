@@ -8,15 +8,15 @@ beforeEach(async () => {
   await db.open();
 });
 
-it('abre com a navegação inferior e mostra a ficha', async () => {
+it('abre com a navegação inferior e o dashboard da semana', async () => {
   render(<App />);
   const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
   for (const label of ['Início', 'Treinar', 'Histórico', 'Evolução', 'Configurações']) {
     expect(nav).toHaveTextContent(label);
   }
-  expect(await screen.findByText(/Segunda — Peito e tríceps/)).toBeInTheDocument();
-  expect(screen.getByText(/Bird dog · 2×10 por lado/)).toBeInTheDocument();
-  expect(screen.getByText(/Supino máquina · 3×10–12/)).toBeInTheDocument();
+  expect(await screen.findByTestId('contador-semana')).toHaveTextContent('0 de 5 treinos esta semana');
+  expect(screen.getAllByTestId('dia-semana')).toHaveLength(7);
+  expect(screen.getByRole('group', { name: 'Local do treino' })).toBeInTheDocument();
 });
 
 it('Histórico e Evolução vazios explicam o que vai aparecer', async () => {
@@ -33,7 +33,7 @@ it('Configurações mostra a versão (dev no lugar do hash fora do build)', asyn
   const { unmount } = render(<App />);
   const versao = (await screen.findByTestId('versao')).textContent!;
   expect(versao.startsWith(`Versão ${__APP_VERSION__} · dev · `)).toBe(true);
-  expect(__APP_VERSION__).toBe('0.3.5');
+  expect(__APP_VERSION__).toBe('0.3.6');
   expect(versao).toMatch(/· \d{2}\/\d{2}\/\d{4}$/);
   unmount();
   window.location.hash = '#/';

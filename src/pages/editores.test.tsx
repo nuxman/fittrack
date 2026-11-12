@@ -41,7 +41,7 @@ describe('editor de ficha', () => {
     fireEvent.click(within(dlg).getByRole('button', { name: 'Trocar os dias' }));
 
     // Espera a navegação para Treinar terminar de carregar antes de consultar o banco.
-    await screen.findAllByText(/exercícios$/);
+    await screen.findAllByTestId('card-ficha');
     expect((await workoutPlansRepository.get(seg.id))!.diaSemana).toBe(3);
     expect((await workoutPlansRepository.list()).find((p) => p.nome === 'Costas e bíceps')!.diaSemana).toBe(1);
   });

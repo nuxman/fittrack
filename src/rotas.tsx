@@ -8,6 +8,7 @@ import { Fichas } from './pages/Fichas';
 import { FichaEditor } from './pages/FichaEditor';
 import { Exercicios } from './pages/Exercicios';
 import { ExercicioEditor } from './pages/ExercicioEditor';
+import { ExercicioDetalhe } from './pages/ExercicioDetalhe';
 import { RetomarSessao } from './components/RetomarSessao';
 import { SessaoLayout } from './pages/sessao/SessaoLayout';
 import { SessaoVisao } from './pages/sessao/SessaoVisao';
@@ -48,6 +49,7 @@ export const ROTAS: RouteObject[] = [
       { path: '/exercicios', element: <Exercicios /> },
       { path: '/exercicios/novo', element: <ExercicioEditor /> },
       { path: '/exercicios/:id', element: <ExercicioEditor /> },
+      { path: '/exercicio/:id', element: <ExercicioDetalhe /> },
       { path: '/historico', element: <Vazia title="Histórico" mensagem="Seus treinos concluídos aparecem aqui, com data, duração e volume. Comece pela aba Treinar." /> },
       { path: '/evolucao', element: <Vazia title="Evolução" mensagem="Aqui você vai ver a evolução de carga, volume e recordes de cada exercício depois dos primeiros treinos. Comece pela aba Treinar." /> },
       { path: '/configuracoes', element: <Configuracoes /> },
