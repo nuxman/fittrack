@@ -11,7 +11,7 @@
 - Decisões fora desta spec: perguntar antes ou listar explicitamente no relatório.
 - Comandos que eu precisar rodar manualmente: PowerShell 7, cada um em uma única linha.
 - Nunca encerrar processos por nome (taskkill /IM, pkill, killall ou similar); só pelo PID de processos que você mesmo iniciou.
-- Versão (package.json, mostrada em Configurações): a cada etapa concluída, subir para 0.<etapa>.0; a cada correção, subir o último número. Subir a versão só quando o código do app muda; commits só de CI, documentação ou CLAUDE.md não sobem a versão.
+- Versão (package.json, mostrada em Configurações): funcionalidade nova sobe o número do meio (0.X.0); correção sobe o último (0.X.Y); commits só de CI, documentação ou CLAUDE.md não sobem versão; 1.0.0 quando as 8 etapas estiverem concluídas.
 - Evitar capturas de tela e leitura de imagens; usar só quando indispensável, porque elas acumulam e travam a sessão.
 
 ## Stack (versões fixas)
@@ -120,6 +120,11 @@ Ao tocar numa nota, mostrar a descrição abaixo dos botões: 0 = repouso; 1–2
 - Depois de "Finalizar treino", perguntar "Fazer cardio agora?" (Sim / Hoje não).
 - Sim: tela de cardio com os valores de cardioPadrao (esteira, 15 min, "nível 7") editáveis, cronômetro da duração e "Concluir cardio" com RPE e observações. Grava CardioSession com sessionId ligando ao treino.
 - O cronômetro do cardio segue as regras do descanso: horário final salvo no banco, Wake Lock e o mesmo alerta sonoro da 3a.5, só com o app visível.
+- Cardio em curso fica em WorkoutSession.cardio (opcional: desde, iniciouEm, fimEm, rascunho dos campos); a CardioSession só é gravada ao concluir. Reabrir o app com cardio em curso volta para a tela de cardio.
+- Duração gravada = campo "Duração"; parar antes do fim (Parar, ou Concluir com a contagem correndo) ajusta para os minutos feitos.
+- Contagem no zero: mostra "Tempo concluído" e destaca "Concluir cardio"; nunca fica negativa.
+- "Cancelar cardio" com confirmação: não grava nada; o treino continua concluído.
+- Cardio esquecido: ao abrir o app, se o horário final (ou o início, se parado) passou há mais de 3 horas, perguntar "Concluir com a duração planejada", "Concluir com outra duração" (abre o campo) ou "Cancelar cardio".
 - O módulo completo de cardio (registro avulso, gráficos) continua na Etapa 5.
 
 ## Pausa
@@ -175,7 +180,7 @@ Cardio padrão: esteira, 15 min, inclinação "nível 7".
 3a.5. CONCLUÍDA. Alerta sonoro do descanso (ver "Cronômetro de descanso"). Aceite: testes com AudioContext simulado: bipes nos tempos certos, reagendamento com ±15 s e Pular, nenhum bipe com som desligado ou app oculto.
 3b. Planejamento: regra de sugestão, aba Treinar completa (com miniaturas), miniaturas no card sugerido do Início, detalhe do exercício fora da sessão (com "Minhas anotações" editável direto nele), botão "Editar exercício" no detalhe e na visão geral da sessão, aviso informativo de mesmo grupoPrincipal em dias consecutivos com RPE ≥ 8, mudanças durante a sessão com "Aplicar também na ficha?", dashboard (cardio e peso com estado vazio até a Etapa 5). Aceite: testes da regra de sugestão: semana sem faltas, falta na terça com sugestão na quarta, duas faltas, treino de sexta feito adiantado, virada de semana zerando pendências, sessão abandonada não contando; local do treino: treino em casa na terça não deixa a ficha de terça da academia pendente, contador soma os dois locais, aviso de dias seguidos cruza locais. Inclui "Local do treino" e a explicação do RPE.
 Divisão da 3b, cada parte com git push e versão própria: 3b.1 (regras, local, editor de ficha) = 0.3.4, CONCLUÍDA; refactor do roteador (createHashRouter + RouterProvider, mesmas URLs, para permitir useBlocker) = 0.3.5, CONCLUÍDO; 3b.2 (Início, aba Treinar, miniaturas, detalhe do exercício, alterações não salvas via useBlocker + beforeunload) = 0.3.6, CONCLUÍDA; 3b.3 (Editar exercício na visão geral, mudanças durante a sessão, RPE explicado, "Aplicar também na ficha?") = 0.4.0, CONCLUÍDA; correção 0.4.1 (substituição com séries e base das mudanças).
-3c. Cardio pós-treino (ver "Cardio pós-treino"), antecipando parte da Etapa 5.
+3c. CONCLUÍDA (0.5.0). Cardio pós-treino (ver "Cardio pós-treino"), antecipando parte da Etapa 5.
 4. Histórico, recordes, gráficos e mini gráfico no detalhe do exercício. Aceite: testes de volume, incluindo peso corporal e placa.
 5. Cardio, medidas e fotos corporais.
 6. Backup e restauração. Aceite: exportar, apagar banco, importar, dados idênticos (incluindo imagens de exercício).

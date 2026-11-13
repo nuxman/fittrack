@@ -2,15 +2,18 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Flag } from 'lucide-react';
 import { useSessao } from './SessaoLayout';
+import { EscolhaRpe } from '../../components/EscolhaRpe';
+import { useDialog } from '../../components/ConfirmDialog';
 import { workoutSessionsRepository } from '../../db/repositories/workoutSessions';
 import { workoutPlansRepository } from '../../db/repositories/workoutPlans';
 import { useAsync } from '../../useAsync';
-import { descricaoRpe, formatarDuracao, mudancasNaSessao, progresso, pulados, tempoAtivoEm } from '../../sessao';
+import { formatarDuracao, mudancasNaSessao, progresso, pulados, tempoAtivoEm } from '../../sessao';
 
 /** Finalizar com RPE (0–10) e observações. ?fim=<timestamp> encerra no horário da última série. */
 export function SessaoFinalizar() {
   const { sessao, sets } = useSessao();
   const navigate = useNavigate();
+  const { escolher } = useDialog();
   const [params] = useSearchParams();
   const fim = Number(params.get('fim')) || undefined;
   const [rpe, setRpe] = useState<number | null>(null);
@@ -42,7 +45,18 @@ export function SessaoFinalizar() {
         await workoutPlansRepository.update(ficha.id, { itens });
       }
       await workoutSessionsRepository.finalizar(sessao.id, { rpe, observacoes: obs }, fim);
-      navigate('/', { replace: true });
+      const cardio = await escolher({
+        titulo: 'Fazer cardio agora?',
+        opcoes: [
+          { label: 'Sim', value: true },
+          { label: 'Hoje não', value: false, variante: 'secundaria' },
+        ],
+        semCancelar: true,
+      });
+      if (cardio) {
+        await workoutSessionsRepository.iniciarCardio(sessao.id);
+        navigate(`/cardio/${sessao.id}`, { replace: true });
+      } else navigate('/', { replace: true });
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível finalizar');
       setGravando(false);
@@ -60,31 +74,13 @@ export function SessaoFinalizar() {
         {fim && <p className="text-sm text-neutral-400">Encerrado no horário da última série.</p>}
       </div>
 
-      <fieldset className="card space-y-2">
-        <legend className="text-lg font-semibold">Esforço percebido (RPE)</legend>
-        <p className="text-sm text-neutral-400">0 = nenhum esforço · 10 = esforço máximo</p>
-        <div className="grid grid-cols-6 gap-2">
-          {Array.from({ length: 11 }, (_, n) => (
-            <button
-              key={n}
-              type="button"
-              aria-pressed={rpe === n}
-              className={rpe === n ? 'btn-primary px-0' : 'btn-secondary px-0'}
-              onClick={() => {
-                setRpe(n);
-                setErro(null);
-              }}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-        {rpe !== null && (
-          <p className="text-neutral-200" data-testid="descricao-rpe">
-            {rpe}: {descricaoRpe(rpe)}
-          </p>
-        )}
-      </fieldset>
+      <EscolhaRpe
+        valor={rpe}
+        onChange={(n) => {
+          setRpe(n);
+          setErro(null);
+        }}
+      />
 
       {mudancas.length > 0 && (
         <fieldset className="card space-y-2">

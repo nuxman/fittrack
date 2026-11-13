@@ -14,6 +14,7 @@ import { SessaoLayout } from './pages/sessao/SessaoLayout';
 import { SessaoVisao } from './pages/sessao/SessaoVisao';
 import { SessaoExecucao } from './pages/sessao/SessaoExecucao';
 import { SessaoFinalizar } from './pages/sessao/SessaoFinalizar';
+import { Cardio } from './pages/Cardio';
 
 /** Raiz: diálogo, retomada da sessão e navegação inferior em volta de todas as telas. */
 // Arquivo de configuração de rotas, não de componentes: fast refresh recarrega a página inteira, sem problema.
@@ -44,6 +45,7 @@ export const ROTAS: RouteObject[] = [
           { path: ':exerciseId', element: <SessaoExecucao /> },
         ],
       },
+      { path: '/cardio/:sessionId', element: <Cardio /> },
       { path: '/fichas/nova', element: <FichaEditor /> },
       { path: '/fichas/:id', element: <FichaEditor /> },
       { path: '/exercicios', element: <Exercicios /> },

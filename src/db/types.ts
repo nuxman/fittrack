@@ -102,6 +102,29 @@ export interface WorkoutSession extends BaseRecord {
   pausadaEm?: number | null;
   /** Opcional: itens do planSnapshot no início, base de "Aplicar também na ficha?". Sessões antigas: comparar com a ficha. */
   itensIniciais?: WorkoutPlanItem[];
+  /** Opcional: cardio pós-treino em curso (some ao concluir ou cancelar). */
+  cardio?: CardioEmCurso;
+}
+
+/** Campos da tela de cardio como digitados (texto), salvos para sobreviver a recarregar. */
+export interface RascunhoCardio {
+  modalidade: ModalidadeCardio;
+  duracaoMin: string;
+  /** Rótulo livre com um número, ex.: "nível 7" (valor 7, não é porcentagem). */
+  inclinacao: string;
+  velocidade: string;
+  distancia: string;
+  fc: string;
+}
+
+export interface CardioEmCurso {
+  /** Quando o cardio foi aberto ("Fazer cardio agora?" → Sim). */
+  desde: number;
+  /** Início do cronômetro atual (null = ainda não iniciado). */
+  iniciouEm: number | null;
+  /** Horário final do cronômetro, salvo no banco (null = parado). */
+  fimEm: number | null;
+  rascunho?: RascunhoCardio;
 }
 
 export interface ExerciseSet extends BaseRecord {
@@ -123,6 +146,8 @@ export interface Inclinacao {
 export type ModalidadeCardio = 'esteira' | 'bicicleta' | 'caminhada';
 
 export interface CardioSession extends BaseRecord {
+  /** Opcional: treino ao qual o cardio pós-treino pertence. */
+  sessionId?: string;
   modalidade: ModalidadeCardio;
   duracaoMin: number;
   velocidadeKmh: number | null;

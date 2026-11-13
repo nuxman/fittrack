@@ -1,5 +1,5 @@
 import { db } from '../db';
-import type { PlanSnapshot, WorkoutSession } from '../types';
+import type { CardioEmCurso, PlanSnapshot, WorkoutSession } from '../types';
 import { ativo, createRepository } from './base';
 import { faixaReps, LIMITES } from './workoutPlans';
 import { exerciseSetsRepository } from './exerciseSets';
@@ -162,6 +162,25 @@ export const workoutSessionsRepository = {
       };
     });
   },
+
+  /** "Fazer cardio agora?" → Sim, com o treino já concluído. */
+  iniciarCardio: (id: string) =>
+    alterar(id, (s, agora) => {
+      if (s.status !== 'concluida') throw new Error('Finalize o treino antes do cardio');
+      return { cardio: s.cardio ?? { desde: agora, iniciouEm: null, fimEm: null } };
+    }),
+
+  setCardio: (id: string, changes: Partial<CardioEmCurso>) =>
+    alterar(id, (s) => {
+      if (!s.cardio) throw new Error('Nenhum cardio em curso');
+      return { cardio: { ...s.cardio, ...changes } };
+    }),
+
+  /** Concluído ou cancelado: o cardio deixa de estar em curso. */
+  encerrarCardio: (id: string) => alterar(id, () => ({ cardio: undefined })),
+
+  /** Treino com cardio em curso (no máximo um no uso normal). */
+  comCardio: () => db.workoutSessions.filter((s) => ativo(s) && s.cardio != null).first(),
 
   pular: (id: string, exerciseId: string) =>
     alterar(id, (s) => ({ exerciciosPulados: [...new Set([...pulados(s), exerciseId])] })),

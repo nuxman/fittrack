@@ -231,6 +231,7 @@ describe('Wake Lock', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Finalizar treino' }));
     fireEvent.click(await screen.findByRole('button', { name: '8' }));
     fireEvent.click(screen.getByRole('button', { name: 'Finalizar treino' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Hoje não' }));
     await waitFor(() => expect(travas[2]!.release).toHaveBeenCalled());
     expect(request).toHaveBeenCalledTimes(3);
   });

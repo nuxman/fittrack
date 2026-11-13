@@ -5,13 +5,13 @@ import { agendarBipes, audioSuspenso, cancelarBipes, prepararAudio, type OpcoesS
 
 const OPCOES = [45, 60, 90, 120, 180];
 
-async function notificar() {
+async function notificar([titulo, body]: readonly [string, string]) {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
   try {
     // No Android, só o service worker mostra notificação; sem ele (dev), tenta a API direta.
     const reg = await navigator.serviceWorker?.getRegistration();
-    if (reg) await reg.showNotification('Descanso terminado', { body: 'Hora da próxima série.' });
-    else new Notification('Descanso terminado', { body: 'Hora da próxima série.' });
+    if (reg) await reg.showNotification(titulo, { body });
+    else new Notification(titulo, { body });
   } catch {
     // Sem alerta garantido: Configurações → Alertas de descanso explica.
   }
@@ -25,13 +25,23 @@ interface ContagemProps {
   som?: OpcoesSom;
   desabilitado?: boolean;
   onDefinir: (endsAt: number | null) => void;
+  /** Reaproveitado no cardio: rótulo da região, texto do botão do meio e da notificação. */
+  rotulo?: string;
+  pularLabel?: string;
+  aviso?: readonly [titulo: string, corpo: string];
+  /** Chamado ao chegar a zero no lugar de onDefinir(null) (o horário final fica salvo). */
+  onFim?: () => void;
 }
+
+const AVISO_DESCANSO = ['Descanso terminado', 'Hora da próxima série.'] as const;
 
 /**
  * Contagem do descanso em curso, com −15 s / Pular / +15 s. Não renderiza nada sem descanso ativo.
  * Vibra e notifica uma vez ao chegar a zero (só se o app estiver visível), depois limpa o descanso.
  */
-export function ContagemDescanso({ endsAt, vibrar, som, desabilitado, onDefinir }: ContagemProps) {
+export function ContagemDescanso({
+  endsAt, vibrar, som, desabilitado, onDefinir, rotulo = 'Cronômetro de descanso', pularLabel = 'Pular', aviso = AVISO_DESCANSO, onFim,
+}: ContagemProps) {
   const agora = useAgora(250);
   const restante = restanteSeg(endsAt, agora);
   // endsAt que vimos contando: o alerta dispara uma vez, e não dispara se o descanso acabou com o app fechado.
@@ -61,9 +71,10 @@ export function ContagemDescanso({ endsAt, vibrar, som, desabilitado, onDefinir 
     if (contando.current !== endsAt) return;
     contando.current = null;
     if (vibrar && document.visibilityState === 'visible') navigator.vibrate?.([300, 150, 300]);
-    void notificar();
-    onDefinir(null);
-  }, [restante, endsAt, vibrar, onDefinir]);
+    void notificar(aviso);
+    if (onFim) onFim();
+    else onDefinir(null);
+  }, [restante, endsAt, vibrar, onDefinir, onFim, aviso]);
 
   if (endsAt == null || restante <= 0) return null;
   // Lido a cada render (useAgora re-renderiza a cada 250 ms).
@@ -82,7 +93,7 @@ export function ContagemDescanso({ endsAt, vibrar, som, desabilitado, onDefinir 
           Toque para ativar o som
         </button>
       )}
-      <section aria-label="Cronômetro de descanso" className="flex items-center gap-2">
+      <section aria-label={rotulo} className="flex items-center gap-2">
         <button type="button" className="btn-secondary px-3" disabled={desabilitado} onClick={() => onDefinir(ajustarDescanso(endsAt, Date.now(), -15))}>
           −15 s
         </button>
@@ -90,7 +101,7 @@ export function ContagemDescanso({ endsAt, vibrar, som, desabilitado, onDefinir 
           {formatarDuracao(restante)}
         </p>
         <button type="button" className="btn-secondary px-3" disabled={desabilitado} onClick={() => onDefinir(null)}>
-          Pular
+          {pularLabel}
         </button>
         <button type="button" className="btn-secondary px-3" disabled={desabilitado} onClick={() => onDefinir(ajustarDescanso(endsAt, Date.now(), 15))}>
           +15 s

@@ -57,16 +57,31 @@ filhos.push(preview);
 const URL_APP = `http://localhost:${PORTA_PREVIEW}/fittrack/`;
 await ate(async () => (await fetch(URL_APP)).ok, 'vite preview');
 
-// 2. Chrome headless.
-const chrome = spawn(navegador, [
-  '--headless=new', `--remote-debugging-port=${PORTA_CDP}`, `--user-data-dir=${perfil}`,
-  '--no-first-run', '--no-default-browser-check', '--disable-gpu', '--no-sandbox', 'about:blank',
-], { stdio: 'ignore' });
-filhos.push(chrome);
-const alvo = await ate(async () => {
-  const lista = await (await fetch(`http://127.0.0.1:${PORTA_CDP}/json/list`)).json();
-  return lista.find((t) => t.type === 'page');
-}, 'Chrome DevTools');
+// 2. Chrome headless. No CI ele às vezes demora a abrir: espera 60 s e tenta uma segunda vez antes de falhar.
+async function abrirChrome() {
+  const chrome = spawn(navegador, [
+    '--headless=new', `--remote-debugging-port=${PORTA_CDP}`, `--user-data-dir=${perfil}`,
+    '--no-first-run', '--no-default-browser-check', '--disable-gpu', '--no-sandbox', 'about:blank',
+  ], { stdio: 'ignore' });
+  filhos.push(chrome);
+  try {
+    return await ate(async () => {
+      const lista = await (await fetch(`http://127.0.0.1:${PORTA_CDP}/json/list`)).json();
+      return lista.find((t) => t.type === 'page');
+    }, 'Chrome DevTools', 60000);
+  } catch (e) {
+    // Só o Chrome que este script abriu, pelo PID.
+    if (chrome.exitCode === null) chrome.kill();
+    throw e;
+  }
+}
+let alvo;
+try {
+  alvo = await abrirChrome();
+} catch {
+  console.log('  (Chrome não abriu em 60 s; tentando de novo)');
+  alvo = await abrirChrome();
+}
 
 // 3. Cliente CDP mínimo (WebSocket nativo do Node 22).
 const ws = new WebSocket(alvo.webSocketDebuggerUrl);

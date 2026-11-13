@@ -11,7 +11,8 @@ const ITENS = [
 
 export function BottomNav() {
   // Durante a sessão a barra inferior dá lugar ao rodapé da sessão ("Concluir série", "Finalizar treino").
-  if (useLocation().pathname.startsWith('/sessao')) return null;
+  const { pathname } = useLocation();
+  if (pathname.startsWith('/sessao') || pathname.startsWith('/cardio')) return null;
   return (
     <nav
       aria-label="Navegação principal"
