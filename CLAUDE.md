@@ -163,7 +163,7 @@ Cardio padrão: esteira, 15 min, inclinação "nível 7".
 ## Pendências
 - Tela de Equipment (cadastro e vínculo opcional ao exercício) — entra na Etapa 5.
 - Editar séries antigas — entra na Etapa 4, no Histórico.
-- Excluir uma sessão pelo Histórico (para remover sessões de teste), refletindo no contador, na duração estimada e nos gráficos — entra na Etapa 4.
+- Excluir uma sessão pelo Histórico (para remover sessões de teste), refletindo no contador, na duração estimada e nos gráficos — entra na Etapa 4. Excluir a sessão também exclui (soft delete) as séries dela, para não afetar última carga, recordes e gráficos.
 - Fase futura, sem etapa definida: login e sincronização entre aparelhos (Supabase). Não fazer até o usuário pedir.
 
 ## Etapas e critérios de aceite
