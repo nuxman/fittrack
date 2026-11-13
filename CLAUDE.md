@@ -4,6 +4,8 @@
 - Implementar UMA etapa por vez, somente a que eu pedir. Não antecipar etapas futuras.
 - Ambiente: Windows, PowerShell 7. Não usar comandos interativos (nada que peça confirmação no terminal); criar a estrutura do projeto com arquivos e comandos não interativos.
 - Antes de dizer que uma etapa terminou: rodar tsc --noEmit, lint e testes, e corrigir até passar.
+- Subir a versão ANTES de rodar tsc, lint, testes e build.
+- Uma entrega só está concluída depois de git push e de confirmar que o deploy passou (gh run watch ou gh run list). Nunca relatar "pronto" sem isso.
 - Ao terminar cada etapa: commit local "Etapa N: <resumo>" e listar arquivos criados, como testar manualmente e o que ficou pendente.
 - Código real e funcional, sem placeholders de lógica. Sem credenciais no repositório.
 - Decisões fora desta spec: perguntar antes ou listar explicitamente no relatório.

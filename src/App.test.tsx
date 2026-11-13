@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { App } from './App';
 import { db } from './db/db';
 
@@ -33,7 +34,8 @@ it('Configurações mostra a versão (dev no lugar do hash fora do build)', asyn
   const { unmount } = render(<App />);
   const versao = (await screen.findByTestId('versao')).textContent!;
   expect(versao.startsWith(`Versão ${__APP_VERSION__} · dev · `)).toBe(true);
-  expect(__APP_VERSION__).toMatch(/^\d+\.\d+\.\d+$/);
+  const pkg = JSON.parse(readFileSync('package.json', 'utf-8')) as { version: string };
+  expect(__APP_VERSION__).toBe(pkg.version);
   expect(versao).toMatch(/· \d{2}\/\d{2}\/\d{4}$/);
   unmount();
   window.location.hash = '#/';
