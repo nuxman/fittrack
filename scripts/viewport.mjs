@@ -134,7 +134,8 @@ conferir('aba Treinar: "Iniciar" e "Editar" sem quebrar linha', await avaliar(`(
   return botoes.length >= 2 && altos.length === 0 ? true : 'quebram: ' + altos.map((b) => b.textContent.trim()).join(', ') + ' (' + botoes.length + ' botões)';
 })()`));
 await avaliar(`__botao('Iniciar').click(), true`);
-await ate(() => avaliar(`location.hash === '#/sessao'`), 'visão geral');
+// Espera a visão geral renderizar (a URL muda antes de a sessão carregar do banco).
+await ate(() => avaliar(`${AJUDA}; location.hash === '#/sessao' && !!__botao('Finalizar treino') && !!document.querySelector('[data-testid="item-sessao"] a')`), 'visão geral');
 conferir('visão geral: "Finalizar treino" visível sem rolar', await avaliar(`${AJUDA}; __visivel(__botao('Finalizar treino'))`));
 conferir('visão geral: sem navegação inferior', await avaliar(`!document.querySelector('nav[aria-label="Navegação principal"]')`));
 
