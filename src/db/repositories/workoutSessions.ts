@@ -1,7 +1,8 @@
 import { db } from '../db';
 import type { PlanSnapshot, WorkoutSession } from '../types';
 import { ativo, createRepository } from './base';
-import { LIMITES } from './workoutPlans';
+import { faixaReps, LIMITES } from './workoutPlans';
+import { exerciseSetsRepository } from './exerciseSets';
 import { ATIVOS, pulados, tempoAtivoEm } from '../../sessao';
 
 const base = createRepository<WorkoutSession>(db.workoutSessions);
@@ -110,6 +111,48 @@ export const workoutSessionsRepository = {
       const itens = s.planSnapshot.itens.map((i) => (i.exerciseId === exerciseId ? { ...i, descansoSeg } : i));
       return { planSnapshot: { ...s.planSnapshot, itens } };
     }),
+
+  /** Séries e reps do exercício só nesta sessão (planSnapshot), com os limites da ficha. */
+  setPrescricaoItem: (id: string, exerciseId: string, p: { series: number; repsMin: number; repsMax: number }) =>
+    alterar(id, (s) => {
+      exigirAtiva(s);
+      const item = s.planSnapshot.itens.find((i) => i.exerciseId === exerciseId);
+      if (!item) throw new Error('Exercício fora deste treino');
+      const [rMin, rMax] = faixaReps(item.tipo);
+      const fora = (v: number, min: number, max: number) => !Number.isInteger(v) || v < min || v > max;
+      if (fora(p.series, ...LIMITES.series)) throw new Error('Séries: de 1 a 10');
+      if (fora(p.repsMin, rMin, rMax) || fora(p.repsMax, rMin, rMax)) throw new Error(`${item.tipo === 'tempo' ? 'Segundos' : 'Repetições'}: de ${rMin} a ${rMax}`);
+      if (p.repsMin > p.repsMax) throw new Error('Mínimo maior que o máximo');
+      const itens = s.planSnapshot.itens.map((i) => (i.exerciseId === exerciseId ? { ...i, ...p } : i));
+      return { planSnapshot: { ...s.planSnapshot, itens } };
+    }),
+
+  /**
+   * Troca o exercício só nesta sessão (mesma posição, séries, reps e descanso). Exige o item sem séries
+   * registradas, para nenhuma série ficar sem exercício na sessão.
+   */
+  async substituir(id: string, exerciseId: string, novoId: string): Promise<WorkoutSession> {
+    const [novo, sets] = await Promise.all([db.exercises.get(novoId), exerciseSetsRepository.listarDaSessao(id)]);
+    if (!novo || novo.deletedAt !== null) throw new Error('Exercício não encontrado');
+    if (sets.some((x) => x.exerciseId === exerciseId)) throw new Error('Desfaça as séries deste exercício antes de substituí-lo');
+    return alterar(id, (s) => {
+      exigirAtiva(s);
+      if (s.planSnapshot.itens.some((i) => i.exerciseId === novoId)) throw new Error(`"${novo.nome}" já está neste treino`);
+      const [min, max] = faixaReps(novo.tipo);
+      const lim = (v: number) => Math.min(max, Math.max(min, v));
+      const itens = s.planSnapshot.itens.map((i) => {
+        if (i.exerciseId !== exerciseId) return i;
+        const original = i.substituiu ?? { exerciseId: i.exerciseId, nome: i.nome };
+        return {
+          ...i, exerciseId: novoId, nome: novo.nome, tipo: novo.tipo, unidadeCarga: novo.unidadeCarga, grupoPrincipal: novo.grupoPrincipal,
+          porLado: novo.porLado, repsMin: lim(i.repsMin), repsMax: lim(i.repsMax),
+          // Voltar ao exercício original desfaz a substituição.
+          substituiu: original.exerciseId === novoId ? undefined : original,
+        };
+      });
+      return { planSnapshot: { ...s.planSnapshot, itens }, exerciciosPulados: pulados(s).filter((e) => e !== exerciseId) };
+    });
+  },
 
   pular: (id: string, exerciseId: string) =>
     alterar(id, (s) => ({ exerciciosPulados: [...new Set([...pulados(s), exerciseId])] })),

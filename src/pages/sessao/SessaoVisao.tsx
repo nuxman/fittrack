@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Flag, SkipForward, Undo2 } from 'lucide-react';
+import { Flag, Pencil, SkipForward, Undo2 } from 'lucide-react';
 import { EstadoTela, useSessao } from './SessaoLayout';
 import { FotoExercicio } from '../../components/FotoExercicio';
 import { workoutSessionsRepository } from '../../db/repositories/workoutSessions';
@@ -21,7 +21,7 @@ export function SessaoVisao() {
           const st = statusExercicio(i, sets, pul);
           const ultima = ultimas.get(i.exerciseId);
           return (
-            <li key={i.exerciseId} className="card flex items-center gap-3" data-testid="item-sessao">
+            <li key={i.exerciseId} className="card flex flex-wrap items-center gap-3" data-testid="item-sessao">
               <Link to={`/sessao/${i.exerciseId}`} className="flex min-w-0 flex-1 items-center gap-3">
                 <FotoExercicio blob={imagens.get(i.exerciseId)} grupo={i.grupoPrincipal} className="h-14 w-14 shrink-0" />
                 <div className="min-w-0">
@@ -44,6 +44,9 @@ export function SessaoVisao() {
                   <SkipForward size={20} /> Pular
                 </button>
               )}
+              <Link to={`/exercicios/${i.exerciseId}`} className="btn-secondary min-h-11 w-full py-1 text-base" aria-label={`Editar exercício ${i.nome}`}>
+                <Pencil size={18} /> Editar exercício
+              </Link>
             </li>
           );
         })}

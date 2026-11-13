@@ -3,7 +3,9 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Flag } from 'lucide-react';
 import { useSessao } from './SessaoLayout';
 import { workoutSessionsRepository } from '../../db/repositories/workoutSessions';
-import { formatarDuracao, progresso, pulados, tempoAtivoEm } from '../../sessao';
+import { workoutPlansRepository } from '../../db/repositories/workoutPlans';
+import { useAsync } from '../../useAsync';
+import { descricaoRpe, formatarDuracao, mudancasNaFicha, progresso, pulados, tempoAtivoEm } from '../../sessao';
 
 /** Finalizar com RPE (0–10) e observações. ?fim=<timestamp> encerra no horário da última série. */
 export function SessaoFinalizar() {
@@ -15,6 +17,10 @@ export function SessaoFinalizar() {
   const [obs, setObs] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [gravando, setGravando] = useState(false);
+  const [ficha] = useAsync(() => workoutPlansRepository.get(sessao.planId), [sessao.planId]);
+  const mudancas = ficha ? mudancasNaFicha(sessao.planSnapshot.itens, ficha.itens) : [];
+  // "Aplicar também na ficha?": escolha por mudança, nenhuma marcada por padrão.
+  const [aplicar, setAplicar] = useState<string[]>([]);
 
   const { feitos, total } = progresso(sessao.planSnapshot.itens, sets, pulados(sessao));
   const duracao = tempoAtivoEm(sessao, fim ?? Date.now());
@@ -23,6 +29,12 @@ export function SessaoFinalizar() {
     if (rpe === null) return setErro('Escolha o RPE do treino (0 a 10).');
     setGravando(true);
     try {
+      const escolhidas = mudancas.filter((m) => aplicar.includes(m.exerciseId));
+      if (ficha && escolhidas.length) {
+        const itens = ficha.itens.map((i) => escolhidas.find((m) => m.exerciseId === i.exerciseId)?.item ?? i);
+        if (new Set(itens.map((i) => i.exerciseId)).size < itens.length) throw new Error('A ficha já tem o exercício substituto; desmarque essa substituição.');
+        await workoutPlansRepository.update(ficha.id, { itens });
+      }
       await workoutSessionsRepository.finalizar(sessao.id, { rpe, observacoes: obs }, fim);
       navigate('/', { replace: true });
     } catch (e) {
@@ -61,7 +73,30 @@ export function SessaoFinalizar() {
             </button>
           ))}
         </div>
+        {rpe !== null && (
+          <p className="text-neutral-200" data-testid="descricao-rpe">
+            {rpe}: {descricaoRpe(rpe)}
+          </p>
+        )}
       </fieldset>
+
+      {mudancas.length > 0 && (
+        <fieldset className="card space-y-2">
+          <legend className="text-lg font-semibold">Aplicar também na ficha?</legend>
+          <p className="text-sm text-neutral-400">Mudanças feitas neste treino. Marque as que devem valer nos próximos.</p>
+          {mudancas.map((m) => (
+            <label key={m.exerciseId} className="flex min-h-11 items-center gap-3">
+              <input
+                type="checkbox"
+                className="h-6 w-6 shrink-0 accent-primary-400"
+                checked={aplicar.includes(m.exerciseId)}
+                onChange={(e) => setAplicar((a) => (e.target.checked ? [...a, m.exerciseId] : a.filter((x) => x !== m.exerciseId)))}
+              />
+              <span>{m.descricao}</span>
+            </label>
+          ))}
+        </fieldset>
+      )}
 
       <label className="card block">
         <span className="text-lg font-semibold">Observações</span>

@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, useMatch, useNavigate } from 'react-router-dom';
 import { EllipsisVertical, Pause, Play, X } from 'lucide-react';
-import { useAsync } from '../../useAsync';
 import { useAgora } from '../../useAgora';
 import { useWakeLock, type EstadoWakeLock } from '../../useWakeLock';
 import { useDialog } from '../../components/ConfirmDialog';
@@ -46,7 +45,7 @@ async function carregar() {
 
 type Dados = NonNullable<Awaited<ReturnType<typeof carregar>>>;
 interface CtxSessao extends Dados {
-  recarregar: () => void;
+  recarregar: () => Promise<void>;
   /** Estado da tela sempre ligada, em texto ("ativa", "desligada", "indisponível"). */
   wake: string;
   /** Executa uma ação no banco e recarrega a sessão. */
@@ -69,7 +68,10 @@ const TEXTO_WAKE: Record<EstadoWakeLock, string> = { ativa: 'ativa', inativa: 'd
  * conteúdo rolável e, em cada tela, o próprio rodapé fixo.
  */
 export function SessaoLayout() {
-  const [dados, recarregar] = useAsync(carregar);
+  const [dados, setDados] = useState<Awaited<ReturnType<typeof carregar>>>();
+  // Aguardável: quem age e navega (ex.: substituir exercício) só segue com os dados novos.
+  const recarregar = useCallback(async () => setDados(await carregar()), []);
+  useEffect(() => void recarregar(), [recarregar]);
   // Wake Lock só com a sessão em andamento: solto ao pausar, finalizar, abandonar ou sair de /sessao.
   const wake = useWakeLock(dados?.sessao.status === 'em_andamento');
 
@@ -77,7 +79,7 @@ export function SessaoLayout() {
     async (f: (s: WorkoutSession) => Promise<unknown>) => {
       if (!dados) return;
       await f(dados.sessao);
-      recarregar();
+      await recarregar();
     },
     [dados, recarregar],
   );

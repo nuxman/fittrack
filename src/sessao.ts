@@ -1,4 +1,4 @@
-import type { ExerciseSet, SnapshotItem, UnidadeCarga, TipoExercicio, WorkoutSession } from './db/types';
+import type { ExerciseSet, SnapshotItem, UnidadeCarga, TipoExercicio, WorkoutPlanItem, WorkoutSession } from './db/types';
 import { faixaReps } from './db/repositories/workoutPlans';
 
 /** Regras puras da sessão de treino (sem banco, sem relógio implícito). */
@@ -138,4 +138,48 @@ export function formatarDuracao(seg: number): string {
   const m = Math.floor((s % 3600) / 60);
   const ss = String(s % 60).padStart(2, '0');
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+}
+
+/** Uma mudança feita durante a sessão num item da ficha, com o item como ficaria na ficha. */
+export interface MudancaFicha {
+  /** exerciseId do item na ficha (o original, se substituído). */
+  exerciseId: string;
+  descricao: string;
+  item: WorkoutPlanItem;
+}
+
+/**
+ * Compara o planSnapshot da sessão com a ficha atual: séries, reps, descanso e substituição.
+ * ponytail: compara com a ficha de agora; editar a ficha durante a sessão também aparece como mudança.
+ * Guardar os itens originais na sessão se isso incomodar.
+ */
+export function mudancasNaFicha(snapshot: SnapshotItem[], ficha: WorkoutPlanItem[]): MudancaFicha[] {
+  const r: MudancaFicha[] = [];
+  for (const f of ficha) {
+    const s = snapshot.find((i) => i.exerciseId === f.exerciseId) ?? snapshot.find((i) => i.substituiu?.exerciseId === f.exerciseId);
+    if (!s) continue;
+    const seg = s.tipo === 'tempo' ? ' s' : '';
+    const partes: string[] = [];
+    if (s.series !== f.series) partes.push(`séries ${f.series} → ${s.series}`);
+    if (s.repsMin !== f.repsMin || s.repsMax !== f.repsMax) partes.push(`${s.tipo === 'tempo' ? 'tempo' : 'reps'} ${f.repsMin}–${f.repsMax} → ${s.repsMin}–${s.repsMax}${seg}`);
+    if (s.descansoSeg !== f.descansoSeg) partes.push(`descanso ${f.descansoSeg} → ${s.descansoSeg} s`);
+    const trocou = s.exerciseId !== f.exerciseId;
+    if (!trocou && partes.length === 0) continue;
+    const titulo = trocou ? `${s.substituiu!.nome} → ${s.nome}` : s.nome;
+    r.push({
+      exerciseId: f.exerciseId,
+      descricao: partes.length ? `${titulo}: ${partes.join('; ')}` : titulo,
+      item: { ...f, exerciseId: s.exerciseId, series: s.series, repsMin: s.repsMin, repsMax: s.repsMax, descansoSeg: s.descansoSeg },
+    });
+  }
+  return r;
+}
+
+/** Descrição de cada nota do RPE (tela Finalizar). */
+export function descricaoRpe(n: number): string {
+  if (n === 0) return 'Repouso.';
+  if (n <= 2) return 'Muito leve.';
+  if (n <= 4) return 'Leve, dava para fazer muito mais.';
+  if (n <= 6) return 'Moderado, sobravam 4 ou mais repetições.';
+  return ['Pesado, sobravam ~3 repetições.', 'Difícil, sobravam ~2 repetições.', 'Muito difícil, sobrava 1 repetição.', 'Máximo, não saía mais nenhuma.'][n - 7]!;
 }

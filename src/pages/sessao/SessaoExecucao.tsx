@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import { Check, ChevronLeft, Minus, Plus, Undo2 } from 'lucide-react';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Check, ChevronLeft, Minus, Pencil, Plus, Replace, Undo2 } from 'lucide-react';
+import { ExercisePicker } from '../../components/ExercisePicker';
 import { EstadoTela, useSessao } from './SessaoLayout';
 import { FotoAmpliavel } from '../../components/FotoAmpliavel';
 import { Anotacoes } from '../../components/Anotacoes';
@@ -50,7 +51,7 @@ function Execucao({ item }: { item: SnapshotItem }) {
 
   const sessionId = sessao.id;
   const definirDescanso = useCallback(
-    (t: number | null) => void workoutSessionsRepository.setDescanso(sessionId, t).then(recarregar),
+    (t: number | null) => void workoutSessionsRepository.setDescanso(sessionId, t).then(() => recarregar()),
     [sessionId, recarregar],
   );
 
@@ -86,7 +87,7 @@ function Execucao({ item }: { item: SnapshotItem }) {
     try {
       await exerciseSetsRepository.registrar({ sessionId: sessao.id, exerciseId: item.exerciseId, carga: c, reps: r });
       await workoutSessionsRepository.setDescanso(sessao.id, item.descansoSeg > 0 ? Date.now() + item.descansoSeg * 1000 : null);
-      recarregar();
+      await recarregar();
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível salvar a série');
     } finally {
@@ -200,7 +201,15 @@ function Execucao({ item }: { item: SnapshotItem }) {
 
         <VerExecucao url={exercicio?.videoUrl} />
 
-        {exercicio && <Anotacoes exerciseId={exercicio.id} inicial={exercicio.anotacoes ?? ''} onSalvo={recarregar} />}
+        {exercicio && (
+          <Link to={`/exercicios/${exercicio.id}`} className="btn-secondary w-full">
+            <Pencil size={20} /> Editar exercício
+          </Link>
+        )}
+
+        <AjustarNoTreino key={`${item.series}-${item.repsMin}-${item.repsMax}`} item={item} temSeries={daSessao.length > 0} />
+
+        {exercicio && <Anotacoes exerciseId={exercicio.id} inicial={exercicio.anotacoes ?? ''} onSalvo={() => void recarregar()} />}
 
         <details className="card">
           <summary className="cursor-pointer text-lg font-semibold">Grupos trabalhados</summary>
@@ -222,6 +231,76 @@ function Execucao({ item }: { item: SnapshotItem }) {
 
       {folha && <FolhaDescanso atualSeg={item.descansoSeg} onEscolher={escolherDescanso} onFechar={() => setFolha(false)} />}
     </>
+  );
+}
+
+/** Séries, reps e substituição só nesta sessão (planSnapshot); a ficha muda só se aplicado ao finalizar. */
+function AjustarNoTreino({ item, temSeries }: { item: SnapshotItem; temSeries: boolean }) {
+  const { sessao, agir } = useSessao();
+  const navigate = useNavigate();
+  const [series, setSeries] = useState(String(item.series));
+  const [min, setMin] = useState(String(item.repsMin));
+  const [max, setMax] = useState(String(item.repsMax));
+  const [erro, setErro] = useState<string | null>(null);
+  const [picker, setPicker] = useState(false);
+  const un = item.tipo === 'tempo' ? 's' : 'reps';
+  const mudou = series !== String(item.series) || min !== String(item.repsMin) || max !== String(item.repsMax);
+
+  const salvar = async () => {
+    try {
+      setErro(null);
+      await agir((s) =>
+        workoutSessionsRepository.setPrescricaoItem(s.id, item.exerciseId, { series: parseNumero(series), repsMin: parseNumero(min), repsMax: parseNumero(max) }),
+      );
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível salvar');
+    }
+  };
+
+  const substituir = async (novoId: string) => {
+    setPicker(false);
+    try {
+      await agir((s) => workoutSessionsRepository.substituir(s.id, item.exerciseId, novoId));
+      navigate(`/sessao/${novoId}`, { replace: true });
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível substituir');
+    }
+  };
+
+  const campo = (rotulo: string, v: string, set: (v: string) => void) => (
+    <label className="block min-w-0 flex-1 text-sm text-neutral-300">
+      {rotulo}
+      <input className="input mt-1 text-center" inputMode="numeric" value={v} onChange={(e) => set(e.target.value)} />
+    </label>
+  );
+
+  return (
+    <details className="card">
+      <summary className="cursor-pointer text-lg font-semibold">Ajustar neste treino</summary>
+      <div className="mt-3 space-y-3">
+        <p className="text-sm text-neutral-400">Vale só para este treino. Ao finalizar, você escolhe se aplica também na ficha.</p>
+        <div className="flex gap-2">
+          {campo('Nº de séries', series, setSeries)}
+          {campo(`Mín. (${un})`, min, setMin)}
+          {campo(`Máx. (${un})`, max, setMax)}
+        </div>
+        <button type="button" className="btn-secondary w-full" disabled={!mudou} onClick={salvar}>
+          Salvar ajuste
+        </button>
+        <button type="button" className="btn-secondary w-full" disabled={temSeries} onClick={() => setPicker(true)}>
+          <Replace size={20} /> Substituir exercício
+        </button>
+        {temSeries && <p className="text-sm text-neutral-400">Para substituir, desfaça antes as séries deste exercício.</p>}
+        {erro && (
+          <p role="alert" className="text-red-400">
+            {erro}
+          </p>
+        )}
+      </div>
+      {picker && (
+        <ExercisePicker excluirIds={sessao.planSnapshot.itens.map((i) => i.exerciseId)} onEscolher={(e) => void substituir(e.id)} onFechar={() => setPicker(false)} />
+      )}
+    </details>
   );
 }
 

@@ -6,6 +6,7 @@ import { workoutPlansRepository } from '../../db/repositories/workoutPlans';
 import { workoutSessionsRepository as sessoes } from '../../db/repositories/workoutSessions';
 import { exerciseSetsRepository as series } from '../../db/repositories/exerciseSets';
 import { settingsRepository } from '../../db/repositories/settings';
+import { exercisesRepository } from '../../db/repositories/exercises';
 
 const doDia = async (d: number) => (await workoutPlansRepository.list()).find((p) => p.diaSemana === d)!;
 const titulo = (nome: string) => screen.findByRole('heading', { level: 2, name: nome });
@@ -90,7 +91,7 @@ describe('navegação', () => {
     expect(await titulo('Supino máquina')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('link', { name: /Visão geral/ }));
     expect(await screen.findAllByTestId('item-sessao')).toHaveLength(5);
-    fireEvent.click(within(screen.getAllByTestId('item-sessao')[1]!).getByRole('link', { name: /Supino inclinado articulado/ }));
+    fireEvent.click(within(screen.getAllByTestId('item-sessao')[1]!).getByRole('link', { name: /^(?!Editar).*Supino inclinado articulado/ }));
     expect(await titulo('Supino inclinado articulado')).toBeInTheDocument();
 
     await act(() => router.navigate(-1));
@@ -239,5 +240,101 @@ describe('Wake Lock', () => {
     await sessoes.iniciar((await doDia(1)).id);
     abrir('/sessao');
     expect(await screen.findByText('Tela sempre ligada: indisponível')).toBeInTheDocument();
+  });
+});
+
+describe('mudanças durante a sessão (3b.3)', () => {
+  const finalizarCom = async (rpe: string) => {
+    fireEvent.click(await screen.findByRole('button', { name: rpe }));
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar treino' }));
+  };
+
+  it('"Editar exercício" na visão geral e na execução abre o editor do exercício', async () => {
+    const s = await sessoes.iniciar((await doDia(1)).id);
+    const ex = s.planSnapshot.itens[0]!.exerciseId;
+    abrir('/sessao');
+    expect(await screen.findByRole('link', { name: 'Editar exercício Supino máquina' })).toHaveAttribute('href', `/exercicios/${ex}`);
+    fireEvent.click(within(screen.getAllByTestId('item-sessao')[0]!).getByRole('link', { name: /^(?!Editar).*Supino máquina/ }));
+    await titulo('Supino máquina');
+    expect(screen.getByRole('link', { name: /Editar exercício/ })).toHaveAttribute('href', `/exercicios/${ex}`);
+  });
+
+  it('ajustar séries/reps muda só o snapshot; ao finalizar, aplica só as mudanças marcadas', async () => {
+    const plano = await doDia(1);
+    const s = await sessoes.iniciar(plano.id);
+    const [a, b] = s.planSnapshot.itens;
+    await sessoes.setDescansoItem(s.id, b!.exerciseId, 60);
+    abrir(`/sessao/${a!.exerciseId}`);
+    await titulo('Supino máquina');
+    fireEvent.change(screen.getByLabelText('Nº de séries'), { target: { value: '4' } });
+    fireEvent.change(screen.getByLabelText('Máx. (reps)'), { target: { value: '15' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar ajuste' }));
+    await waitFor(() => expect(screen.getByText('4× 10 a 15')).toBeInTheDocument());
+    expect((await doDia(1)).itens[0]).toMatchObject({ series: 3, repsMax: 12 });
+
+    fireEvent.click(screen.getByRole('link', { name: /Visão geral/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Finalizar treino' }));
+    const grupo = await screen.findByRole('group', { name: 'Aplicar também na ficha?' });
+    const caixas = within(grupo).getAllByRole('checkbox');
+    expect(caixas.map((c) => c.closest('label')!.textContent)).toEqual([
+      'Supino máquina: séries 3 → 4; reps 10–12 → 10–15',
+      'Supino inclinado articulado: descanso 90 → 60 s',
+    ]);
+    fireEvent.click(caixas[0]!);
+    await finalizarCom('8');
+    await waitFor(async () => expect((await sessoes.get(s.id))!.status).toBe('concluida'));
+    const depois = await doDia(1);
+    expect(depois.itens[0]).toMatchObject({ exerciseId: a!.exerciseId, series: 4, repsMin: 10, repsMax: 15 });
+    expect(depois.itens[1]!.descansoSeg).toBe(90);
+  });
+
+  it('limites da ficha valem no ajuste', async () => {
+    const s = await sessoes.iniciar((await doDia(1)).id);
+    const ex = s.planSnapshot.itens[0]!.exerciseId;
+    await expect(sessoes.setPrescricaoItem(s.id, ex, { series: 11, repsMin: 10, repsMax: 12 })).rejects.toThrow('Séries');
+    await expect(sessoes.setPrescricaoItem(s.id, ex, { series: 3, repsMin: 12, repsMax: 10 })).rejects.toThrow('Mínimo');
+  });
+
+  it('substituir exercício vale só para a sessão; aplicar troca o exercício na ficha', async () => {
+    const plano = await doDia(1);
+    const s = await sessoes.iniciar(plano.id);
+    const ex = s.planSnapshot.itens[0]!.exerciseId;
+    abrir(`/sessao/${ex}`);
+    await titulo('Supino máquina');
+    fireEvent.click(screen.getByRole('button', { name: /Substituir exercício/ }));
+    const picker = await screen.findByRole('dialog', { name: 'Adicionar exercício' });
+    fireEvent.change(within(picker).getByPlaceholderText('Buscar ou criar exercício'), { target: { value: 'Flexão' } });
+    fireEvent.change(within(picker).getByLabelText('Grupo principal'), { target: { value: 'peito' } });
+    fireEvent.click(within(picker).getByRole('button', { name: 'Criar "Flexão"' }));
+    expect(await titulo('Flexão')).toBeInTheDocument();
+    const novo = (await exercisesRepository.list()).find((e) => e.nome === 'Flexão')!;
+    const snap = (await sessoes.get(s.id))!.planSnapshot.itens[0]!;
+    expect(snap).toMatchObject({ exerciseId: novo.id, nome: 'Flexão', series: 3, substituiu: { exerciseId: ex, nome: 'Supino máquina' } });
+    expect((await doDia(1)).itens[0]!.exerciseId).toBe(ex);
+
+    fireEvent.click(screen.getByRole('link', { name: /Visão geral/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Finalizar treino' }));
+    const caixa = within(await screen.findByRole('group', { name: 'Aplicar também na ficha?' })).getByRole('checkbox', { name: 'Supino máquina → Flexão' });
+    fireEvent.click(caixa);
+    await finalizarCom('5');
+    await waitFor(async () => expect((await doDia(1)).itens[0]!.exerciseId).toBe(novo.id));
+    expect((await sessoes.get(s.id))!.status).toBe('concluida');
+  });
+
+  it('substituir bloqueado com séries registradas', async () => {
+    const s = await sessoes.iniciar((await doDia(1)).id);
+    const [a, , c] = s.planSnapshot.itens;
+    await series.registrar({ sessionId: s.id, exerciseId: a!.exerciseId, carga: 40, reps: 10 });
+    await expect(sessoes.substituir(s.id, a!.exerciseId, c!.exerciseId)).rejects.toThrow('Desfaça');
+  });
+
+  it('sem mudanças não pergunta; RPE mostra a explicação ao tocar', async () => {
+    await sessoes.iniciar((await doDia(1)).id);
+    abrir('/sessao/finalizar');
+    fireEvent.click(await screen.findByRole('button', { name: '7' }));
+    expect(screen.getByTestId('descricao-rpe')).toHaveTextContent('7: Pesado, sobravam ~3 repetições.');
+    fireEvent.click(screen.getByRole('button', { name: '10' }));
+    expect(screen.getByTestId('descricao-rpe')).toHaveTextContent('Máximo, não saía mais nenhuma.');
+    expect(screen.queryByRole('group', { name: 'Aplicar também na ficha?' })).not.toBeInTheDocument();
   });
 });

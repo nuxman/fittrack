@@ -72,6 +72,8 @@ export interface SnapshotItem extends WorkoutPlanItem {
   grupoPrincipal: GrupoMuscular;
   /** Opcional (ler com ?? false): total de reps da série = reps × 2. */
   porLado?: boolean;
+  /** Opcional: exercício da ficha trocado por este só nesta sessão ("Substituir exercício"). */
+  substituiu?: { exerciseId: string; nome: string };
 }
 
 export interface PlanSnapshot extends Omit<WorkoutPlan, 'itens'> {

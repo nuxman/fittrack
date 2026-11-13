@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ExerciseSet } from './db/types';
 import {
-  ajustarDescanso, exercicioAtual, formatarSerie, parseNumero, restanteSeg, sessaoEsquecida, statusExercicio, tempoAtivoEm, totalReps, volumeKg,
+  ajustarDescanso, descricaoRpe, exercicioAtual, formatarSerie, parseNumero, restanteSeg, sessaoEsquecida, statusExercicio, tempoAtivoEm, totalReps, volumeKg,
 } from './sessao';
 
 let n = 0;
@@ -96,5 +96,15 @@ describe('volume (último treino no Início)', () => {
     ];
     expect(volumeKg(sets, itens)).toBe(400 + 240);
     expect(volumeKg(sets.slice(2), itens)).toBeNull();
+  });
+});
+
+describe('descricaoRpe', () => {
+  it('cobre 0 a 10 conforme a spec', () => {
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(descricaoRpe)).toEqual([
+      'Repouso.', 'Muito leve.', 'Muito leve.', 'Leve, dava para fazer muito mais.', 'Leve, dava para fazer muito mais.',
+      'Moderado, sobravam 4 ou mais repetições.', 'Moderado, sobravam 4 ou mais repetições.', 'Pesado, sobravam ~3 repetições.',
+      'Difícil, sobravam ~2 repetições.', 'Muito difícil, sobrava 1 repetição.', 'Máximo, não saía mais nenhuma.',
+    ]);
   });
 });
