@@ -30,7 +30,7 @@ export function CardFicha({ plano, painel, destaque, motivo, aviso, iniciando, o
         <h2 className="text-lg font-semibold">{plano.nome}</h2>
         {grupos.length > 0 && <p className="text-sm text-neutral-300">{grupos.join(', ')}</p>}
         <p className="text-neutral-400">
-          {plano.itens.length} exercícios · {formatarEstimativa(duracaoEstimadaSeg(plano, painel.sessoes))}
+          {plano.itens.length} exercícios · {formatarEstimativa(duracaoEstimadaSeg(plano, painel.sessoes, painel.seriesPorSessao))}
         </p>
         {aviso && <p className="mt-1 text-sm text-neutral-400" data-testid="aviso-grupo">{aviso}</p>}
       </div>
@@ -46,8 +46,8 @@ export function CardFicha({ plano, painel, destaque, motivo, aviso, iniciando, o
           </button>
         )}
         {editar && (
-          <Link to={`/fichas/${plano.id}`} className="btn-secondary">
-            <Pencil size={20} /> Editar ficha
+          <Link to={`/fichas/${plano.id}`} className="btn-secondary" aria-label={`Editar ficha ${plano.nome}`}>
+            <Pencil size={20} /> Editar
           </Link>
         )}
       </div>

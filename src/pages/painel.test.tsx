@@ -92,6 +92,24 @@ describe('Início', () => {
   });
 });
 
+describe('treino concluído hoje', () => {
+  it('Início e aba Treinar mostram "Treino de hoje concluído" com a ficha e a duração; outra ficha ainda pode ser iniciada', async () => {
+    await concluir(3, new Date(2026, 0, 7, 7));
+    vi.setSystemTime(QUARTA);
+    const { router } = abrir('/');
+    const card = await screen.findByTestId('concluido-hoje');
+    expect(card).toHaveTextContent('Treino de hoje concluído');
+    expect(card).toHaveTextContent('Costas e bíceps · 30:00');
+    // Segunda e terça estão pendentes, mas não são sugeridas hoje.
+    expect(screen.queryByText(/Pendente de/)).not.toBeInTheDocument();
+
+    await act(() => router.navigate('/treinar'));
+    expect(await screen.findByTestId('concluido-hoje')).toHaveTextContent('Sugerido');
+    expect(screen.queryByText(/Sugerido · pendente/)).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Iniciar / })).toHaveLength(5);
+  });
+});
+
 describe('aba Treinar', () => {
   it('filtro por local; "Nova ficha" cria no local selecionado', async () => {
     abrir('/treinar');
@@ -173,5 +191,44 @@ describe('alterações não salvas', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Voltar' }));
     expect(await screen.findByRole('dialog')).toHaveTextContent('Sair sem salvar?');
+  });
+});
+
+describe('foto em tela cheia', () => {
+  it('zoom com dois dedos, arrastar ampliada e toque duplo volta a 1×', async () => {
+    const { FotoAmpliavel } = await import('../components/FotoAmpliavel');
+    const { render } = await import('@testing-library/react');
+    URL.createObjectURL = () => 'blob:x';
+    URL.revokeObjectURL = () => {};
+    render(<FotoAmpliavel blob={new Blob(['x'], { type: 'image/webp' })} grupo="peito" className="h-10 w-10" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Ampliar foto' }));
+    const area = screen.getByTestId('foto-zoom');
+    const p = (tipo: string, id: number, x: number, y: number) => fireEvent(area, Object.assign(new Event(tipo, { bubbles: true }), { pointerId: id, clientX: x, clientY: y }));
+
+    // Pinça: dedos de 100 px para 300 px de distância = 3×.
+    p('pointerdown', 1, 100, 300);
+    p('pointerdown', 2, 200, 300);
+    p('pointermove', 2, 400, 300);
+    p('pointerup', 2, 400, 300);
+    p('pointerup', 1, 100, 300);
+    expect(area.style.transform).toBe('translate(0px, 0px) scale(3)');
+    expect(screen.getByRole('dialog', { name: 'Foto ampliada' })).toBeInTheDocument();
+
+    // Arrastar com um dedo, ampliada.
+    p('pointerdown', 3, 100, 100);
+    p('pointermove', 3, 150, 80);
+    p('pointerup', 3, 150, 80);
+    expect(area.style.transform).toBe('translate(50px, -20px) scale(3)');
+
+    // Toque duplo volta a 1×; um toque simples com 1× fecha.
+    for (let k = 0; k < 2; k++) {
+      p('pointerdown', 10 + k, 50, 50);
+      p('pointerup', 10 + k, 50, 50);
+    }
+    expect(area.style.transform).toBe('translate(0px, 0px) scale(1)');
+    vi.setSystemTime(Date.now() + 1000);
+    p('pointerdown', 20, 50, 50);
+    p('pointerup', 20, 50, 50);
+    expect(screen.queryByRole('dialog', { name: 'Foto ampliada' })).not.toBeInTheDocument();
   });
 });

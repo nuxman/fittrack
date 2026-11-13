@@ -7,6 +7,7 @@ import { useAsync } from '../useAsync';
 import { useIniciar } from '../useIniciar';
 import { useLocalHoje } from '../useLocalHoje';
 import { carregarPainel } from '../painel';
+import { ConcluidoHoje } from './Inicio';
 import { localDe } from '../db/repositories/workoutPlans';
 import { DIAS } from '../dias';
 import { sugestao } from '../semana';
@@ -38,6 +39,7 @@ export function Fichas() {
           <Play size={22} /> Retomar treino — {ativa.planSnapshot.nome}
         </Link>
       )}
+      {s.tipo === 'concluido' && <ConcluidoHoje sessao={s.sessao} rotulo="Sugerido" />}
       {ordenados.map((p) => (
         <CardFicha
           key={p.id}

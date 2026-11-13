@@ -44,7 +44,9 @@ export function pendentes<F extends Ficha>(planos: F[], sessoes: Sessao[], local
 
 export const fimDeSemana = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
 
-export type Sugestao<F> =
+export type Sugestao<F, S = Sessao> =
+  /** Já houve treino concluído hoje (qualquer local): nada a sugerir hoje; pendências voltam amanhã. */
+  | { tipo: 'concluido'; sessao: S }
   /** Pendente mais antiga; `hoje` = ficha de hoje (não feita) como segunda opção. Fim de semana: opcional. */
   | { tipo: 'pendente'; plano: F; opcional: boolean; hoje?: F }
   | { tipo: 'hoje'; plano: F }
@@ -52,7 +54,12 @@ export type Sugestao<F> =
   /** Nada a sugerir em dia útil: mostrar as fichas do local para escolher. */
   | { tipo: 'escolher' };
 
-export function sugestao<F extends Ficha>(planos: F[], sessoes: Sessao[], local: LocalTreino, agora: Date): Sugestao<F> {
+export function sugestao<F extends Ficha, S extends Sessao>(planos: F[], sessoes: S[], local: LocalTreino, agora: Date): Sugestao<F, S> {
+  const hojeChave = chaveDia(agora);
+  const deHoje = sessoes
+    .filter((s) => s.status === 'concluida' && chaveDia(new Date(s.iniciadaEm)) === hojeChave)
+    .sort((a, b) => b.iniciadaEm.localeCompare(a.iniciadaEm))[0];
+  if (deHoje) return { tipo: 'concluido', sessao: deHoje };
   const doHoje = planos.find((p) => localDe(p) === local && p.diaSemana === agora.getDay());
   const hoje = doHoje && !feita(doHoje, sessoes, agora) ? doHoje : undefined;
   const [maisAntiga] = pendentes(planos, sessoes, local, agora);
@@ -91,17 +98,32 @@ export const localEscolhido = (s: Pick<UserSettings, 'interface'>, agora: Date):
 
 type Item = Pick<WorkoutPlan['itens'][number], 'exerciseId' | 'series' | 'descansoSeg'>;
 
+export const SERIE_SEG = 40;
+export const TROCA_SEG = 60;
+const MIN_VALIDA_SEG = 10 * 60;
+
+/** Sem histórico: por exercício, séries × 40 s + (séries − 1) × descanso, mais 60 s de troca entre exercícios. */
+export const duracaoPlanejadaSeg = (itens: Pick<Item, 'series' | 'descansoSeg'>[]) =>
+  itens.reduce((t, i) => t + i.series * SERIE_SEG + Math.max(0, i.series - 1) * i.descansoSeg, 0) + Math.max(0, itens.length - 1) * TROCA_SEG;
+
+type SessaoDuracao = Pick<WorkoutSession, 'id' | 'planId' | 'status' | 'iniciadaEm' | 'duracaoAtivaSeg' | 'planSnapshot'>;
+
 /**
- * Duração estimada (s): média das últimas 3 sessões concluídas da ficha; sem histórico,
- * séries × 40 s + descansos planejados (um por série).
+ * Duração estimada (s): média das últimas 3 sessões concluídas válidas da ficha. Válida = pelo menos
+ * 50% das séries planejadas (no snapshot) e 10 min ou mais. Sem nenhuma válida, duracaoPlanejadaSeg.
+ * `seriesPorSessao`: séries registradas em cada sessão (id → quantidade).
  */
-export function duracaoEstimadaSeg(plano: { id: string; itens: Item[] }, sessoes: Pick<WorkoutSession, 'planId' | 'status' | 'iniciadaEm' | 'duracaoAtivaSeg'>[]): number {
-  const ultimas = sessoes
-    .filter((s) => s.planId === plano.id && s.status === 'concluida')
+export function duracaoEstimadaSeg(plano: { id: string; itens: Item[] }, sessoes: SessaoDuracao[], seriesPorSessao: Map<string, number>): number {
+  const validas = sessoes
+    .filter((s) => s.planId === plano.id && s.status === 'concluida' && s.duracaoAtivaSeg >= MIN_VALIDA_SEG)
+    .filter((s) => {
+      const planejadas = s.planSnapshot.itens.reduce((t, i) => t + i.series, 0);
+      return planejadas > 0 && (seriesPorSessao.get(s.id) ?? 0) * 2 >= planejadas;
+    })
     .sort((a, b) => b.iniciadaEm.localeCompare(a.iniciadaEm))
     .slice(0, 3);
-  if (ultimas.length) return ultimas.reduce((t, s) => t + s.duracaoAtivaSeg, 0) / ultimas.length;
-  return plano.itens.reduce((t, i) => t + i.series * (40 + i.descansoSeg), 0);
+  if (validas.length) return validas.reduce((t, s) => t + s.duracaoAtivaSeg, 0) / validas.length;
+  return duracaoPlanejadaSeg(plano.itens);
 }
 
 /** "~45 min" (mínimo 1 min). */

@@ -33,7 +33,7 @@ it('Configurações mostra a versão (dev no lugar do hash fora do build)', asyn
   const { unmount } = render(<App />);
   const versao = (await screen.findByTestId('versao')).textContent!;
   expect(versao.startsWith(`Versão ${__APP_VERSION__} · dev · `)).toBe(true);
-  expect(__APP_VERSION__).toBe('0.3.7');
+  expect(__APP_VERSION__).toBe('0.3.8');
   expect(versao).toMatch(/· \d{2}\/\d{2}\/\d{4}$/);
   unmount();
   window.location.hash = '#/';

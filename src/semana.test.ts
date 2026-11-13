@@ -67,6 +67,23 @@ describe('regra de sugestão', () => {
   });
 });
 
+describe('treino concluído hoje', () => {
+  it('com treino concluído hoje (qualquer local), a sugestão é "concluído", mesmo com pendentes', () => {
+    const casaHoje = { ...sessao('casa-qua', dia(QUA, 7)), duracaoAtivaSeg: 1800 };
+    const r = sugestao(ACADEMIA, [casaHoje], 'academia', dia(QUA, 12));
+    expect(r).toEqual({ tipo: 'concluido', sessao: casaHoje });
+    // No dia seguinte, as pendências voltam (quarta foi feita; segunda e terça continuam pendentes).
+    const amanha = sugestao(ACADEMIA, [casaHoje], 'academia', dia(QUI));
+    expect(amanha).toMatchObject({ tipo: 'pendente', plano: ACADEMIA[0] });
+    expect(ids(pendentes(ACADEMIA, [casaHoje], 'academia', dia(QUI)))).toEqual(['seg', 'ter']);
+  });
+
+  it('sessão abandonada hoje não conta como concluída', () => {
+    const r = sugestao(ACADEMIA, [sessao('seg', dia(SEG, 7), { status: 'abandonada' })], 'academia', dia(SEG, 12));
+    expect(r).toEqual({ tipo: 'hoje', plano: ACADEMIA[0] });
+  });
+});
+
 describe('local do treino', () => {
   const CASA = [ficha('casa-ter', 2, 'casa'), ficha('casa-qui', 4, 'casa')];
   const TODAS = [...ACADEMIA, ...CASA];
@@ -81,6 +98,11 @@ describe('local do treino', () => {
     expect(sugestao(TODAS, [], 'casa', dia(QUA))).toMatchObject({ tipo: 'pendente', plano: CASA[0] });
     // Sem ficha de casa para hoje e sem pendentes: escolher entre as fichas de casa.
     expect(sugestao(TODAS, [sessao('casa-ter', dia(TER))], 'casa', dia(QUA))).toEqual({ tipo: 'escolher' });
+  });
+
+  it('contador: duas fichas feitas no mesmo dia contam 2', () => {
+    const s = [sessao('casa-ter', dia(TER, 7)), sessao('ter', dia(TER, 19))];
+    expect(contadorSemana(TODAS, s, dia(QUA)).feitos).toBe(2);
   });
 
   it('contador soma treinos dos dois locais; Y conta só dias com ficha de academia', () => {
@@ -107,11 +129,29 @@ describe('local do treino', () => {
 
 describe('duração estimada', () => {
   const plano = { id: 'p', itens: [{ exerciseId: 'a', series: 3, descansoSeg: 90 }, { exerciseId: 'b', series: 2, descansoSeg: 60 }] };
-  const s = (dia: number, seg: number, status: StatusSessao = 'concluida') => ({ planId: 'p', status, iniciadaEm: new Date(2026, 0, dia).toISOString(), duracaoAtivaSeg: seg });
-  it('sem histórico: séries × 40 s + descansos planejados', () => {
-    expect(duracaoEstimadaSeg(plano, [])).toBe(3 * 130 + 2 * 100);
+  // Snapshot com 5 séries planejadas (3 + 2).
+  const snap = { itens: [{ series: 3 }, { series: 2 }] } as never;
+  const s = (id: string, dia: number, seg: number, status: StatusSessao = 'concluida') =>
+    ({ id, planId: 'p', status, iniciadaEm: new Date(2026, 0, dia).toISOString(), duracaoAtivaSeg: seg, planSnapshot: snap });
+  const series = (...pares: [string, number][]) => new Map(pares);
+
+  it('sem histórico: séries × 40 s + (séries − 1) × descanso + 60 s de troca entre exercícios', () => {
+    // a: 3×40 + 2×90 = 300; b: 2×40 + 1×60 = 140; troca: 60.
+    expect(duracaoEstimadaSeg(plano, [], new Map())).toBe(300 + 140 + 60);
   });
-  it('média das últimas 3 concluídas da ficha (abandonadas fora)', () => {
-    expect(duracaoEstimadaSeg(plano, [s(1, 9999), s(2, 3000), s(3, 2400), s(4, 3600), s(5, 1, 'abandonada')])).toBe(3000);
+
+  it('média das últimas 3 concluídas válidas (abandonadas fora)', () => {
+    const ss = [s('1', 1, 9999), s('2', 2, 3000), s('3', 3, 2400), s('4', 4, 3600), s('5', 5, 3000, 'abandonada')];
+    const todas = series(['1', 5], ['2', 5], ['3', 5], ['4', 5], ['5', 5]);
+    expect(duracaoEstimadaSeg(plano, ss, todas)).toBe(3000);
+  });
+
+  it('ignora sessões com menos de 50% das séries ou menos de 10 min (ex.: sessão de teste de 3 min)', () => {
+    const teste = s('t', 6, 180); // 3 min, 1 série
+    const poucasSeries = s('p', 7, 2400); // 40 min, 2 de 5 séries
+    expect(duracaoEstimadaSeg(plano, [teste, poucasSeries], series(['t', 1], ['p', 2]))).toBe(500);
+    // Metade ou mais das séries e 10 min ou mais: vale.
+    const valida = s('v', 5, 600);
+    expect(duracaoEstimadaSeg(plano, [teste, poucasSeries, valida], series(['t', 1], ['p', 2], ['v', 3]))).toBe(600);
   });
 });

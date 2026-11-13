@@ -10,7 +10,7 @@ import { SEMANA } from './dias';
 
 /** Dados do Início e da aba Treinar, numa leitura só. */
 export async function carregarPainel() {
-  const [planos, sessoes, exercicios, imagens, cardio, descansos, settings, ativa] = await Promise.all([
+  const [planos, sessoes, exercicios, imagens, cardio, descansos, settings, ativa, seriesPorSessao] = await Promise.all([
     workoutPlansRepository.list(),
     workoutSessionsRepository.list(),
     exercisesRepository.list(),
@@ -19,11 +19,13 @@ export async function carregarPainel() {
     restDaysRepository.list(),
     settingsRepository.get(),
     workoutSessionsRepository.ativa(),
+    exerciseSetsRepository.contagemPorSessao(),
   ]);
   const ultima = sessoes.filter((s) => s.status === 'concluida').sort((a, b) => b.iniciadaEm.localeCompare(a.iniciadaEm))[0];
   return {
     planos: planos.sort((a, b) => SEMANA.indexOf(a.diaSemana) - SEMANA.indexOf(b.diaSemana)),
     sessoes,
+    seriesPorSessao,
     exercicios: new Map(exercicios.map((e) => [e.id, e])),
     imagens,
     cardio,

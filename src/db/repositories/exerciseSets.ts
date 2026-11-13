@@ -15,6 +15,13 @@ export const exerciseSetsRepository = {
     return (await db.exerciseSets.where('sessionId').equals(sessionId).filter(ativo).toArray()).sort(porConclusao);
   },
 
+  /** Quantidade de séries ativas por sessão (duração estimada). */
+  async contagemPorSessao(): Promise<Map<string, number>> {
+    const m = new Map<string, number>();
+    await db.exerciseSets.filter(ativo).each((s) => void m.set(s.sessionId, (m.get(s.sessionId) ?? 0) + 1));
+    return m;
+  },
+
   /** Série mais recente do exercício em qualquer sessão (carga sugerida = última registrada). */
   async ultimaDoExercicio(exerciseId: string): Promise<ExerciseSet | undefined> {
     return (await db.exerciseSets.where('exerciseId').equals(exerciseId).filter(ativo).toArray()).sort(porConclusao).at(-1);

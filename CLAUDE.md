@@ -75,6 +75,7 @@ Schema Dexie versionado desde a versão 1.
 - Ficha "feita" na semana = existe WorkoutSession 'concluida' daquela ficha nesta semana, em qualquer dia. Sessões abandonadas não contam.
 - Pendentes = fichas com diaSemana anterior a hoje, nesta semana, ainda não feitas.
 - Sugerido = a pendente mais antiga; sem pendentes, a ficha do dia de hoje (se ainda não feita).
+- Já houve treino concluído hoje (qualquer local): o card do Início e o "Sugerido" da aba Treinar mostram "Treino de hoje concluído ✓" (ficha feita e duração) e não sugerem pendentes nesse dia; as pendências voltam a ser sugeridas no dia seguinte. Iniciar outra ficha continua possível pela aba Treinar.
 - O motivo aparece junto: "Treino de hoje" ou "Pendente de <dia>". Quando o sugerido for pendente, mostrar também a ficha de hoje como segunda opção.
 - Sábado e domingo: pendentes aparecem como "opcional"; sem pendentes, "Dia de descanso".
 - Pendências não passam para a semana seguinte. Registrar RestDay não altera pendências.
@@ -83,7 +84,7 @@ Schema Dexie versionado desde a versão 1.
 De cima para baixo:
 1. Saudação curta e data de hoje.
 2. Faixa da semana S T Q Q S S D (começando na segunda) com o número do dia; check dourado nos dias com treino concluído ou cardio; ícone diferente para RestDay; "Hoje" destacado. Ao lado: "X de Y treinos esta semana" (Y = número de fichas).
-3. Card do treino sugerido (conforme "Regra de sugestão"): nome, motivo, número de exercícios, duração estimada (média das últimas 3 sessões concluídas da ficha; sem histórico, séries × 40 s + descansos planejados), botão grande "Iniciar treino". Com sessão 'em_andamento' ou 'pausada': "Retomar treino" no lugar. Fileira de miniaturas (foto ou ícone do grupo principal) de todos os exercícios da ficha, com rolagem horizontal; tocar numa miniatura abre o detalhe do exercício.
+3. Card do treino sugerido (conforme "Regra de sugestão"): nome, motivo, número de exercícios, duração estimada (média das últimas 3 sessões concluídas válidas da ficha, ignorando as com menos de 50% das séries planejadas ou menos de 10 minutos; sem sessões válidas, por exercício séries × 40 s + (séries − 1) × descanso, mais 60 s de troca entre exercícios), botão grande "Iniciar treino". Com sessão 'em_andamento' ou 'pausada': "Retomar treino" no lugar. Fileira de miniaturas (foto ou ícone do grupo principal) de todos os exercícios da ficha, com rolagem horizontal; tocar numa miniatura abre o detalhe do exercício.
 4. Resumo da semana: minutos de musculação e de cardio (cardio lido das CardioSession desde já, porque a 3c vem antes da Etapa 5).
 5. Peso atual e variação em relação à medição de cerca de 7 dias antes. Bloco não exibido até a Etapa 5 (nem texto, nem botão).
 6. Último treino: data, ficha, duração e volume.
@@ -159,6 +160,7 @@ Cardio padrão: esteira, 15 min, inclinação "nível 7".
 ## Pendências
 - Tela de Equipment (cadastro e vínculo opcional ao exercício) — entra na Etapa 5.
 - Editar séries antigas — entra na Etapa 4, no Histórico.
+- Excluir uma sessão pelo Histórico (para remover sessões de teste), refletindo no contador, na duração estimada e nos gráficos — entra na Etapa 4.
 - Fase futura, sem etapa definida: login e sincronização entre aparelhos (Supabase). Não fazer até o usuário pedir.
 
 ## Etapas e critérios de aceite

@@ -8,7 +8,7 @@ import { textoAviso, useIniciar } from '../useIniciar';
 import { useLocalHoje } from '../useLocalHoje';
 import { carregarPainel, type Painel } from '../painel';
 import { localDe, NOME_LOCAL } from '../db/repositories/workoutPlans';
-import type { LocalTreino, WorkoutPlan } from '../db/types';
+import type { LocalTreino, WorkoutPlan, WorkoutSession } from '../db/types';
 import { DIAS } from '../dias';
 import { chaveDia, concluidasNaSemana, contadorSemana, diasDaSemana, sugestao } from '../semana';
 import { formatarDuracao, volumeKg } from '../sessao';
@@ -117,6 +117,7 @@ function Sugerido({ painel, local, agora, iniciando, onIniciar }: {
   if (doLocal.length === 0) return <CriarFicha local={local} />;
 
   const s = sugestao(painel.planos, painel.sessoes, local, agora);
+  if (s.tipo === 'concluido') return <ConcluidoHoje sessao={s.sessao} />;
   if (s.tipo === 'hoje') return card(s.plano, 'Treino de hoje');
   if (s.tipo === 'pendente') {
     return (
@@ -137,6 +138,21 @@ function Sugerido({ painel, local, agora, iniciando, onIniciar }: {
     <section className="space-y-3" aria-label="Escolha uma ficha">
       <p className="text-neutral-300">Sem treino de {NOME_LOCAL[local].toLowerCase()} sugerido para hoje. Escolha uma ficha:</p>
       {doLocal.map((p) => card(p, DIAS[p.diaSemana]!, false))}
+    </section>
+  );
+}
+
+/** Já treinou hoje: mostra a ficha feita e a duração; outra ficha só pela aba Treinar. */
+export function ConcluidoHoje({ sessao, rotulo }: { sessao: Pick<WorkoutSession, 'planSnapshot' | 'duracaoAtivaSeg'>; rotulo?: string }) {
+  return (
+    <section className="card space-y-1 ring-2 ring-primary-400" data-testid="concluido-hoje">
+      {rotulo && <p className="text-sm font-semibold uppercase text-primary-400">{rotulo}</p>}
+      <p className="flex items-center gap-2 text-lg font-semibold text-primary-400">
+        Treino de hoje concluído <Check size={20} aria-hidden />
+      </p>
+      <p className="text-neutral-200">
+        {sessao.planSnapshot.nome} · {formatarDuracao(sessao.duracaoAtivaSeg)}
+      </p>
     </section>
   );
 }

@@ -121,6 +121,18 @@ const conferir = (nome, valor) => {
 };
 
 await ate(() => avaliar(`${AJUDA}; !!__botao('Iniciar')`), 'aba Treinar');
+// Botões dos cards da aba Treinar em uma linha só (texto sem quebra).
+conferir('aba Treinar: "Iniciar" e "Editar" sem quebrar linha', await avaliar(`(() => {
+  const card = document.querySelector('[data-testid="card-ficha"]');
+  const botoes = [...card.querySelectorAll('a, button')].filter((b) => /^(Iniciar|Editar|Retomar)/.test(b.textContent.trim()));
+  const altos = botoes.filter((b) => {
+    const linha = parseFloat(getComputedStyle(b).lineHeight) || 24;
+    const texto = document.createRange();
+    texto.selectNodeContents(b);
+    return texto.getClientRects().length > 0 && [...texto.getClientRects()].reduce((m, r) => Math.max(m, r.bottom), 0) - [...texto.getClientRects()].reduce((m, r) => Math.min(m, r.top), Infinity) > linha * 1.5;
+  });
+  return botoes.length >= 2 && altos.length === 0 ? true : 'quebram: ' + altos.map((b) => b.textContent.trim()).join(', ') + ' (' + botoes.length + ' botões)';
+})()`));
 await avaliar(`__botao('Iniciar').click(), true`);
 await ate(() => avaliar(`location.hash === '#/sessao'`), 'visão geral');
 conferir('visão geral: "Finalizar treino" visível sem rolar', await avaliar(`${AJUDA}; __visivel(__botao('Finalizar treino'))`));
