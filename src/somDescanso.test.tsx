@@ -2,21 +2,31 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ContagemDescanso } from './components/RestTimer';
-import { prepararAudio, type OpcoesSom } from './somDescanso';
+import { GANHO, prepararAudio, type OpcoesSom } from './somDescanso';
 
 /** AudioContext simulado: registra cada oscilador (frequência, início, se foi cancelado). */
-interface Osc { freq: number; inicio: number; parado: boolean }
+interface Osc { freq: number; inicio: number; parado: boolean; tipo: string; ganho: number }
 let oscs: Osc[] = [];
+let compressores = 0;
 const ctx = {
   state: 'running' as AudioContextState,
   currentTime: 100, // relógio do áudio não começa em zero
   destination: {},
   resume: async () => {},
-  createGain: () => ({ gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect: (d: unknown) => d }),
+  // bipe() cria o oscilador antes do ganho: o ganho vai para o último oscilador.
+  createGain: () => ({
+    gain: { setValueAtTime: (v: number) => void (oscs.at(-1)!.ganho = v), exponentialRampToValueAtTime() {} },
+    connect: (d: unknown) => d,
+  }),
+  createDynamicsCompressor: () => {
+    compressores++;
+    return { threshold: { value: 0 }, ratio: { value: 0 }, connect: (d: unknown) => d };
+  },
   createOscillator() {
-    const o: Osc = { freq: 0, inicio: NaN, parado: false };
+    const o: Osc = { freq: 0, inicio: NaN, parado: false, tipo: 'sine', ganho: NaN };
     oscs.push(o);
     return {
+      set type(t: string) { o.tipo = t; },
       frequency: { set value(v: number) { o.freq = v; } },
       connect: (g: unknown) => g,
       disconnect() {},
@@ -28,7 +38,7 @@ const ctx = {
 vi.stubGlobal('AudioContext', function AudioContext() { return ctx; });
 
 let visibilidade: DocumentVisibilityState = 'visible';
-const PADRAO: OpcoesSom = { som: true, avisoSeg: 10, contagem: true };
+const PADRAO: OpcoesSom = { som: true, avisoSeg: 10, contagem: true, volume: 'alto' };
 
 function ComBanco({ som = PADRAO }: { som?: OpcoesSom }) {
   const [endsAt, setEndsAt] = useState<number | null>(null);
@@ -42,7 +52,7 @@ function ComBanco({ som = PADRAO }: { som?: OpcoesSom }) {
   );
 }
 /** Bipes ainda valendo, em segundos a partir do início do descanso; F = bipe final. */
-const ativos = () => oscs.filter((o) => !o.parado).map((o) => `${Math.round((o.inicio - 100) * 10) / 10}${o.freq > 1000 ? 'F' : ''}`);
+const ativos = () => oscs.filter((o) => !o.parado).map((o) => `${Math.round((o.inicio - 100) * 100) / 100}${o.freq >= 3000 ? 'F' : ''}`);
 const iniciar = () => fireEvent.click(screen.getByRole('button', { name: 'iniciar 30' }));
 
 beforeEach(() => {
@@ -63,13 +73,40 @@ describe('alerta sonoro do descanso', () => {
   it('agenda aviso antecipado, 3-2-1 e o bipe final no relógio do AudioContext', () => {
     render(<ComBanco />);
     iniciar();
-    expect(ativos()).toEqual(['20', '27', '28', '29', '30F']);
+    expect(ativos()).toEqual(['20', '20.18', '27', '28', '29', '30F']);
+  });
+
+  it('onda quadrada em 2000–3000 Hz, final mais agudo e mais longo, passando pelo compressor', () => {
+    render(<ComBanco />);
+    iniciar();
+    expect(oscs.every((o) => o.tipo === 'square')).toBe(true);
+    expect(oscs.every((o) => o.freq >= 2000 && o.freq <= 3000)).toBe(true);
+    expect(oscs.at(-1)!.freq).toBeGreaterThan(oscs[0]!.freq);
+    expect(compressores).toBeGreaterThanOrEqual(1);
+  });
+
+  it('ganho por nível de volume', () => {
+    for (const [volume, ganho] of Object.entries(GANHO)) {
+      oscs = [];
+      const { unmount } = render(<ComBanco som={{ ...PADRAO, volume: volume as OpcoesSom['volume'] }} />);
+      iniciar();
+      expect(oscs.map((o) => o.ganho)).toEqual(Array(6).fill(ganho));
+      unmount();
+    }
+    expect(GANHO.baixo).toBeLessThan(GANHO.medio);
+    expect(GANHO.medio).toBeLessThan(GANHO.alto);
+  });
+
+  it('aviso antecipado é bipe duplo; contagem 3-2-1 é bipe simples', () => {
+    render(<ComBanco som={{ ...PADRAO, contagem: false }} />);
+    iniciar();
+    expect(ativos()).toEqual(['20', '20.18', '30F']);
   });
 
   it('aviso de 5 s e sem contagem', () => {
-    render(<ComBanco som={{ som: true, avisoSeg: 5, contagem: false }} />);
+    render(<ComBanco som={{ ...PADRAO, avisoSeg: 5, contagem: false }} />);
     iniciar();
-    expect(ativos()).toEqual(['25', '30F']);
+    expect(ativos()).toEqual(['25', '25.18', '30F']);
   });
 
   it('+15 s e −15 s cancelam e reagendam', () => {
@@ -80,11 +117,11 @@ describe('alerta sonoro do descanso', () => {
       ctx.currentTime = 105;
     });
     fireEvent.click(screen.getByRole('button', { name: '+15 s' }));
-    expect(ativos()).toEqual(['35', '42', '43', '44', '45F']);
+    expect(ativos()).toEqual(['35', '35.18', '42', '43', '44', '45F']);
     fireEvent.click(screen.getByRole('button', { name: '−15 s' }));
     fireEvent.click(screen.getByRole('button', { name: '−15 s' }));
     // Fim aos 15 s: o aviso de 10 s antes já passou (5 s) e não toca.
-    expect(ativos()).toEqual(['5', '12', '13', '14', '15F']);
+    expect(ativos()).toEqual(['5', '5.18', '12', '13', '14', '15F']);
   });
 
   it('Pular cancela todos os bipes', () => {
@@ -110,7 +147,7 @@ describe('alerta sonoro do descanso', () => {
     ctx.state = 'running';
     oscs = [];
     fireEvent.click(ativar);
-    expect(ativos()).toHaveLength(5);
+    expect(ativos()).toHaveLength(6);
     act(() => void vi.advanceTimersByTime(300));
     expect(screen.queryByRole('button', { name: 'Toque para ativar o som' })).not.toBeInTheDocument();
   });
@@ -128,7 +165,7 @@ describe('alerta sonoro do descanso', () => {
     expect(oscs).toHaveLength(0);
     visibilidade = 'visible';
     act(() => void document.dispatchEvent(new Event('visibilitychange')));
-    expect(ativos()).toHaveLength(5);
+    expect(ativos()).toHaveLength(6);
     visibilidade = 'hidden';
     act(() => void document.dispatchEvent(new Event('visibilitychange')));
     expect(ativos()).toEqual([]);

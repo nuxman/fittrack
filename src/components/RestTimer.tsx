@@ -39,10 +39,10 @@ export function ContagemDescanso({ endsAt, vibrar, som, desabilitado, onDefinir 
 
   // Bipes agendados no relógio do AudioContext; reagenda a cada mudança de endsAt (±15 s, Pular, pausa)
   // e ao voltar ao app; oculto ou ao sair da execução, cancela.
-  const { som: ligado = false, avisoSeg = 0, contagem = false } = som ?? {};
+  const { som: ligado = false, avisoSeg = 0, contagem = false, volume = 'alto' } = som ?? {};
   useEffect(() => {
     if (endsAt == null || !ligado) return;
-    const agendar = () => agendarBipes(endsAt, { som: ligado, avisoSeg, contagem });
+    const agendar = () => agendarBipes(endsAt, { som: ligado, avisoSeg, contagem, volume });
     const mudou = () => (document.visibilityState === 'visible' ? agendar() : cancelarBipes());
     agendar();
     document.addEventListener('visibilitychange', mudou);
@@ -50,7 +50,7 @@ export function ContagemDescanso({ endsAt, vibrar, som, desabilitado, onDefinir 
       document.removeEventListener('visibilitychange', mudou);
       cancelarBipes();
     };
-  }, [endsAt, ligado, avisoSeg, contagem]);
+  }, [endsAt, ligado, avisoSeg, contagem, volume]);
 
   useEffect(() => {
     if (endsAt == null) return;
@@ -76,7 +76,7 @@ export function ContagemDescanso({ endsAt, vibrar, som, desabilitado, onDefinir 
           className="w-full text-center text-sm font-semibold text-primary-400 underline"
           onClick={() => {
             prepararAudio();
-            agendarBipes(endsAt, { som: ligado, avisoSeg, contagem });
+            agendarBipes(endsAt, { som: ligado, avisoSeg, contagem, volume });
           }}
         >
           Toque para ativar o som

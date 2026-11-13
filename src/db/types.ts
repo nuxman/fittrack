@@ -157,7 +157,7 @@ export interface UserSettings extends BaseRecord {
   cardioPadrao: CardioPadrao;
   /**
    * Opcionais, lidos com valor padrão (sem migração): avisoNotificacoesVisto ?? false;
-   * somDescanso ?? true, avisoAntecipadoSeg ?? 10, contagem321 ?? true (ver opcoesSom).
+   * somDescanso ?? true, avisoAntecipadoSeg ?? 10, contagem321 ?? true, volumeAlerta ?? 'alto' (ver opcoesSom).
    */
   interface: {
     tema: 'escuro' | 'claro';
@@ -166,6 +166,7 @@ export interface UserSettings extends BaseRecord {
     somDescanso?: boolean;
     avisoAntecipadoSeg?: 0 | 5 | 10;
     contagem321?: boolean;
+    volumeAlerta?: 'baixo' | 'medio' | 'alto';
     /** Local escolhido no Início, válido só no dia `data` (chaveDia); em outro dia, volta para academia. */
     localHoje?: { local: LocalTreino; data: string };
   };

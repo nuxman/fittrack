@@ -33,7 +33,7 @@ it('Configurações mostra a versão (dev no lugar do hash fora do build)', asyn
   const { unmount } = render(<App />);
   const versao = (await screen.findByTestId('versao')).textContent!;
   expect(versao.startsWith(`Versão ${__APP_VERSION__} · dev · `)).toBe(true);
-  expect(__APP_VERSION__).toBe('0.3.6');
+  expect(__APP_VERSION__).toBe('0.3.7');
   expect(versao).toMatch(/· \d{2}\/\d{2}\/\d{4}$/);
   unmount();
   window.location.hash = '#/';
@@ -62,6 +62,10 @@ it('Configurações → Alertas de descanso: som, aviso antecipado e 3-2-1 salvo
   expect(screen.getByLabelText('Aviso antecipado')).toHaveValue('10');
   expect(screen.getByLabelText('Contagem 3-2-1')).toBeChecked();
   expect(screen.getByRole('button', { name: /Testar som/ })).toBeInTheDocument();
+  expect(screen.getByLabelText('Volume do alerta')).toHaveValue('alto');
+  expect(screen.getByText('O alerta não fica mais alto que o volume de mídia do celular.')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Volume do alerta'), { target: { value: 'medio' } });
+  await waitFor(async () => expect((await db.settings.toArray())[0]!.interface.volumeAlerta).toBe('medio'));
   fireEvent.change(screen.getByLabelText('Aviso antecipado'), { target: { value: '5' } });
   await waitFor(async () => expect((await db.settings.toArray())[0]!.interface.avisoAntecipadoSeg).toBe(5));
   fireEvent.click(screen.getByLabelText('Contagem 3-2-1'));

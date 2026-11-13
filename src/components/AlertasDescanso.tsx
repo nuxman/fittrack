@@ -3,7 +3,7 @@ import { Bell, Volume2 } from 'lucide-react';
 import { useAsync } from '../useAsync';
 import { settingsRepository } from '../db/repositories/settings';
 import type { UserSettings } from '../db/types';
-import { opcoesSom, testarSom } from '../somDescanso';
+import { opcoesSom, testarSom, type VolumeAlerta } from '../somDescanso';
 
 const permissaoAtual = () => (typeof Notification === 'undefined' ? null : Notification.permission);
 
@@ -59,7 +59,21 @@ export function AlertasDescanso() {
               onChange={(e) => void salvar({ contagem321: e.target.checked })}
             />
           </label>
-          <button type="button" className="btn-secondary w-full" onClick={testarSom}>
+          <label className="flex min-h-11 items-center justify-between gap-3">
+            Volume do alerta
+            <select
+              className="input w-auto"
+              disabled={!som.som}
+              value={som.volume}
+              onChange={(e) => void salvar({ volumeAlerta: e.target.value as VolumeAlerta })}
+            >
+              <option value="baixo">Baixo</option>
+              <option value="medio">Médio</option>
+              <option value="alto">Alto</option>
+            </select>
+          </label>
+          <p className="text-sm text-neutral-400">O alerta não fica mais alto que o volume de mídia do celular.</p>
+          <button type="button" className="btn-secondary w-full" onClick={() => testarSom(som.volume)}>
             <Volume2 size={20} /> Testar som
           </button>
         </div>
