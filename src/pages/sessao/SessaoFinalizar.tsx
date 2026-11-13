@@ -5,7 +5,7 @@ import { useSessao } from './SessaoLayout';
 import { workoutSessionsRepository } from '../../db/repositories/workoutSessions';
 import { workoutPlansRepository } from '../../db/repositories/workoutPlans';
 import { useAsync } from '../../useAsync';
-import { descricaoRpe, formatarDuracao, mudancasNaFicha, progresso, pulados, tempoAtivoEm } from '../../sessao';
+import { descricaoRpe, formatarDuracao, mudancasNaSessao, progresso, pulados, tempoAtivoEm } from '../../sessao';
 
 /** Finalizar com RPE (0–10) e observações. ?fim=<timestamp> encerra no horário da última série. */
 export function SessaoFinalizar() {
@@ -18,7 +18,9 @@ export function SessaoFinalizar() {
   const [erro, setErro] = useState<string | null>(null);
   const [gravando, setGravando] = useState(false);
   const [ficha] = useAsync(() => workoutPlansRepository.get(sessao.planId), [sessao.planId]);
-  const mudancas = ficha ? mudancasNaFicha(sessao.planSnapshot.itens, ficha.itens) : [];
+  // Base: os itens do início da sessão (edições da ficha durante o treino não contam); sessões antigas, a ficha.
+  const iniciais = sessao.itensIniciais ?? ficha?.itens;
+  const mudancas = iniciais ? mudancasNaSessao(iniciais, sessao.planSnapshot.itens) : [];
   // "Aplicar também na ficha?": escolha por mudança, nenhuma marcada por padrão.
   const [aplicar, setAplicar] = useState<string[]>([]);
 
@@ -31,7 +33,11 @@ export function SessaoFinalizar() {
     try {
       const escolhidas = mudancas.filter((m) => aplicar.includes(m.exerciseId));
       if (ficha && escolhidas.length) {
-        const itens = ficha.itens.map((i) => escolhidas.find((m) => m.exerciseId === i.exerciseId)?.item ?? i);
+        // Item removido da ficha durante o treino: a mudança dele é ignorada.
+        const itens = ficha.itens.map((i) => {
+          const m = escolhidas.find((x) => x.exerciseId === i.exerciseId);
+          return m ? { ...i, ...m.novo } : i;
+        });
         if (new Set(itens.map((i) => i.exerciseId)).size < itens.length) throw new Error('A ficha já tem o exercício substituto; desmarque essa substituição.');
         await workoutPlansRepository.update(ficha.id, { itens });
       }

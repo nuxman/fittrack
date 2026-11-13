@@ -73,8 +73,9 @@ export const workoutSessionsRepository = {
       const atual = await ativa();
       if (atual) throw new SessaoAtivaError(atual);
       const agora = Date.now();
+      const planSnapshot = await snapshotDaFicha(planId);
       return base.create({
-        planId, planSnapshot: await snapshotDaFicha(planId), status: 'em_andamento',
+        planId, planSnapshot, itensIniciais: structuredClone(planSnapshot.itens), status: 'em_andamento',
         iniciadaEm: new Date(agora).toISOString(), finalizadaEm: null, duracaoAtivaSeg: 0, rpe: null, observacoes: '',
         restTimerEndsAt: null, exerciciosPulados: [], ativaDesde: agora, pausadaEm: null,
       });
@@ -128,29 +129,37 @@ export const workoutSessionsRepository = {
     }),
 
   /**
-   * Troca o exercício só nesta sessão (mesma posição, séries, reps e descanso). Exige o item sem séries
-   * registradas, para nenhuma série ficar sem exercício na sessão.
+   * Troca o exercício só nesta sessão. Sem séries registradas: o substituto ocupa o lugar (mesmas séries,
+   * reps e descanso). Com N séries: o original fica como "trocado após N séries" e o substituto entra logo
+   * depois, com as séries que faltavam.
    */
   async substituir(id: string, exerciseId: string, novoId: string): Promise<WorkoutSession> {
     const [novo, sets] = await Promise.all([db.exercises.get(novoId), exerciseSetsRepository.listarDaSessao(id)]);
     if (!novo || novo.deletedAt !== null) throw new Error('Exercício não encontrado');
-    if (sets.some((x) => x.exerciseId === exerciseId)) throw new Error('Desfaça as séries deste exercício antes de substituí-lo');
+    const feitas = sets.filter((x) => x.exerciseId === exerciseId).length;
     return alterar(id, (s) => {
       exigirAtiva(s);
-      if (s.planSnapshot.itens.some((i) => i.exerciseId === novoId)) throw new Error(`"${novo.nome}" já está neste treino`);
+      const itens = [...s.planSnapshot.itens].sort((a, b) => a.ordem - b.ordem);
+      const k = itens.findIndex((x) => x.exerciseId === exerciseId);
+      const i = itens[k];
+      if (!i) throw new Error('Exercício fora deste treino');
+      if (i.trocadoApos != null) throw new Error('Este exercício já foi trocado');
+      if (feitas >= i.series) throw new Error('Este exercício já foi concluído');
+      if (itens.some((x) => x.exerciseId === novoId)) throw new Error(`"${novo.nome}" já está neste treino`);
       const [min, max] = faixaReps(novo.tipo);
       const lim = (v: number) => Math.min(max, Math.max(min, v));
-      const itens = s.planSnapshot.itens.map((i) => {
-        if (i.exerciseId !== exerciseId) return i;
-        const original = i.substituiu ?? { exerciseId: i.exerciseId, nome: i.nome };
-        return {
-          ...i, exerciseId: novoId, nome: novo.nome, tipo: novo.tipo, unidadeCarga: novo.unidadeCarga, grupoPrincipal: novo.grupoPrincipal,
-          porLado: novo.porLado, repsMin: lim(i.repsMin), repsMax: lim(i.repsMax),
-          // Voltar ao exercício original desfaz a substituição.
-          substituiu: original.exerciseId === novoId ? undefined : original,
-        };
-      });
-      return { planSnapshot: { ...s.planSnapshot, itens }, exerciciosPulados: pulados(s).filter((e) => e !== exerciseId) };
+      const original = i.substituiu ?? { exerciseId: i.exerciseId, nome: i.nome };
+      const substituto = {
+        ...i, exerciseId: novoId, nome: novo.nome, tipo: novo.tipo, unidadeCarga: novo.unidadeCarga, grupoPrincipal: novo.grupoPrincipal,
+        porLado: novo.porLado, series: i.series - feitas, repsMin: lim(i.repsMin), repsMax: lim(i.repsMax),
+        // Voltar ao exercício original (sem séries) desfaz a substituição.
+        substituiu: original.exerciseId === novoId ? undefined : original,
+      };
+      itens.splice(k, 1, ...(feitas > 0 ? [{ ...i, trocadoApos: feitas }, substituto] : [substituto]));
+      return {
+        planSnapshot: { ...s.planSnapshot, itens: itens.map((x, ordem) => ({ ...x, ordem })) },
+        exerciciosPulados: pulados(s).filter((e) => e !== exerciseId),
+      };
     });
   },
 

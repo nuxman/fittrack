@@ -15,7 +15,7 @@ import { settingsRepository } from '../../db/repositories/settings';
 import { opcoesSom, prepararAudio } from '../../somDescanso';
 import type { SnapshotItem } from '../../db/types';
 import {
-  exercicioAtual, formatarSerie, parseNumero, prescricaoSessao, pulados, seriesFeitas, usaCarga, validarSerie,
+  exercicioAtual, formatarSerie, parseNumero, prescricaoSessao, pulados, seriesFeitas, textoTrocado, usaCarga, validarSerie,
 } from '../../sessao';
 
 const num = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
@@ -65,6 +65,9 @@ function Execucao({ item }: { item: SnapshotItem }) {
   const daSessao = sets.filter((s) => s.exerciseId === item.exerciseId);
   const feitas = seriesFeitas(sets, item.exerciseId);
   const pausada = sessao.status === 'pausada';
+  // Trocado no meio: encerrado, sem novas séries; o substituto vem logo depois.
+  const trocado = item.trocadoApos != null;
+  const substituto = trocado ? sessao.planSnapshot.itens.find((i) => i.ordem === item.ordem + 1) : undefined;
   const foto = imagens.get(item.exerciseId);
   const proximo = exercicioAtual(sessao.planSnapshot.itens, sets, pulados(sessao));
   const proximoItem = proximo && proximo !== item.exerciseId ? sessao.planSnapshot.itens.find((i) => i.exerciseId === proximo) : undefined;
@@ -150,7 +153,7 @@ function Execucao({ item }: { item: SnapshotItem }) {
               </li>
             ))}
           </ol>
-          {daSessao.length > 0 && (
+          {daSessao.length > 0 && !trocado && (
             <button type="button" className="ml-auto inline-flex min-h-11 items-center gap-1 px-2 text-sm text-neutral-300" disabled={gravando} onClick={desfazer}>
               <Undo2 size={16} /> Desfazer última série
             </button>
@@ -193,7 +196,7 @@ function Execucao({ item }: { item: SnapshotItem }) {
           </p>
         )}
 
-        {proximoItem && feitas >= item.series && (
+        {proximoItem && (feitas >= item.series || trocado) && (
           <Link to={`/sessao/${proximoItem.exerciseId}`} className="btn-secondary w-full">
             Próximo: {proximoItem.nome}
           </Link>
@@ -207,7 +210,14 @@ function Execucao({ item }: { item: SnapshotItem }) {
           </Link>
         )}
 
-        <AjustarNoTreino key={`${item.series}-${item.repsMin}-${item.repsMax}`} item={item} temSeries={daSessao.length > 0} />
+        {trocado ? (
+          <p className="card text-neutral-300" data-testid="aviso-trocado">
+            {textoTrocado(item.trocadoApos!)}
+            {substituto ? ` por ${substituto.nome}` : ''}.
+          </p>
+        ) : (
+          <AjustarNoTreino key={`${item.series}-${item.repsMin}-${item.repsMax}`} item={item} />
+        )}
 
         {exercicio && <Anotacoes exerciseId={exercicio.id} inicial={exercicio.anotacoes ?? ''} onSalvo={() => void recarregar()} />}
 
@@ -224,7 +234,7 @@ function Execucao({ item }: { item: SnapshotItem }) {
       <footer className="safe-bottom shrink-0 space-y-2 border-t border-neutral-800 bg-surface px-4 pt-2" data-testid="rodape-execucao">
         <ContagemDescanso endsAt={sessao.restTimerEndsAt} desabilitado={pausada} vibrar={vibrar} som={opcoesSom(settings)} onDefinir={definirDescanso} />
         {pausada && <p className="text-center text-sm text-primary-400">Treino pausado. Retome para registrar séries.</p>}
-        <button type="button" className="btn-primary min-h-16 w-full text-xl" disabled={gravando || pausada} onClick={concluir}>
+        <button type="button" className="btn-primary min-h-16 w-full text-xl" disabled={gravando || pausada || trocado} onClick={concluir}>
           <Check size={24} /> Concluir série
         </button>
       </footer>
@@ -235,7 +245,7 @@ function Execucao({ item }: { item: SnapshotItem }) {
 }
 
 /** Séries, reps e substituição só nesta sessão (planSnapshot); a ficha muda só se aplicado ao finalizar. */
-function AjustarNoTreino({ item, temSeries }: { item: SnapshotItem; temSeries: boolean }) {
+function AjustarNoTreino({ item }: { item: SnapshotItem }) {
   const { sessao, agir } = useSessao();
   const navigate = useNavigate();
   const [series, setSeries] = useState(String(item.series));
@@ -287,10 +297,10 @@ function AjustarNoTreino({ item, temSeries }: { item: SnapshotItem; temSeries: b
         <button type="button" className="btn-secondary w-full" disabled={!mudou} onClick={salvar}>
           Salvar ajuste
         </button>
-        <button type="button" className="btn-secondary w-full" disabled={temSeries} onClick={() => setPicker(true)}>
+        <button type="button" className="btn-secondary w-full" onClick={() => setPicker(true)}>
           <Replace size={20} /> Substituir exercício
         </button>
-        {temSeries && <p className="text-sm text-neutral-400">Para substituir, desfaça antes as séries deste exercício.</p>}
+        <p className="text-sm text-neutral-400">Com séries feitas, este exercício fica com elas e o substituto recebe as que faltam.</p>
         {erro && (
           <p role="alert" className="text-red-400">
             {erro}

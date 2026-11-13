@@ -321,11 +321,74 @@ describe('mudanças durante a sessão (3b.3)', () => {
     expect((await sessoes.get(s.id))!.status).toBe('concluida');
   });
 
-  it('substituir bloqueado com séries registradas', async () => {
-    const s = await sessoes.iniciar((await doDia(1)).id);
-    const [a, , c] = s.planSnapshot.itens;
+  it('substituir com séries feitas: original fica "trocado após N séries" e o substituto herda o restante', async () => {
+    const plano = await doDia(1);
+    const s = await sessoes.iniciar(plano.id);
+    const [a, b] = s.planSnapshot.itens;
+    const flexao = await exercisesRepository.create({
+      nome: 'Flexão', tipo: 'peso_corporal', unidadeCarga: 'kg', grupoPrincipal: 'peito', gruposSecundarios: [], porLado: false,
+    });
     await series.registrar({ sessionId: s.id, exerciseId: a!.exerciseId, carga: 40, reps: 10 });
-    await expect(sessoes.substituir(s.id, a!.exerciseId, c!.exerciseId)).rejects.toThrow('Desfaça');
+    await sessoes.substituir(s.id, a!.exerciseId, flexao.id);
+    const itens = (await sessoes.get(s.id))!.planSnapshot.itens;
+    expect(itens.map((i) => [i.nome, i.ordem, i.series, i.trocadoApos])).toEqual([
+      ['Supino máquina', 0, 3, 1],
+      ['Flexão', 1, 2, undefined],
+      [b!.nome, 2, 3, undefined],
+      ...itens.slice(3).map((i) => [i.nome, i.ordem, i.series, undefined]),
+    ]);
+    expect(itens[1]!.substituiu).toEqual({ exerciseId: a!.exerciseId, nome: 'Supino máquina' });
+
+    abrir('/');
+    // Retomada vai para o substituto, não para o original trocado.
+    expect(await titulo('Flexão')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: /Visão geral/ }));
+    const lista = await screen.findAllByTestId('item-sessao');
+    expect(lista).toHaveLength(6);
+    expect(lista[0]).toHaveTextContent('Trocado após 1 série');
+    expect(within(lista[0]!).queryByRole('button', { name: /Pular/ })).not.toBeInTheDocument();
+    expect(screen.getByTestId('progresso')).toHaveTextContent('0 de 6');
+    fireEvent.click(within(lista[0]!).getByRole('link', { name: /^(?!Editar).*Supino máquina/ }));
+    expect(await screen.findByTestId('aviso-trocado')).toHaveTextContent('Trocado após 1 série por Flexão.');
+    expect(screen.getByRole('button', { name: 'Concluir série' })).toBeDisabled();
+
+    // Aplicar na ficha: troca o exercício e mantém as 3 séries (1 feita + 2 herdadas).
+    fireEvent.click(screen.getByRole('link', { name: /Visão geral/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Finalizar treino' }));
+    const grupo = await screen.findByRole('group', { name: 'Aplicar também na ficha?' });
+    expect(within(grupo).getAllByRole('checkbox').map((c) => c.closest('label')!.textContent)).toEqual(['Supino máquina → Flexão']);
+    fireEvent.click(within(grupo).getByRole('checkbox'));
+    await finalizarCom('6');
+    await waitFor(async () => expect((await doDia(1)).itens[0]).toMatchObject({ exerciseId: flexao.id, series: 3 }));
+    expect((await series.listarDaSessao(s.id)).map((x) => x.exerciseId)).toEqual([a!.exerciseId]);
+  });
+
+  it('exercício concluído ou já trocado não pode ser substituído', async () => {
+    const s = await sessoes.iniciar((await doDia(1)).id);
+    const [a, , c, d] = s.planSnapshot.itens;
+    for (let k = 0; k < 3; k++) await series.registrar({ sessionId: s.id, exerciseId: a!.exerciseId, carga: 40, reps: 10 });
+    await expect(sessoes.substituir(s.id, a!.exerciseId, c!.exerciseId)).rejects.toThrow('concluído');
+    const flexao = await exercisesRepository.create({
+      nome: 'Flexão', tipo: 'peso_corporal', unidadeCarga: 'kg', grupoPrincipal: 'peito', gruposSecundarios: [], porLado: false,
+    });
+    await series.registrar({ sessionId: s.id, exerciseId: d!.exerciseId, carga: 20, reps: 10 });
+    await sessoes.substituir(s.id, d!.exerciseId, flexao.id);
+    await expect(sessoes.substituir(s.id, d!.exerciseId, c!.exerciseId)).rejects.toThrow('já foi trocado');
+  });
+
+  it('editar a ficha durante o treino não gera item em "Aplicar também na ficha?"', async () => {
+    const plano = await doDia(1);
+    const s = await sessoes.iniciar(plano.id);
+    const itens = plano.itens.map((i, k) => (k === 0 ? { ...i, series: 5, descansoSeg: 30 } : i));
+    await workoutPlansRepository.update(plano.id, { itens });
+    abrir('/sessao/finalizar');
+    fireEvent.click(await screen.findByRole('button', { name: '7' }));
+    expect(screen.queryByRole('group', { name: 'Aplicar também na ficha?' })).not.toBeInTheDocument();
+
+    // Mudança na sessão aparece medida contra o início; aplicar não desfaz a edição da ficha nos outros campos.
+    await sessoes.setPrescricaoItem(s.id, plano.itens[1]!.exerciseId, { series: 2, repsMin: 10, repsMax: 12 });
+    const ini = (await sessoes.get(s.id))!.itensIniciais!;
+    expect(ini[0]!.series).toBe(3);
   });
 
   it('sem mudanças não pergunta; RPE mostra a explicação ao tocar', async () => {

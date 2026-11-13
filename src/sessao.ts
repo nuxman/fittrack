@@ -7,7 +7,7 @@ export const ESQUECIDA_MS = 3 * 60 * 60 * 1000;
 export const ATIVOS: WorkoutSession['status'][] = ['em_andamento', 'pausada'];
 
 export type StatusExercicio = 'pendente' | 'parcial' | 'concluido' | 'pulado';
-type ItemSessao = Pick<SnapshotItem, 'exerciseId' | 'series' | 'ordem'>;
+type ItemSessao = Pick<SnapshotItem, 'exerciseId' | 'series' | 'ordem' | 'trocadoApos'>;
 
 export const pulados = (s: Pick<WorkoutSession, 'exerciciosPulados'>) => s.exerciciosPulados ?? [];
 
@@ -16,6 +16,7 @@ export const seriesFeitas = (sets: ExerciseSet[], exerciseId: string) =>
 
 /** Calculado só pelas séries registradas; "pulado" só vale enquanto não estiver completo. */
 export function statusExercicio(item: ItemSessao, sets: ExerciseSet[], pul: string[]): StatusExercicio {
+  if (item.trocadoApos != null) return 'parcial';
   const n = seriesFeitas(sets, item.exerciseId);
   if (n >= item.series) return 'concluido';
   if (pul.includes(item.exerciseId)) return 'pulado';
@@ -29,7 +30,7 @@ export function progresso(itens: ItemSessao[], sets: ExerciseSet[], pul: string[
 /** Exercício para retomar: o da última série, se ainda aberto; senão o primeiro aberto na ordem. */
 export function exercicioAtual(itens: ItemSessao[], sets: ExerciseSet[], pul: string[]): string | undefined {
   const ordenados = [...itens].sort((a, b) => a.ordem - b.ordem);
-  const aberto = (i: ItemSessao) => ['pendente', 'parcial'].includes(statusExercicio(i, sets, pul));
+  const aberto = (i: ItemSessao) => i.trocadoApos == null && ['pendente', 'parcial'].includes(statusExercicio(i, sets, pul));
   const ultima = [...sets].sort((a, b) => a.concluidaEm.localeCompare(b.concluidaEm)).at(-1);
   const daUltima = ultima && ordenados.find((i) => i.exerciseId === ultima.exerciseId);
   if (daUltima && aberto(daUltima)) return daUltima.exerciseId;
@@ -140,40 +141,47 @@ export function formatarDuracao(seg: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
 }
 
-/** Uma mudança feita durante a sessão num item da ficha, com o item como ficaria na ficha. */
+/** Uma mudança feita durante a sessão num item, com os valores que iriam para a ficha. */
 export interface MudancaFicha {
-  /** exerciseId do item na ficha (o original, se substituído). */
+  /** exerciseId do item no início da sessão (o original, se substituído). */
   exerciseId: string;
   descricao: string;
-  item: WorkoutPlanItem;
+  novo: Pick<WorkoutPlanItem, 'exerciseId' | 'series' | 'repsMin' | 'repsMax' | 'descansoSeg'>;
 }
 
 /**
- * Compara o planSnapshot da sessão com a ficha atual: séries, reps, descanso e substituição.
- * ponytail: compara com a ficha de agora; editar a ficha durante a sessão também aparece como mudança.
- * Guardar os itens originais na sessão se isso incomodar.
+ * Compara os itens do início da sessão com o planSnapshot atual: séries, reps, descanso e substituição.
+ * Substituído após N séries: o substituto herda o restante, então na ficha valem N + as séries dele.
  */
-export function mudancasNaFicha(snapshot: SnapshotItem[], ficha: WorkoutPlanItem[]): MudancaFicha[] {
+export function mudancasNaSessao(iniciais: WorkoutPlanItem[], atuais: SnapshotItem[]): MudancaFicha[] {
+  const raiz = (i: SnapshotItem) => i.substituiu?.exerciseId ?? i.exerciseId;
   const r: MudancaFicha[] = [];
-  for (const f of ficha) {
-    const s = snapshot.find((i) => i.exerciseId === f.exerciseId) ?? snapshot.find((i) => i.substituiu?.exerciseId === f.exerciseId);
-    if (!s) continue;
-    const seg = s.tipo === 'tempo' ? ' s' : '';
+  for (const ini of iniciais) {
+    const grupo = atuais.filter((i) => raiz(i) === ini.exerciseId);
+    const final = grupo.find((i) => i.trocadoApos == null);
+    if (!final) continue;
+    const series = final.series + grupo.reduce((t, i) => t + (i.trocadoApos ?? 0), 0);
+    const seg = final.tipo === 'tempo' ? ' s' : '';
     const partes: string[] = [];
-    if (s.series !== f.series) partes.push(`séries ${f.series} → ${s.series}`);
-    if (s.repsMin !== f.repsMin || s.repsMax !== f.repsMax) partes.push(`${s.tipo === 'tempo' ? 'tempo' : 'reps'} ${f.repsMin}–${f.repsMax} → ${s.repsMin}–${s.repsMax}${seg}`);
-    if (s.descansoSeg !== f.descansoSeg) partes.push(`descanso ${f.descansoSeg} → ${s.descansoSeg} s`);
-    const trocou = s.exerciseId !== f.exerciseId;
+    if (series !== ini.series) partes.push(`séries ${ini.series} → ${series}`);
+    if (final.repsMin !== ini.repsMin || final.repsMax !== ini.repsMax) {
+      partes.push(`${final.tipo === 'tempo' ? 'tempo' : 'reps'} ${ini.repsMin}–${ini.repsMax} → ${final.repsMin}–${final.repsMax}${seg}`);
+    }
+    if (final.descansoSeg !== ini.descansoSeg) partes.push(`descanso ${ini.descansoSeg} → ${final.descansoSeg} s`);
+    const trocou = final.exerciseId !== ini.exerciseId;
     if (!trocou && partes.length === 0) continue;
-    const titulo = trocou ? `${s.substituiu!.nome} → ${s.nome}` : s.nome;
+    const titulo = trocou ? `${final.substituiu!.nome} → ${final.nome}` : final.nome;
     r.push({
-      exerciseId: f.exerciseId,
+      exerciseId: ini.exerciseId,
       descricao: partes.length ? `${titulo}: ${partes.join('; ')}` : titulo,
-      item: { ...f, exerciseId: s.exerciseId, series: s.series, repsMin: s.repsMin, repsMax: s.repsMax, descansoSeg: s.descansoSeg },
+      novo: { exerciseId: final.exerciseId, series, repsMin: final.repsMin, repsMax: final.repsMax, descansoSeg: final.descansoSeg },
     });
   }
   return r;
 }
+
+/** "Trocado após 2 séries". */
+export const textoTrocado = (n: number) => `Trocado após ${n} ${n === 1 ? 'série' : 'séries'}`;
 
 /** Descrição de cada nota do RPE (tela Finalizar). */
 export function descricaoRpe(n: number): string {

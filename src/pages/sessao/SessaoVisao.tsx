@@ -3,7 +3,7 @@ import { Flag, Pencil, SkipForward, Undo2 } from 'lucide-react';
 import { EstadoTela, useSessao } from './SessaoLayout';
 import { FotoExercicio } from '../../components/FotoExercicio';
 import { workoutSessionsRepository } from '../../db/repositories/workoutSessions';
-import { formatarSerie, prescricaoSessao, pulados, seriesFeitas, statusExercicio, type StatusExercicio } from '../../sessao';
+import { formatarSerie, prescricaoSessao, pulados, seriesFeitas, statusExercicio, textoTrocado, type StatusExercicio } from '../../sessao';
 
 const ROTULO: Record<Exclude<StatusExercicio, 'parcial'>, string> = { pendente: 'Pendente', concluido: 'Concluído', pulado: 'Pulado' };
 
@@ -30,7 +30,9 @@ export function SessaoVisao() {
                     {prescricaoSessao(i)} | {ultima ? formatarSerie(ultima, i) : 'sem registro'}
                   </p>
                   <p className={`text-sm font-semibold ${st === 'concluido' ? 'text-primary-400' : 'text-neutral-300'}`}>
-                    {st === 'parcial' ? `${seriesFeitas(sets, i.exerciseId)}/${i.series}` : ROTULO[st]}
+                    {i.trocadoApos != null
+                      ? textoTrocado(i.trocadoApos)
+                      : st === 'parcial' ? `${seriesFeitas(sets, i.exerciseId)}/${i.series}` : ROTULO[st]}
                   </p>
                 </div>
               </Link>
@@ -39,7 +41,7 @@ export function SessaoVisao() {
                   <Undo2 size={20} /> Desfazer pulo
                 </button>
               )}
-              {(st === 'pendente' || st === 'parcial') && (
+              {(st === 'pendente' || st === 'parcial') && i.trocadoApos == null && (
                 <button type="button" className="btn-secondary shrink-0 px-3" onClick={() => agir((s) => workoutSessionsRepository.pular(s.id, i.exerciseId))}>
                   <SkipForward size={20} /> Pular
                 </button>

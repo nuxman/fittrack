@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ExerciseSet } from './db/types';
 import {
-  ajustarDescanso, descricaoRpe, exercicioAtual, formatarSerie, parseNumero, restanteSeg, sessaoEsquecida, statusExercicio, tempoAtivoEm, totalReps, volumeKg,
+  ajustarDescanso, descricaoRpe, mudancasNaSessao, exercicioAtual, formatarSerie, parseNumero, restanteSeg, sessaoEsquecida, statusExercicio, tempoAtivoEm, totalReps, volumeKg,
 } from './sessao';
 
 let n = 0;
@@ -106,5 +106,32 @@ describe('descricaoRpe', () => {
       'Moderado, sobravam 4 ou mais repetições.', 'Moderado, sobravam 4 ou mais repetições.', 'Pesado, sobravam ~3 repetições.',
       'Difícil, sobravam ~2 repetições.', 'Muito difícil, sobrava 1 repetição.', 'Máximo, não saía mais nenhuma.',
     ]);
+  });
+});
+
+describe('mudancasNaSessao', () => {
+  const base = { series: 3, repsMin: 10, repsMax: 12, descansoSeg: 90 };
+  const snap = (exerciseId: string, nome: string, ordem: number, extra = {}) => ({
+    ...base, exerciseId, nome, ordem, tipo: 'carga' as const, unidadeCarga: 'kg' as const, grupoPrincipal: 'peito' as const, ...extra,
+  });
+  const iniciais = [{ ...base, exerciseId: 'a', ordem: 0 }, { ...base, exerciseId: 'b', ordem: 1 }];
+
+  it('sem mudanças, lista vazia', () => {
+    expect(mudancasNaSessao(iniciais, [snap('a', 'A', 0), snap('b', 'B', 1)])).toEqual([]);
+  });
+
+  it('séries, reps e descanso medidos contra o início', () => {
+    const r = mudancasNaSessao(iniciais, [snap('a', 'A', 0, { series: 4, repsMax: 15 }), snap('b', 'B', 1, { descansoSeg: 60 })]);
+    expect(r.map((m) => m.descricao)).toEqual(['A: séries 3 → 4; reps 10–12 → 10–15', 'B: descanso 90 → 60 s']);
+    expect(r[0]!.novo).toEqual({ exerciseId: 'a', series: 4, repsMin: 10, repsMax: 15, descansoSeg: 90 });
+  });
+
+  it('troca após N séries: substituto com o total planejado', () => {
+    const r = mudancasNaSessao(iniciais, [
+      snap('a', 'A', 0, { trocadoApos: 1 }),
+      snap('x', 'X', 1, { series: 2, substituiu: { exerciseId: 'a', nome: 'A' } }),
+      snap('b', 'B', 2),
+    ]);
+    expect(r).toEqual([{ exerciseId: 'a', descricao: 'A → X', novo: { exerciseId: 'x', series: 3, repsMin: 10, repsMax: 12, descansoSeg: 90 } }]);
   });
 });

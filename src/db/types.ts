@@ -74,6 +74,8 @@ export interface SnapshotItem extends WorkoutPlanItem {
   porLado?: boolean;
   /** Opcional: exercício da ficha trocado por este só nesta sessão ("Substituir exercício"). */
   substituiu?: { exerciseId: string; nome: string };
+  /** Opcional: exercício trocado no meio, depois de N séries; fica na sessão como parcial, encerrado. */
+  trocadoApos?: number;
 }
 
 export interface PlanSnapshot extends Omit<WorkoutPlan, 'itens'> {
@@ -98,6 +100,8 @@ export interface WorkoutSession extends BaseRecord {
   ativaDesde?: number | null;
   /** Timestamp da pausa atual (com status 'pausada'). */
   pausadaEm?: number | null;
+  /** Opcional: itens do planSnapshot no início, base de "Aplicar também na ficha?". Sessões antigas: comparar com a ficha. */
+  itensIniciais?: WorkoutPlanItem[];
 }
 
 export interface ExerciseSet extends BaseRecord {
