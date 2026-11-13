@@ -65,17 +65,17 @@ Schema Dexie versionado desde a versão 1.
 - Início: seletor grande "Academia | Casa" no topo. A escolha vale para o dia: guardar local e data em UserSettings (campos opcionais); em outro dia, volta para Academia.
 - Sugestão considera só as fichas do local escolhido. Sem ficha desse local para hoje (e sem pendente), mostrar as fichas desse local para escolher.
 - Pendências: um dia em que houve qualquer treino concluído (casa ou academia) não gera pendência para a ficha daquele dia em nenhum local.
-- "X de Y treinos esta semana": X conta treinos concluídos em qualquer local; Y = dias com ficha de academia.
+- "X de Y treinos esta semana": Y = dias com ficha de academia; X = quantos desses dias estão cobertos na semana. Um dia está coberto se a ficha de academia dele foi concluída nesta semana (em qualquer dia) OU se houve treino em casa concluído naquele dia da semana. X nunca passa de Y (mesma noção das pendências).
 - Aviso de mesmo grupoPrincipal em dias seguidos considera sessões dos dois locais.
 - Aba Treinar: filtro "Academia | Casa"; "Nova ficha" cria no local selecionado.
-- Local escolhido sem nenhuma ficha: mostrar "Criar ficha de <local>" no Início e na aba Treinar.
+- Local escolhido sem nenhuma ficha: mostrar "Criar ficha de <local>" no Início e na aba Treinar (no Início, com treino concluído hoje, vira link pequeno abaixo do card de concluído).
 - Editor de ficha: seletor "Academia | Casa". Mudar o local (ou o dia) para um dia já ocupado nesse local pede a mesma confirmação de troca; a outra ficha vai para o dia e o local antigos.
 
 ## Regra de sugestão
 - Ficha "feita" na semana = existe WorkoutSession 'concluida' daquela ficha nesta semana, em qualquer dia. Sessões abandonadas não contam.
 - Pendentes = fichas com diaSemana anterior a hoje, nesta semana, ainda não feitas.
 - Sugerido = a pendente mais antiga; sem pendentes, a ficha do dia de hoje (se ainda não feita).
-- Já houve treino concluído hoje (qualquer local): o card do Início e o "Sugerido" da aba Treinar mostram "Treino de hoje concluído ✓" (ficha feita e duração) e não sugerem pendentes nesse dia; as pendências voltam a ser sugeridas no dia seguinte. Iniciar outra ficha continua possível pela aba Treinar.
+- Já houve treino concluído hoje (qualquer local): o card do Início e o "Sugerido" da aba Treinar mostram "Treino de hoje concluído ✓" (ficha feita e duração) e não sugerem pendentes nesse dia; as pendências voltam a ser sugeridas no dia seguinte. Iniciar outra ficha continua possível pela aba Treinar. Essa regra tem prioridade em qualquer local: com um local sem fichas escolhido, o Início mostra o card de concluído e, abaixo, um link pequeno "Criar ficha de <local>".
 - O motivo aparece junto: "Treino de hoje" ou "Pendente de <dia>". Quando o sugerido for pendente, mostrar também a ficha de hoje como segunda opção.
 - Sábado e domingo: pendentes aparecem como "opcional"; sem pendentes, "Dia de descanso".
 - Pendências não passam para a semana seguinte. Registrar RestDay não altera pendências.
@@ -83,7 +83,7 @@ Schema Dexie versionado desde a versão 1.
 ## Tela Início (dashboard)
 De cima para baixo:
 1. Saudação curta e data de hoje.
-2. Faixa da semana S T Q Q S S D (começando na segunda) com o número do dia; check dourado nos dias com treino concluído ou cardio; ícone diferente para RestDay; "Hoje" destacado. Ao lado: "X de Y treinos esta semana" (Y = número de fichas).
+2. Faixa da semana S T Q Q S S D (começando na segunda) com o número do dia; check dourado nos dias com treino concluído ou cardio; ícone diferente para RestDay; "Hoje" destacado. Ao lado: "X de Y treinos esta semana" (conforme "Local do treino": Y = dias com ficha de academia, X = dias cobertos).
 3. Card do treino sugerido (conforme "Regra de sugestão"): nome, motivo, número de exercícios, duração estimada (média das últimas 3 sessões concluídas válidas da ficha, ignorando as com menos de 50% das séries planejadas ou menos de 10 minutos; sem sessões válidas, por exercício séries × 40 s + (séries − 1) × descanso, mais 60 s de troca entre exercícios), botão grande "Iniciar treino". Com sessão 'em_andamento' ou 'pausada': "Retomar treino" no lugar. Fileira de miniaturas (foto ou ícone do grupo principal) de todos os exercícios da ficha, com rolagem horizontal; tocar numa miniatura abre o detalhe do exercício.
 4. Resumo da semana: minutos de musculação e de cardio (cardio lido das CardioSession desde já, porque a 3c vem antes da Etapa 5).
 5. Peso atual e variação em relação à medição de cerca de 7 dias antes. Bloco não exibido até a Etapa 5 (nem texto, nem botão).
@@ -92,11 +92,14 @@ De cima para baixo:
 ## Aba Treinar (escolha de treino)
 - Todas as fichas em cards: nome, grupos principais, número de exercícios, duração estimada.
 - Card "Sugerido" conforme a regra. Qualquer ficha pode ser iniciada em qualquer dia.
-- Acesso a "Editar ficha" a partir do card.
+- Acesso a "Editar ficha" a partir do card (botão com o texto curto "Editar", rótulo acessível "Editar ficha <nome>"; "Iniciar" e "Editar" sem quebrar linha, conferido no test:viewport).
 - Cada card tem a mesma fileira de miniaturas do card sugerido do Início.
 
 ## Detalhe do exercício (fora da sessão)
-Aberto pelas miniaturas do Início e da aba Treinar. Somente leitura: foto grande (toque para ampliar), nome, prescrição da ficha, última carga, "Ver execução" (mesmas regras da tela de execução), Minhas anotações (editável direto nesta tela, sem abrir o editor), Grupos trabalhados e botão "Editar exercício". Sem campos de série nem cronômetro.
+Aberto pelas miniaturas do Início e da aba Treinar. Somente leitura: foto grande (toque para ampliar; ver "Foto em tela cheia"), nome, prescrição da ficha, última carga, "Ver execução" (mesmas regras da tela de execução), Minhas anotações (editável direto nesta tela, sem abrir o editor), Grupos trabalhados e botão "Editar exercício". Sem campos de série nem cronômetro.
+
+## Foto em tela cheia
+Vale para toda foto ampliável (detalhe do exercício, execução). Zoom com dois dedos (1× a 5×), arrastar quando ampliada, toque duplo volta a 1×. Fecha pelo botão X ou por um toque simples sem zoom. Texto "Use dois dedos para ampliar" enquanto em 1×.
 
 ## Visão geral da sessão
 Lista dos exercícios da sessão: foto (ou ícone do grupo principal), nome, "séries× repsMin a repsMax | última carga", status (pendente, parcial "2/3", concluído, pulado). Status calculado pelas séries registradas, NUNCA marcado à mão. Tocar abre a tela de execução. Botão "Pular" registra em exerciciosPulados. Progresso geral do treino (X de Y exercícios concluídos). Botão fixo "Finalizar treino" no rodapé. Botão "Editar exercício" (foto, link, anotações) em cada exercício. Card recolhível "Durante o treino": não prender a respiração e sintomas para parar.

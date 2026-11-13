@@ -12,7 +12,8 @@ const ACADEMIA = [ficha('seg', 1), ficha('ter', 2), ficha('qua', 3), ficha('qui'
 
 const sessao = (planId: string, em: Date, { status = 'concluida' as StatusSessao, rpe = 6, grupos = ['peito'] as GrupoMuscular[] } = {}) => ({
   planId, status, rpe, iniciadaEm: em.toISOString(),
-  planSnapshot: { itens: grupos.map((grupoPrincipal) => ({ grupoPrincipal })) } as never,
+  // Fichas com id 'casa-…' são de casa (o contador lê o local do snapshot).
+  planSnapshot: { ...(planId.startsWith('casa') && { local: 'casa' }), itens: grupos.map((grupoPrincipal) => ({ grupoPrincipal })) } as never,
 });
 const ids = (xs: { id: string }[]) => xs.map((x) => x.id);
 
@@ -100,14 +101,28 @@ describe('local do treino', () => {
     expect(sugestao(TODAS, [sessao('casa-ter', dia(TER))], 'casa', dia(QUA))).toEqual({ tipo: 'escolher' });
   });
 
-  it('contador: duas fichas feitas no mesmo dia contam 2', () => {
-    const s = [sessao('casa-ter', dia(TER, 7)), sessao('ter', dia(TER, 19))];
-    expect(contadorSemana(TODAS, s, dia(QUA)).feitos).toBe(2);
+  it('contador: duas fichas de academia feitas no mesmo dia cobrem 2 dias', () => {
+    const s = [sessao('seg', dia(TER, 7)), sessao('ter', dia(TER, 19))];
+    expect(contadorSemana(TODAS, s, dia(QUA))).toEqual({ feitos: 2, planejados: 5 });
   });
 
-  it('contador soma treinos dos dois locais; Y conta só dias com ficha de academia', () => {
-    const s = [sessao('seg', dia(SEG)), sessao('casa-ter', dia(TER)), sessao('qua', dia(QUA)), sessao('ter', dia(1), {})];
-    expect(contadorSemana(TODAS, s, dia(QUA))).toEqual({ feitos: 3, planejados: 5 });
+  it('contador: treino em casa na terça cobre a terça', () => {
+    expect(contadorSemana(TODAS, [sessao('casa-ter', dia(TER))], dia(QUA))).toEqual({ feitos: 1, planejados: 5 });
+  });
+
+  it('contador: treino em casa num dia já coberto não soma', () => {
+    const s = [sessao('ter', dia(TER, 7)), sessao('casa-ter', dia(TER, 19))];
+    expect(contadorSemana(TODAS, s, dia(QUA)).feitos).toBe(1);
+    // Ficha de quarta feita adiantada na terça + casa na quarta: a quarta já estava coberta.
+    const s2 = [sessao('qua', dia(TER)), sessao('casa-qui', dia(QUA))];
+    expect(contadorSemana(TODAS, s2, dia(QUI)).feitos).toBe(1);
+  });
+
+  it('contador: X nunca passa de Y; Y conta só dias com ficha de academia; semana anterior não conta', () => {
+    const tudo = [...ACADEMIA, ...CASA].flatMap((p) => [sessao(p.id, dia(SEG)), sessao(p.id, dia(SAB))]);
+    const casaTodoDia = [SEG, TER, QUA, QUI, SEX, SAB, DOM].map((d) => sessao('casa-ter', dia(d)));
+    expect(contadorSemana(TODAS, [...tudo, ...casaTodoDia, sessao('ter', dia(1))], dia(DOM))).toEqual({ feitos: 5, planejados: 5 });
+    expect(contadorSemana(TODAS, [sessao('ter', dia(1))], dia(QUA)).feitos).toBe(0);
   });
 
   it('aviso de grupo em dias seguidos cruza locais e exige RPE ≥ 8', () => {

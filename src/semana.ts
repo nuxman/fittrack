@@ -68,11 +68,19 @@ export function sugestao<F extends Ficha, S extends Sessao>(planos: F[], sessoes
   return fimDeSemana(agora) ? { tipo: 'descanso' } : { tipo: 'escolher' };
 }
 
-/** "X de Y treinos esta semana": X = concluídos em qualquer local; Y = dias com ficha de academia. */
+/**
+ * "X de Y treinos esta semana": Y = dias com ficha de academia; X = desses dias, os cobertos: a ficha
+ * de academia do dia foi concluída nesta semana (em qualquer dia) ou houve treino em casa concluído
+ * naquele dia da semana. X nunca passa de Y.
+ */
 export function contadorSemana(planos: Ficha[], sessoes: Sessao[], agora: Date) {
+  const semana = concluidasNaSemana(sessoes, agora);
+  const feitas = new Set(semana.map((s) => s.planId));
+  const diasEmCasa = new Set(semana.filter((s) => localDe(s.planSnapshot) === 'casa').map((s) => new Date(s.iniciadaEm).getDay()));
+  const academia = planos.filter((p) => localDe(p) === 'academia');
   return {
-    feitos: concluidasNaSemana(sessoes, agora).length,
-    planejados: new Set(planos.filter((p) => localDe(p) === 'academia').map((p) => p.diaSemana)).size,
+    feitos: new Set(academia.filter((p) => feitas.has(p.id) || diasEmCasa.has(p.diaSemana)).map((p) => p.diaSemana)).size,
+    planejados: new Set(academia.map((p) => p.diaSemana)).size,
   };
 }
 

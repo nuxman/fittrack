@@ -114,10 +114,21 @@ function Sugerido({ painel, local, agora, iniciando, onIniciar }: {
   }
 
   const doLocal = painel.planos.filter((p) => localDe(p) === local);
-  if (doLocal.length === 0) return <CriarFicha local={local} />;
-
   const s = sugestao(painel.planos, painel.sessoes, local, agora);
-  if (s.tipo === 'concluido') return <ConcluidoHoje sessao={s.sessao} />;
+  // Concluído hoje tem prioridade em qualquer local; sem fichas do local, só um link pequeno para criar.
+  if (s.tipo === 'concluido') {
+    return (
+      <>
+        <ConcluidoHoje sessao={s.sessao} />
+        {doLocal.length === 0 && (
+          <Link to={`/fichas/nova?local=${local}`} className="block text-center text-sm text-primary-400 underline">
+            Criar ficha de {NOME_LOCAL[local].toLowerCase()}
+          </Link>
+        )}
+      </>
+    );
+  }
+  if (doLocal.length === 0) return <CriarFicha local={local} />;
   if (s.tipo === 'hoje') return card(s.plano, 'Treino de hoje');
   if (s.tipo === 'pendente') {
     return (

@@ -194,6 +194,19 @@ describe('alterações não salvas', () => {
   });
 });
 
+describe('concluído hoje com Casa escolhido e sem fichas de casa', () => {
+  it('mostra o card de concluído e, abaixo, o link pequeno "Criar ficha de casa"', async () => {
+    await concluir(3, new Date(2026, 0, 7, 7));
+    vi.setSystemTime(QUARTA);
+    abrir('/');
+    fireEvent.click(await screen.findByRole('button', { name: 'Casa' }));
+    expect(await screen.findByTestId('concluido-hoje')).toHaveTextContent('Costas e bíceps');
+    const link = await screen.findByRole('link', { name: 'Criar ficha de casa' });
+    expect(link).toHaveAttribute('href', '/fichas/nova?local=casa');
+    expect(link).not.toHaveClass('btn-primary');
+  });
+});
+
 describe('foto em tela cheia', () => {
   it('zoom com dois dedos, arrastar ampliada e toque duplo volta a 1×', async () => {
     const { FotoAmpliavel } = await import('../components/FotoAmpliavel');
