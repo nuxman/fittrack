@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Check, ChevronLeft, Minus, Pencil, Plus, Replace, Undo2 } from 'lucide-react';
+import { Check, ChevronLeft, Pencil, Replace, Undo2 } from 'lucide-react';
+import { Campo, ajustarTexto, num } from '../../components/CampoSerie';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { EstadoTela, useSessao } from './SessaoLayout';
 import { FotoAmpliavel } from '../../components/FotoAmpliavel';
@@ -17,8 +18,6 @@ import type { SnapshotItem } from '../../db/types';
 import {
   exercicioAtual, formatarSerie, parseNumero, prescricaoSessao, pulados, seriesFeitas, textoTrocado, usaCarga, validarSerie,
 } from '../../sessao';
-
-const num = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
 
 export function SessaoExecucao() {
   const { exerciseId } = useParams();
@@ -71,11 +70,6 @@ function Execucao({ item }: { item: SnapshotItem }) {
   const foto = imagens.get(item.exerciseId);
   const proximo = exercicioAtual(sessao.planSnapshot.itens, sets, pulados(sessao));
   const proximoItem = proximo && proximo !== item.exerciseId ? sessao.planSnapshot.itens.find((i) => i.exerciseId === proximo) : undefined;
-
-  const ajustar = (texto: string, delta: number, min: number) => {
-    const v = parseNumero(texto);
-    return num(Math.max(min, (Number.isNaN(v) ? 0 : v) + delta));
-  };
 
   const concluir = async () => {
     if (gravandoRef.current) return;
@@ -166,8 +160,8 @@ function Execucao({ item }: { item: SnapshotItem }) {
             valor={carga}
             inputMode="decimal"
             onChange={setCarga}
-            onMenos={() => setCarga((v) => ajustar(v, -passo, 0))}
-            onMais={() => setCarga((v) => ajustar(v, passo, 0))}
+            onMenos={() => setCarga((v) => ajustarTexto(v, -passo, 0))}
+            onMais={() => setCarga((v) => ajustarTexto(v, passo, 0))}
           />
         )}
         <Campo
@@ -175,8 +169,8 @@ function Execucao({ item }: { item: SnapshotItem }) {
           valor={reps}
           inputMode="numeric"
           onChange={setReps}
-          onMenos={() => setReps((v) => ajustar(v, -1, 1))}
-          onMais={() => setReps((v) => ajustar(v, 1, 1))}
+          onMenos={() => setReps((v) => ajustarTexto(v, -1, 1))}
+          onMais={() => setReps((v) => ajustarTexto(v, 1, 1))}
         />
         {erro && (
           <p role="alert" className="text-red-400">
@@ -311,34 +305,5 @@ function AjustarNoTreino({ item }: { item: SnapshotItem }) {
         <ExercisePicker excluirIds={sessao.planSnapshot.itens.map((i) => i.exerciseId)} onEscolher={(e) => void substituir(e.id)} onFechar={() => setPicker(false)} />
       )}
     </details>
-  );
-}
-
-interface CampoProps {
-  rotulo: string;
-  valor: string;
-  inputMode: 'decimal' | 'numeric';
-  onChange: (v: string) => void;
-  onMenos: () => void;
-  onMais: () => void;
-}
-
-function Campo({ rotulo, valor, inputMode, onChange, onMenos, onMais }: CampoProps) {
-  const id = useId();
-  return (
-    <div>
-      <label htmlFor={id} className="mb-1 block text-sm text-neutral-300">
-        {rotulo}
-      </label>
-      <div className="flex gap-2">
-        <button type="button" className="btn-secondary w-16 shrink-0 px-0" aria-label={`Diminuir ${rotulo}`} onClick={onMenos}>
-          <Minus size={24} />
-        </button>
-        <input id={id} className="input text-center text-2xl" inputMode={inputMode} value={valor} onChange={(e) => onChange(e.target.value)} />
-        <button type="button" className="btn-secondary w-16 shrink-0 px-0" aria-label={`Aumentar ${rotulo}`} onClick={onMais}>
-          <Plus size={24} />
-        </button>
-      </div>
-    </div>
   );
 }

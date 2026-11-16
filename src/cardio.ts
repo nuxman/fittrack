@@ -1,7 +1,12 @@
-import type { CardioEmCurso, CardioPadrao, CardioSession, RascunhoCardio } from './db/types';
+import type { CardioEmCurso, CardioPadrao, CardioSession, ModalidadeCardio, RascunhoCardio } from './db/types';
 import { ESQUECIDA_MS, parseNumero } from './sessao';
 
 /** Regras puras do cardio pós-treino. */
+
+export const NOME_MODALIDADE: Record<ModalidadeCardio, string> = { esteira: 'Esteira', bicicleta: 'Bicicleta', caminhada: 'Caminhada' };
+
+/** Linha do cardio ligado no Histórico: "+ Esteira 15 min". */
+export const linhaCardio = (c: Pick<CardioSession, 'modalidade' | 'duracaoMin'>) => `+ ${NOME_MODALIDADE[c.modalidade]} ${c.duracaoMin} min`;
 
 export type DadosCardio = Pick<CardioSession, 'modalidade' | 'duracaoMin' | 'velocidadeKmh' | 'inclinacaoNivel' | 'distanciaKm' | 'fcMedia'>;
 

@@ -1,6 +1,7 @@
 import { db } from '../db';
 import type { ExerciseSet } from '../types';
-import { ativo, createRepository } from './base';
+import { ativo, createRepository, now } from './base';
+import { validarSerie } from '../../sessao';
 
 const base = createRepository<ExerciseSet>(db.exerciseSets);
 
@@ -20,6 +21,39 @@ export const exerciseSetsRepository = {
     const m = new Map<string, number>();
     await db.exerciseSets.filter(ativo).each((s) => void m.set(s.sessionId, (m.get(s.sessionId) ?? 0) + 1));
     return m;
+  },
+
+  /** Séries ativas agrupadas por sessão, em ordem de conclusão (lista do Histórico). */
+  async porSessao(): Promise<Map<string, ExerciseSet[]>> {
+    const m = new Map<string, ExerciseSet[]>();
+    for (const s of (await db.exerciseSets.filter(ativo).toArray()).sort(porConclusao)) m.set(s.sessionId, [...(m.get(s.sessionId) ?? []), s]);
+    return m;
+  },
+
+  /** Corrige carga e reps de uma série já gravada, validada pelo tipo e unidade do planSnapshot da sessão. */
+  editar(id: string, carga: number | null, reps: number): Promise<ExerciseSet> {
+    return db.transaction('rw', db.exerciseSets, db.workoutSessions, async () => {
+      const set = await base.get(id);
+      if (!set) throw new Error('Série não encontrada');
+      const item = (await db.workoutSessions.get(set.sessionId))?.planSnapshot.itens.find((i) => i.exerciseId === set.exerciseId);
+      if (!item) throw new Error('Exercício fora deste treino');
+      const msg = validarSerie(item, carga, reps);
+      if (msg) throw new Error(msg);
+      return base.update(id, { carga, reps });
+    });
+  },
+
+  /** Soft delete de uma série e renumeração (1, 2, 3…) das restantes do mesmo exercício na sessão. */
+  excluir(id: string): Promise<void> {
+    return db.transaction('rw', db.exerciseSets, async () => {
+      const set = await base.get(id);
+      if (!set) return;
+      await base.remove(id);
+      const restantes = (await exerciseSetsRepository.listarDaSessao(set.sessionId)).filter((s) => s.exerciseId === set.exerciseId);
+      await Promise.all(
+        restantes.map((s, k) => (s.numeroSerie === k + 1 ? undefined : db.exerciseSets.put({ ...s, numeroSerie: k + 1, updatedAt: now() }))),
+      );
+    });
   },
 
   /** Série mais recente do exercício em qualquer sessão (carga sugerida = última registrada). */

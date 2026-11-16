@@ -1,11 +1,18 @@
 import { db } from '../db';
 import type { CardioEmCurso, PlanSnapshot, WorkoutSession } from '../types';
-import { ativo, createRepository } from './base';
+import { ativo, createRepository, now } from './base';
 import { faixaReps, LIMITES } from './workoutPlans';
 import { exerciseSetsRepository } from './exerciseSets';
 import { ATIVOS, pulados, tempoAtivoEm } from '../../sessao';
 
 const base = createRepository<WorkoutSession>(db.workoutSessions);
+
+/** Registros marcados por uma exclusão de treino (para desfazer). */
+export interface ExclusaoTreino {
+  id: string;
+  sets: string[];
+  cardio: string[];
+}
 
 export class SessaoAtivaError extends Error {
   constructor(readonly sessao: WorkoutSession) {
@@ -194,6 +201,45 @@ export const workoutSessionsRepository = {
       if (!Number.isInteger(dados.rpe) || dados.rpe < 0 || dados.rpe > 10) throw new Error('RPE deve ser de 0 a 10');
       return encerrar(s, fim ?? agora, 'concluida', { rpe: dados.rpe, observacoes: dados.observacoes.trim() });
     }),
+
+  /** Correção pelo Histórico: RPE (0–10, ou null em abandonada) e observações de um treino encerrado. */
+  editarAvaliacao: (id: string, dados: { rpe: number | null; observacoes: string }) =>
+    alterar(id, (s) => {
+      if (ATIVOS.includes(s.status)) throw new Error('Treino em andamento');
+      if (dados.rpe === null ? s.status === 'concluida' : !Number.isInteger(dados.rpe) || dados.rpe < 0 || dados.rpe > 10) throw new Error('RPE deve ser de 0 a 10');
+      return { rpe: dados.rpe, observacoes: dados.observacoes.trim() };
+    }),
+
+  /**
+   * Exclui (soft delete) o treino encerrado, as séries e o cardio ligado, numa transação.
+   * Devolve os ids excluídos, usados em `restaurar` (desfazer).
+   */
+  excluir(id: string): Promise<ExclusaoTreino> {
+    return db.transaction('rw', db.workoutSessions, db.exerciseSets, db.cardioSessions, async () => {
+      const s = await base.get(id);
+      if (!s) throw new Error('Sessão não encontrada');
+      if (ATIVOS.includes(s.status)) throw new Error('Treino em andamento não pode ser excluído');
+      if (s.cardio) throw new Error('Conclua ou cancele o cardio antes de excluir');
+      const ts = now();
+      const marca = { deletedAt: ts, updatedAt: ts };
+      const sets = await db.exerciseSets.where('sessionId').equals(id).filter(ativo).primaryKeys();
+      const cardio = await db.cardioSessions.filter((c) => ativo(c) && c.sessionId === id).primaryKeys();
+      await db.workoutSessions.update(id, marca);
+      await db.exerciseSets.where('id').anyOf(sets).modify(marca);
+      await db.cardioSessions.where('id').anyOf(cardio).modify(marca);
+      return { id, sets, cardio };
+    });
+  },
+
+  /** Desfaz `excluir`: tira o deletedAt só dos registros daquela exclusão (séries excluídas antes continuam excluídas). */
+  restaurar(e: ExclusaoTreino): Promise<void> {
+    return db.transaction('rw', db.workoutSessions, db.exerciseSets, db.cardioSessions, async () => {
+      const volta = { deletedAt: null, updatedAt: now() };
+      await db.workoutSessions.update(e.id, volta);
+      await db.exerciseSets.where('id').anyOf(e.sets).modify(volta);
+      await db.cardioSessions.where('id').anyOf(e.cardio).modify(volta);
+    });
+  },
 
   /** As séries registradas permanecem. */
   abandonar: (id: string, fim?: number) =>

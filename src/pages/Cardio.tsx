@@ -11,10 +11,10 @@ import { workoutSessionsRepository } from '../db/repositories/workoutSessions';
 import { cardioSessionsRepository } from '../db/repositories/cardioSessions';
 import { settingsRepository } from '../db/repositories/settings';
 import { opcoesSom, prepararAudio } from '../somDescanso';
-import { minutosEntre, rascunhoPadrao, validarCardio } from '../cardio';
+import { minutosEntre, NOME_MODALIDADE, rascunhoPadrao, validarCardio } from '../cardio';
 import type { CardioEmCurso, ModalidadeCardio, RascunhoCardio, UserSettings, WorkoutSession } from '../db/types';
 
-const MODALIDADES: [ModalidadeCardio, string][] = [['esteira', 'Esteira'], ['bicicleta', 'Bicicleta'], ['caminhada', 'Caminhada']];
+const MODALIDADES = Object.entries(NOME_MODALIDADE) as [ModalidadeCardio, string][];
 const AVISO_CARDIO = ['Cardio terminado', 'Tempo concluído.'] as const;
 
 /** Cardio pós-treino: /cardio/:sessionId. ?duracao=1 abre com o campo de duração em foco. */

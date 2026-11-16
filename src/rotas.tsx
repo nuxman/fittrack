@@ -15,6 +15,8 @@ import { SessaoVisao } from './pages/sessao/SessaoVisao';
 import { SessaoExecucao } from './pages/sessao/SessaoExecucao';
 import { SessaoFinalizar } from './pages/sessao/SessaoFinalizar';
 import { Cardio } from './pages/Cardio';
+import { Historico } from './pages/historico/Historico';
+import { HistoricoDetalhe } from './pages/historico/HistoricoDetalhe';
 
 /** Raiz: diálogo, retomada da sessão e navegação inferior em volta de todas as telas. */
 // Arquivo de configuração de rotas, não de componentes: fast refresh recarrega a página inteira, sem problema.
@@ -52,7 +54,8 @@ export const ROTAS: RouteObject[] = [
       { path: '/exercicios/novo', element: <ExercicioEditor /> },
       { path: '/exercicios/:id', element: <ExercicioEditor /> },
       { path: '/exercicio/:id', element: <ExercicioDetalhe /> },
-      { path: '/historico', element: <Vazia title="Histórico" mensagem="Seus treinos concluídos aparecem aqui, com data, duração e volume. Comece pela aba Treinar." /> },
+      { path: '/historico', element: <Historico /> },
+      { path: '/historico/:id', element: <HistoricoDetalhe /> },
       { path: '/evolucao', element: <Vazia title="Evolução" mensagem="Aqui você vai ver a evolução de carga, volume e recordes de cada exercício depois dos primeiros treinos. Comece pela aba Treinar." /> },
       { path: '/configuracoes', element: <Configuracoes /> },
     ],
