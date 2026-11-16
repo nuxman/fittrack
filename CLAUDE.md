@@ -169,8 +169,6 @@ Cardio padrão: esteira, 15 min, inclinação "nível 7".
 
 ## Pendências
 - Tela de Equipment (cadastro e vínculo opcional ao exercício) — entra na Etapa 5.
-- Editar séries antigas — entra na Etapa 4, no Histórico.
-- Excluir uma sessão pelo Histórico (para remover sessões de teste), refletindo no contador, na duração estimada e nos gráficos — entra na Etapa 4. Excluir a sessão também exclui (soft delete) as séries dela, para não afetar última carga, recordes e gráficos.
 - Fase futura, sem etapa definida: login e sincronização entre aparelhos (Supabase). Não fazer até o usuário pedir.
 
 ## Etapas e critérios de aceite
@@ -182,6 +180,10 @@ Cardio padrão: esteira, 15 min, inclinação "nível 7".
 Divisão da 3b, cada parte com git push e versão própria: 3b.1 (regras, local, editor de ficha) = 0.3.4, CONCLUÍDA; refactor do roteador (createHashRouter + RouterProvider, mesmas URLs, para permitir useBlocker) = 0.3.5, CONCLUÍDO; 3b.2 (Início, aba Treinar, miniaturas, detalhe do exercício, alterações não salvas via useBlocker + beforeunload) = 0.3.6, CONCLUÍDA; 3b.3 (Editar exercício na visão geral, mudanças durante a sessão, RPE explicado, "Aplicar também na ficha?") = 0.4.0, CONCLUÍDA; correção 0.4.1 (substituição com séries e base das mudanças).
 3c. CONCLUÍDA (0.5.0). Cardio pós-treino (ver "Cardio pós-treino"), antecipando parte da Etapa 5.
 4. Histórico, recordes, gráficos e mini gráfico no detalhe do exercício. Aceite: testes de volume, incluindo peso corporal e placa.
+Divisão da 4, cada parte com git push e versão própria:
+- 4a (0.6.0) Histórico. Lista /historico agrupada por semana (segunda a domingo, "Semana de 10/11 a 16/11"), da mais recente para a mais antiga; card com ficha, data, duração, volume (kg só com exercício de carga em kg; senão "—") e RPE; cardio ligado numa linha dentro do card ("+ Esteira 15 min"). Abandonadas aparecem com a marca "abandonado" e podem ser excluídas; sessões ativas não aparecem (continuam em "Retomar"). Detalhe /historico/:id: ficha, data e hora, duração, RPE, observações, cardio ligado e as séries de cada exercício do planSnapshot (com "Trocado após N séries" e pulados). Editar série (carga e reps com − e +, mesmo campo decimal e mesma validarSerie da execução, pelo tipo e unidade do planSnapshot); excluir uma série isolada (com confirmação; renumera as séries restantes do exercício); editar RPE e observações. Excluir treino: confirmação (avisa quando o cardio ligado também será excluído); exclui numa transação a sessão, as séries e o cardio ligado (soft delete); recusa sessão ativa ou com cardio em curso; depois mostra "Treino excluído · Desfazer" por 8 segundos, e Desfazer restaura a sessão, as séries e o cardio (removendo o deletedAt só dos registros excluídos nessa operação). Testes: exclusão reflete no contador, duração estimada, última carga, minutos e "Último treino"; desfazer restaura; corrigir o RPE altera o aviso de dias seguidos; excluir uma série muda o volume e a última carga.
+- 4b (0.7.0) Evolução: lista de exercícios com séries; gráficos de carga máxima e volume por sessão (Recharts); placa só progressão de placa; peso corporal em total de reps (porLado × 2); recordes por unidade. A aba Evolução e o Recharts carregam sob demanda (React.lazy na rota), para não pesar a abertura do app. Recordes e gráficos ficam fora da 4a.
+- 4c (0.8.0) Comparação com o treino anterior da mesma ficha no detalhe do Histórico; mini gráfico "Evolução de carga" na execução (recolhido por padrão) e no detalhe do exercício, carregado sob demanda ao abrir a seção.
 5. Cardio, medidas e fotos corporais.
 6. Backup e restauração. Aceite: exportar, apagar banco, importar, dados idênticos (incluindo imagens de exercício).
 7. PWA e offline. Aceite: instala no Chrome Android, abre offline, ícones 192 e 512; conferir "Armazenamento persistente" em Configurações com o app instalado no celular.
