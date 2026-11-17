@@ -1,9 +1,9 @@
+import { lazy, Suspense, type ReactNode } from 'react';
 import { Outlet, type RouteObject } from 'react-router-dom';
 import { BottomNav } from './components/BottomNav';
 import { ConfirmDialogProvider } from './components/ConfirmDialog';
 import { Inicio } from './pages/Inicio';
 import { Configuracoes } from './pages/Configuracoes';
-import { Vazia } from './pages/Vazia';
 import { Fichas } from './pages/Fichas';
 import { FichaEditor } from './pages/FichaEditor';
 import { Exercicios } from './pages/Exercicios';
@@ -17,6 +17,11 @@ import { SessaoFinalizar } from './pages/sessao/SessaoFinalizar';
 import { Cardio } from './pages/Cardio';
 import { Historico } from './pages/historico/Historico';
 import { HistoricoDetalhe } from './pages/historico/HistoricoDetalhe';
+
+// Evolução e Recharts sob demanda: não pesam a abertura do app.
+const Evolucao = lazy(() => import('./pages/evolucao/Evolucao'));
+const EvolucaoExercicio = lazy(() => import('./pages/evolucao/EvolucaoExercicio'));
+const sobDemanda = (el: ReactNode) => <Suspense fallback={<p className="p-4">Carregando…</p>}>{el}</Suspense>;
 
 /** Raiz: diálogo, retomada da sessão e navegação inferior em volta de todas as telas. */
 // Arquivo de configuração de rotas, não de componentes: fast refresh recarrega a página inteira, sem problema.
@@ -56,7 +61,8 @@ export const ROTAS: RouteObject[] = [
       { path: '/exercicio/:id', element: <ExercicioDetalhe /> },
       { path: '/historico', element: <Historico /> },
       { path: '/historico/:id', element: <HistoricoDetalhe /> },
-      { path: '/evolucao', element: <Vazia title="Evolução" mensagem="Aqui você vai ver a evolução de carga, volume e recordes de cada exercício depois dos primeiros treinos. Comece pela aba Treinar." /> },
+      { path: '/evolucao', element: sobDemanda(<Evolucao />) },
+      { path: '/evolucao/:id', element: sobDemanda(<EvolucaoExercicio />) },
       { path: '/configuracoes', element: <Configuracoes /> },
     ],
   },

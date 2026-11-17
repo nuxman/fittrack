@@ -20,7 +20,7 @@ it('abre com a navegação inferior e o dashboard da semana', async () => {
   expect(screen.getByRole('group', { name: 'Local do treino' })).toBeInTheDocument();
 });
 
-it('Histórico e Evolução vazios explicam o que vai aparecer', async () => {
+it('Histórico vazio explica o que vai aparecer', async () => {
   window.location.hash = '#/historico';
   const { unmount } = render(<App />);
   expect(await screen.findByText(/Seus treinos concluídos aparecem aqui/)).toBeInTheDocument();

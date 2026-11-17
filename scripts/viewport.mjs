@@ -219,6 +219,32 @@ const com = await medirExecucao(comFoto ? 'com foto, com descanso' : 'com descan
 conferir('com descanso: contagem visível', com.contagem);
 conferir('com descanso: contagem acima de "Concluir série"', await avaliar(`${AJUDA}; __q('[data-testid="descanso"]').getBoundingClientRect().bottom <= __botao('Concluir série').getBoundingClientRect().top || 'sobreposto'`));
 
+// Evolução (só na rodada sem foto): encerra a sessão e grava um treino anterior com uma série, direto no banco,
+// para ter dois pontos; o gráfico (Recharts, sob demanda) precisa desenhar a linha sem rolagem horizontal.
+if (!comFoto) {
+  await avaliar(`(async () => {
+    const exId = location.hash.split('/').pop();
+    const req = indexedDB.open('fittrack');
+    const db = await new Promise((ok) => (req.onsuccess = () => ok(req.result)));
+    const tx = db.transaction(['workoutSessions', 'exerciseSets'], 'readwrite');
+    const ss = tx.objectStore('workoutSessions');
+    const sessao = await new Promise((ok) => { const r = ss.getAll(); r.onsuccess = () => ok(r.result.find((s) => s.status === 'em_andamento')); });
+    ss.put({ ...sessao, status: 'concluida', finalizadaEm: new Date().toISOString(), rpe: 7 });
+    const antes = new Date(Date.now() - 7 * 864e5).toISOString();
+    const id = crypto.randomUUID();
+    ss.put({ ...sessao, id, status: 'concluida', iniciadaEm: antes, finalizadaEm: antes, rpe: 7 });
+    tx.objectStore('exerciseSets').put({ id: crypto.randomUUID(), sessionId: id, exerciseId: exId, numeroSerie: 1, carga: 35, reps: 10, lado: null, concluidaEm: antes, createdAt: antes, updatedAt: antes, deletedAt: null });
+    await new Promise((ok) => (tx.oncomplete = ok));
+    db.close();
+    location.hash = '#/evolucao/' + exId;
+    location.reload();
+    return true;
+  })()`);
+  await ate(() => avaliar(`!!document.querySelector('figure .recharts-line-curve')`), 'gráfico da Evolução');
+  conferir('evolução: linha do gráfico desenhada', await avaliar(`(() => { const w = document.querySelector('figure .recharts-line-curve').getBoundingClientRect().width; return w > 100 || 'largura ' + w; })()`));
+  conferir('evolução: sem rolagem horizontal', await avaliar(`document.documentElement.scrollWidth <= innerWidth || 'scrollWidth ' + document.documentElement.scrollWidth`));
+}
+
 ws.close();
 encerrar();
 if (falhas.length) {

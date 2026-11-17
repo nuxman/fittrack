@@ -2,7 +2,7 @@
 
 > Documento para quem vai continuar o trabalho sem acesso às conversas anteriores.
 > A **especificação completa e oficial** está em `CLAUDE.md` (raiz). Em caso de conflito, o `CLAUDE.md` vale.
-> Situação em 17/11/2026: versão **0.6.1** (correção "Ver execução" em todos os exercícios, depois da Etapa 4a), deploy confirmado com sucesso no GitHub Actions.
+> Situação em 17/11/2026: versão **0.7.0** (Etapa 4b, Evolução), deploy confirmado com sucesso no GitHub Actions.
 
 ---
 
@@ -33,7 +33,7 @@ Funciona **100% offline e local**: sem servidor, sem login, sem APIs externas. T
 | Roteamento | React Router 6 com `createHashRouter` + `RouterProvider` (URLs com `#`) |
 | Banco de dados | IndexedDB via **Dexie 4** (schema versionado, hoje na versão 2) |
 | Validação | Zod |
-| Gráficos | Recharts 2 (instalado; uso previsto na Etapa 4b) |
+| Gráficos | Recharts 2 (aba Evolução, carregado sob demanda) |
 | PWA | vite-plugin-pwa 0.20 (instalado; configuração prevista na Etapa 7) |
 | Testes | Vitest + jsdom + fake-indexeddb + @testing-library/react; teste de layout em Chrome headless (`scripts/viewport.mjs`) |
 | Lint | ESLint 9 (typescript-eslint, react-hooks, react-refresh) |
@@ -124,13 +124,14 @@ src/pages/Cardio.tsx                    Cardio pós-treino (/cardio/:sessionId)
 src/pages/historico/Historico.tsx       Lista do histórico agrupada por semana
 src/pages/historico/HistoricoDetalhe.tsx Detalhe do treino: editar/excluir séries, RPE, excluir treino com desfazer
 src/pages/Configuracoes.tsx             Versão, armazenamento persistente, alertas de descanso
-src/pages/Vazia.tsx                     Estado vazio (usado hoje na aba Evolução)
+src/evolucao.ts                         Regras puras da Evolução: pontos por sessão, medidas por unidade, recordes
+src/pages/evolucao/                     Aba Evolução (lista, detalhe com gráficos e tabela), carregada com React.lazy
 
 src/test/setup.ts, src/test/abrir.tsx   Configuração dos testes e helper para montar o app numa rota
-src/**/*.test.ts(x)                     ~136 testes (regras da semana, sessão, banco, cardio, telas, som, imagem)
+src/**/*.test.ts(x)                     ~183 testes (regras da semana, sessão, banco, cardio, telas, som, imagem)
 ```
 
-Rotas (com `#`): `/`, `/treinar`, `/sessao`, `/sessao/:exerciseId`, `/sessao/finalizar`, `/cardio/:sessionId`, `/fichas/nova`, `/fichas/:id`, `/exercicios`, `/exercicios/novo`, `/exercicios/:id`, `/exercicio/:id`, `/historico`, `/historico/:id`, `/evolucao` (vazia), `/configuracoes`.
+Rotas (com `#`): `/`, `/treinar`, `/sessao`, `/sessao/:exerciseId`, `/sessao/finalizar`, `/cardio/:sessionId`, `/fichas/nova`, `/fichas/:id`, `/exercicios`, `/exercicios/novo`, `/exercicios/:id`, `/exercicio/:id`, `/historico`, `/historico/:id`, `/evolucao`, `/evolucao/:id`, `/configuracoes`.
 
 ---
 
@@ -171,6 +172,7 @@ Publicação: `git push` no `master` dispara `.github/workflows/deploy.yml`. No 
 - **Etapa 3a.5**: alerta sonoro do descanso (Web Audio), configurações de som/aviso antecipado/3-2-1/volume, "Testar som", permissão de notificações.
 - **Etapa 3b** (0.3.4 a 0.4.1): regra de sugestão e pendências, local do treino (Academia/Casa), contador "X de Y treinos esta semana", aviso informativo de mesmo grupo em dias seguidos com RPE ≥ 8, Início (dashboard), aba Treinar completa com miniaturas, detalhe do exercício, aviso de alterações não salvas, mudanças durante a sessão (séries/reps/descanso/substituir exercício) com "Aplicar também na ficha?", explicação do RPE.
 - **Etapa 3c** (0.5.0): cardio pós-treino com cronômetro persistido, rascunho no banco, cardio esquecido, cancelar.
+- **Etapa 4b** (0.7.0): aba Evolução com lista de exercícios, recordes por unidade, gráficos de carga máxima e volume (Recharts, carregado sob demanda) e tabela.
 - **Correção 0.6.1**: botão de vídeo ao lado do nome na execução e ícone de vídeo em cada exercício da visão geral; sem link salvo, usa a busca no YouTube pelo nome.
 - **Etapa 4a** (0.6.0): Histórico agrupado por semana, detalhe do treino, editar/excluir série, editar RPE e observações, excluir treino (sessão + séries + cardio ligado, em transação) com "Desfazer" por 8 segundos.
 - CI/CD funcionando (último deploy da 4a: sucesso).
@@ -180,7 +182,6 @@ Publicação: `git push` no `master` dispara `.github/workflows/deploy.yml`. No 
 ## 6. Pela metade ou bugs conhecidos
 
 - Nenhum bug aberto conhecido no momento da passagem.
-- Aba **Evolução** (`/evolucao`) mostra só um estado vazio — é a Etapa 4b.
 - Configurações ainda **não tem**: backup/restauração e o aviso permanente sobre perda de dados (Etapa 6), meta de peso, tela de Equipment (Etapa 5).
 - Bloco de **peso** no Início não é exibido até a Etapa 5 (intencional). Tabelas `bodyMeasurements`, `bodyPhotos`, `restDays` e `equipment` existem no banco e têm repositories, mas ainda sem telas.
 - **PWA** (manifest, service worker, ícones 192/512, offline) ainda não configurado — vite-plugin-pwa está instalado mas não usado (Etapa 7). Por isso notificações no Android ainda dependem do fallback.
@@ -192,13 +193,12 @@ Publicação: `git push` no `master` dispara `.github/workflows/deploy.yml`. No 
 
 Cada parte com `git push`, deploy confirmado e versão própria (detalhes em `CLAUDE.md` → "Etapas e critérios de aceite"):
 
-1. **4b (0.7.0) — Evolução**: lista de exercícios com séries; gráficos de carga máxima e volume por sessão (Recharts); "placa" mostra só progressão de placa; peso corporal em total de reps (porLado × 2); recordes por unidade. Aba Evolução e Recharts carregados sob demanda (`React.lazy` na rota).
-2. **4c (0.8.0)**: comparação com o treino anterior da mesma ficha no detalhe do Histórico; mini gráfico "Evolução de carga" na execução (recolhido) e no detalhe do exercício, carregado sob demanda.
-3. **Etapa 5**: cardio avulso e gráficos, medidas corporais, fotos corporais, tela de Equipment, bloco de peso no Início.
-4. **Etapa 6**: backup JSON (com schemaVersion, imagens de exercício em base64, sem fotos corporais), importação com Zod + pré-visualização + confirmação, CSV de séries e medidas, aviso permanente de perda de dados.
-5. **Etapa 7**: PWA e offline (instala no Chrome Android, ícones 192 e 512, manifest com `start_url`/`scope` `/fittrack/`).
-6. **Etapa 8**: README com instalação no S24 Ultra e revisão do workflow. Versão 1.0.0 ao concluir as 8 etapas.
-7. Futuro sem etapa: login e sincronização (Supabase) — **não fazer até o usuário pedir**.
+1. **4c (0.8.0)**: comparação com o treino anterior da mesma ficha no detalhe do Histórico; mini gráfico "Evolução de carga" na execução (recolhido) e no detalhe do exercício, carregado sob demanda.
+2. **Etapa 5**: cardio avulso e gráficos, medidas corporais, fotos corporais, tela de Equipment, bloco de peso no Início.
+3. **Etapa 6**: backup JSON (com schemaVersion, imagens de exercício em base64, sem fotos corporais), importação com Zod + pré-visualização + confirmação, CSV de séries e medidas, aviso permanente de perda de dados.
+4. **Etapa 7**: PWA e offline (instala no Chrome Android, ícones 192 e 512, manifest com `start_url`/`scope` `/fittrack/`).
+5. **Etapa 8**: README com instalação no S24 Ultra e revisão do workflow. Versão 1.0.0 ao concluir as 8 etapas.
+6. Futuro sem etapa: login e sincronização (Supabase) — **não fazer até o usuário pedir**.
 
 ---
 
