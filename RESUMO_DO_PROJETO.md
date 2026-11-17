@@ -2,7 +2,7 @@
 
 > Documento para quem vai continuar o trabalho sem acesso às conversas anteriores.
 > A **especificação completa e oficial** está em `CLAUDE.md` (raiz). Em caso de conflito, o `CLAUDE.md` vale.
-> Situação em 17/11/2026: versão **0.7.0** (Etapa 4b, Evolução), deploy confirmado com sucesso no GitHub Actions.
+> Situação em 17/11/2026: versão **0.8.0** (modo demonstração, depois da Etapa 4b), deploy confirmado com sucesso no GitHub Actions.
 
 ---
 
@@ -83,6 +83,8 @@ src/somDescanso.ts             Bipes do descanso com Web Audio (OscillatorNode +
 src/image.ts                   Redimensiona foto para ≤1024 px, WebP 0.8 (fallback JPEG)
 src/format.ts                  Formatação de prescrição ("3×10–12"), duração etc.
 src/dias.ts                    Nomes dos dias e ordem da semana (segunda primeiro)
+src/modo.ts                    Modo demonstração: nome do banco (fittrack ou fittrack-demo) escolhido na abertura via localStorage
+src/db/demo.ts                 Treinos fictícios do banco de demonstração (populate)
 src/storage.ts                 navigator.storage.persist() e consulta de persistência
 src/useAgora.ts                Hook de relógio para cronômetros
 src/useAsync.ts                Hook para carregar dados de repositories com reload()
@@ -92,6 +94,7 @@ src/useLocalHoje.ts            Local do dia (Academia/Casa) salvo em UserSetting
 src/useWakeLock.ts             Mantém a tela ligada durante a sessão
 
 src/components/ConfirmDialog.tsx    Diálogo de confirmação/escolha do app (substitui window.confirm/alert/prompt)
+src/components/FaixaDemo.tsx        Faixa fixa "Modo demonstração · Sair" no topo (só no modo)
 src/components/BottomNav.tsx        Navegação inferior (some durante a sessão)
 src/components/RetomarSessao.tsx    Ao abrir o app: retoma sessão/cardio ativo; pergunta se esquecida (> 3 h)
 src/components/RestTimer.tsx        Cronômetro de descanso (restTimerEndsAt salvo no banco), notificação, vibração
@@ -128,7 +131,7 @@ src/evolucao.ts                         Regras puras da Evolução: pontos por s
 src/pages/evolucao/                     Aba Evolução (lista, detalhe com gráficos e tabela), carregada com React.lazy
 
 src/test/setup.ts, src/test/abrir.tsx   Configuração dos testes e helper para montar o app numa rota
-src/**/*.test.ts(x)                     ~183 testes (regras da semana, sessão, banco, cardio, telas, som, imagem)
+src/**/*.test.ts(x)                     ~188 testes (regras da semana, sessão, banco, cardio, telas, som, imagem)
 ```
 
 Rotas (com `#`): `/`, `/treinar`, `/sessao`, `/sessao/:exerciseId`, `/sessao/finalizar`, `/cardio/:sessionId`, `/fichas/nova`, `/fichas/:id`, `/exercicios`, `/exercicios/novo`, `/exercicios/:id`, `/exercicio/:id`, `/historico`, `/historico/:id`, `/evolucao`, `/evolucao/:id`, `/configuracoes`.
@@ -155,7 +158,7 @@ npm run lint             # eslint .
 npm test                 # vitest run
 npm run build            # tsc + vite build (gera dist/)
 npm run preview          # serve o dist/
-npm run test:viewport    # layout no viewport 384×832 em Chrome headless (precisa do build e de Chrome; caminho via CHROME_PATH se necessário)
+npm run test:viewport    # layout no viewport 384×832 em Chrome headless (rodadas: normal, --com-foto, --demo) (precisa do build e de Chrome; caminho via CHROME_PATH se necessário)
 gh run list --limit 3    # conferir o deploy depois do push
 gh run watch             # acompanhar o deploy em andamento
 ```
@@ -172,6 +175,7 @@ Publicação: `git push` no `master` dispara `.github/workflows/deploy.yml`. No 
 - **Etapa 3a.5**: alerta sonoro do descanso (Web Audio), configurações de som/aviso antecipado/3-2-1/volume, "Testar som", permissão de notificações.
 - **Etapa 3b** (0.3.4 a 0.4.1): regra de sugestão e pendências, local do treino (Academia/Casa), contador "X de Y treinos esta semana", aviso informativo de mesmo grupo em dias seguidos com RPE ≥ 8, Início (dashboard), aba Treinar completa com miniaturas, detalhe do exercício, aviso de alterações não salvas, mudanças durante a sessão (séries/reps/descanso/substituir exercício) com "Aplicar também na ficha?", explicação do RPE.
 - **Etapa 3c** (0.5.0): cardio pós-treino com cronômetro persistido, rascunho no banco, cardio esquecido, cancelar.
+- **Modo demonstração** (0.8.0, fora das etapas): Configurações → "Entrar no modo demonstração" abre o app num banco separado (`fittrack-demo`) com ~4 semanas de treinos fictícios; faixa "Modo demonstração · Sair" no topo; "Recomeçar demonstração". O banco real não é tocado.
 - **Etapa 4b** (0.7.0): aba Evolução com lista de exercícios, recordes por unidade, gráficos de carga máxima e volume (Recharts, carregado sob demanda) e tabela.
 - **Correção 0.6.1**: botão de vídeo ao lado do nome na execução e ícone de vídeo em cada exercício da visão geral; sem link salvo, usa a busca no YouTube pelo nome.
 - **Etapa 4a** (0.6.0): Histórico agrupado por semana, detalhe do treino, editar/excluir série, editar RPE e observações, excluir treino (sessão + séries + cardio ligado, em transação) com "Desfazer" por 8 segundos.
@@ -193,7 +197,7 @@ Publicação: `git push` no `master` dispara `.github/workflows/deploy.yml`. No 
 
 Cada parte com `git push`, deploy confirmado e versão própria (detalhes em `CLAUDE.md` → "Etapas e critérios de aceite"):
 
-1. **4c (0.8.0)**: comparação com o treino anterior da mesma ficha no detalhe do Histórico; mini gráfico "Evolução de carga" na execução (recolhido) e no detalhe do exercício, carregado sob demanda.
+1. **4c (0.9.0)**: comparação com o treino anterior da mesma ficha no detalhe do Histórico; mini gráfico "Evolução de carga" na execução (recolhido) e no detalhe do exercício, carregado sob demanda.
 2. **Etapa 5**: cardio avulso e gráficos, medidas corporais, fotos corporais, tela de Equipment, bloco de peso no Início.
 3. **Etapa 6**: backup JSON (com schemaVersion, imagens de exercício em base64, sem fotos corporais), importação com Zod + pré-visualização + confirmação, CSV de séries e medidas, aviso permanente de perda de dados.
 4. **Etapa 7**: PWA e offline (instala no Chrome Android, ícones 192 e 512, manifest com `start_url`/`scope` `/fittrack/`).
@@ -222,6 +226,7 @@ Cada parte com `git push`, deploy confirmado e versão própria (detalhes em `CL
 - **Semana de segunda a domingo; pendências não passam para a semana seguinte.**
 - **Local Academia/Casa**: `local ?? 'academia'` sem migração; treino em casa num dia cobre a pendência da ficha de academia desse dia.
 - **Teste de viewport em Chrome headless real**: jsdom não calcula layout; garante que tudo da série cabe na tela do S24 Ultra sem rolar.
+- **Modo demonstração em banco separado, escolhido na abertura**: o `db` é criado uma vez por carregamento; trocar de banco recarregando a página garante que nenhuma tela fique com o banco antigo aberto, e o banco real nunca é aberto no modo.
 - **CI/deploy antecipado** (desde a 3a.1) para testar no celular de verdade a cada etapa.
 - **Versionamento**: funcionalidade nova sobe o número do meio, correção o último; commits só de CI/docs/CLAUDE.md não sobem versão. A versão sobe **antes** de rodar tsc/lint/testes/build.
 
@@ -242,6 +247,7 @@ Cada parte com `git push`, deploy confirmado e versão própria (detalhes em `CL
 O app **não usa variáveis de ambiente, senhas nem chaves** (não há `.env`; `.env*` está no `.gitignore`). Nada de credenciais no repositório.
 
 Configurações existentes:
+- `localStorage` chave `fittrack-modo` = `demo`: liga o modo demonstração (sem ela, banco real).
 - `CHROME_PATH` — opcional, caminho do executável do Chrome usado por `npm run test:viewport` (no CI: `/usr/bin/google-chrome`).
 - Constantes injetadas pelo Vite no build (não são variáveis de ambiente): `__APP_VERSION__` (de `package.json`), `__APP_COMMIT__` (hash do git), `__APP_BUILD_DATE__`.
 - GitHub: Pages com Source = "GitHub Actions"; o workflow usa as permissões `pages: write` e `id-token: write` (sem secrets próprios).

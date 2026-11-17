@@ -5,6 +5,8 @@ import type {
 } from './types';
 import { buildSeed, LINKS_DO_SEED } from './seed';
 import { normalizeNome } from './normalize';
+import { gerarDemo } from './demo';
+import { BANCO_DEMO, BANCO_REAL, nomeDoBanco } from '../modo';
 
 export class FitTrackDB extends Dexie {
   equipment!: Table<Equipment, string>;
@@ -19,7 +21,7 @@ export class FitTrackDB extends Dexie {
   restDays!: Table<RestDay, string>;
   settings!: Table<UserSettings, string>;
 
-  constructor(name = 'fittrack') {
+  constructor(name = BANCO_REAL) {
     super(name);
     // deletedAt não é indexado: IndexedDB ignora null em índices; o filtro é feito em base.ts.
     this.version(1).stores({
@@ -50,8 +52,16 @@ export class FitTrackDB extends Dexie {
       await tx.table('exercises').bulkAdd(seed.exercises);
       await tx.table('workoutPlans').bulkAdd(seed.workoutPlans);
       await tx.table('settings').add(seed.settings);
+      // Banco de demonstração: também ~4 semanas de treinos fictícios (o banco real nunca passa por aqui).
+      if (this.name === BANCO_DEMO) {
+        const demo = gerarDemo(seed.exercises, seed.workoutPlans);
+        await tx.table('workoutSessions').bulkAdd(demo.sessions);
+        await tx.table('exerciseSets').bulkAdd(demo.sets);
+        await tx.table('cardioSessions').bulkAdd(demo.cardio);
+      }
     });
   }
 }
 
-export const db = new FitTrackDB();
+/** Banco desta abertura do app: o real ou o de demonstração (ver modo.ts). */
+export const db = new FitTrackDB(nomeDoBanco());

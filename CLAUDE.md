@@ -11,7 +11,7 @@
 - Decisões fora desta spec: perguntar antes ou listar explicitamente no relatório.
 - Comandos que eu precisar rodar manualmente: PowerShell 7, cada um em uma única linha.
 - Nunca encerrar processos por nome (taskkill /IM, pkill, killall ou similar); só pelo PID de processos que você mesmo iniciou.
-- Versão (package.json, mostrada em Configurações): funcionalidade nova sobe o número do meio (0.X.0); correção sobe o último (0.X.Y); commits só de CI, documentação ou CLAUDE.md não sobem versão; 1.0.0 quando as 8 etapas estiverem concluídas.
+- Versão (package.json, mostrada em Configurações): funcionalidade nova sobe o número do meio (0.X.0); correção sobe o último (0.X.Y); commits só de CI, documentação ou CLAUDE.md não sobem versão; 1.0.0 quando as 8 etapas estiverem concluídas. Funcionalidades fora das etapas também sobem o número do meio (ex.: modo demonstração = 0.8.0; a 4c passou a ser 0.9.0).
 - Evitar capturas de tela e leitura de imagens; usar só quando indispensável, porque elas acumulam e travam a sessão.
 
 ## Stack (versões fixas)
@@ -169,6 +169,14 @@ Cardio padrão: esteira, 15 min, inclinação "nível 7".
 - CSV de séries e de medidas.
 - Aviso permanente em Configurações: dados locais se perdem ao limpar o navegador ou trocar de aparelho sem backup.
 
+## Modo demonstração (0.8.0, fora das etapas)
+- Configurações → "Modo demonstração": "Entrar no modo demonstração", com explicação curta de que os dados reais não são lidos nem alterados.
+- Banco Dexie separado "fittrack-demo", escolhido na abertura do app (src/modo.ts: localStorage "fittrack-modo" = "demo"; o banco real é "fittrack"). Entrar, sair e recomeçar recarregam a página. Os repositories continuam sendo o único acesso ao banco; nada do modo lê ou grava o banco real.
+- O populate do banco de demonstração grava o seed e ~4 semanas de treinos fictícios concluídos (src/db/demo.ts): da segunda de 4 semanas atrás até ontem, um treino por dia com ficha (duas faltas), 18h30, cargas subindo aos poucos, cardio pós-treino às terças e quintas. Hoje fica livre, para iniciar um treino.
+- Faixa fixa no topo, em todas as telas: "Modo demonstração · Sair". Altura em --demo-h (0 fora do modo); as telas de altura total (sessão, cardio) descontam a faixa. Conferido no test:viewport (rodada --demo).
+- No modo, Configurações mostra "Recomeçar demonstração" (com confirmação; apaga e recria só o banco de demonstração) e "Sair do modo demonstração".
+- Testes: entrar, criar e abandonar um treino, sair, e o banco real continua idêntico (todas as tabelas).
+
 ## Pendências
 - Tela de Equipment (cadastro e vínculo opcional ao exercício) — entra na Etapa 5.
 - Fase futura, sem etapa definida: login e sincronização entre aparelhos (Supabase). Não fazer até o usuário pedir.
@@ -186,7 +194,8 @@ Divisão da 4, cada parte com git push e versão própria:
 - 4a (0.6.0) Histórico. Lista /historico agrupada por semana (segunda a domingo, "Semana de 10/11 a 16/11"), da mais recente para a mais antiga; card com ficha, data, duração, volume (kg só com exercício de carga em kg; senão "—") e RPE; cardio ligado numa linha dentro do card ("+ Esteira 15 min"). Abandonadas aparecem com a marca "abandonado" e podem ser excluídas; sessões ativas não aparecem (continuam em "Retomar"). Detalhe /historico/:id: ficha, data e hora, duração, RPE, observações, cardio ligado e as séries de cada exercício do planSnapshot (com "Trocado após N séries" e pulados). Editar série (carga e reps com − e +, mesmo campo decimal e mesma validarSerie da execução, pelo tipo e unidade do planSnapshot); excluir uma série isolada (com confirmação; renumera as séries restantes do exercício); editar RPE e observações. Excluir treino: confirmação (avisa quando o cardio ligado também será excluído); exclui numa transação a sessão, as séries e o cardio ligado (soft delete); recusa sessão ativa ou com cardio em curso; depois mostra "Treino excluído · Desfazer" por 8 segundos, e Desfazer restaura a sessão, as séries e o cardio (removendo o deletedAt só dos registros excluídos nessa operação). Testes: exclusão reflete no contador, duração estimada, última carga, minutos e "Último treino"; desfazer restaura; corrigir o RPE altera o aviso de dias seguidos; excluir uma série muda o volume e a última carga.
 - Correção 0.6.1: "Ver execução" mais visível e em todos os exercícios.
 - 4b (0.7.0) CONCLUÍDA. Evolução: lista de exercícios com séries; gráficos de carga máxima e volume por sessão (Recharts); placa só progressão de placa; peso corporal em total de reps (porLado × 2); recordes por unidade. A aba Evolução e o Recharts carregam sob demanda (React.lazy na rota), para não pesar a abertura do app. Recordes e gráficos ficam fora da 4a. Implementado: /evolucao lista os exercícios com séries em sessões encerradas (concluídas e abandonadas; ativas não), do treinado mais recentemente; /evolucao/:id mostra, por medida do planSnapshot (kg, placa, peso corporal, tempo; exercício que mudou de unidade tem um bloco por unidade), os recordes, os gráficos (a partir de 2 treinos) e "Ver em tabela". Recordes: kg = maior carga (com as reps) e maior volume; placa = maior placa; peso corporal = mais reps numa sessão; tempo = maior tempo; empate fica com o primeiro. Linha em âmbar #d97706 (validada contra o fundo #171717).
-- 4c (0.8.0) Comparação com o treino anterior da mesma ficha no detalhe do Histórico; mini gráfico "Evolução de carga" na execução (recolhido por padrão) e no detalhe do exercício, carregado sob demanda ao abrir a seção.
+- Modo demonstração (0.8.0, fora das etapas): ver "Modo demonstração". CONCLUÍDO.
+- 4c (0.9.0) Comparação com o treino anterior da mesma ficha no detalhe do Histórico; mini gráfico "Evolução de carga" na execução (recolhido por padrão) e no detalhe do exercício, carregado sob demanda ao abrir a seção.
 5. Cardio, medidas e fotos corporais.
 6. Backup e restauração. Aceite: exportar, apagar banco, importar, dados idênticos (incluindo imagens de exercício).
 7. PWA e offline. Aceite: instala no Chrome Android, abre offline, ícones 192 e 512; conferir "Armazenamento persistente" em Configurações com o app instalado no celular.

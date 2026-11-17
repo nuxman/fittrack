@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from 'react';
 import { Outlet, type RouteObject } from 'react-router-dom';
 import { BottomNav } from './components/BottomNav';
+import { FaixaDemo } from './components/FaixaDemo';
 import { ConfirmDialogProvider } from './components/ConfirmDialog';
 import { Inicio } from './pages/Inicio';
 import { Configuracoes } from './pages/Configuracoes';
@@ -29,6 +30,7 @@ const sobDemanda = (el: ReactNode) => <Suspense fallback={<p className="p-4">Car
 function Raiz() {
   return (
     <ConfirmDialogProvider>
+      <FaixaDemo />
       <Outlet />
       <RetomarSessao />
       <BottomNav />

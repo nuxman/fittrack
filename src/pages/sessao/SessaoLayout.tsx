@@ -89,7 +89,7 @@ export function SessaoLayout() {
 
   return (
     <Ctx.Provider value={{ ...dados, recarregar, agir, wake: TEXTO_WAKE[wake] }}>
-      <main className="mx-auto flex h-dvh max-w-xl flex-col" data-testid="tela-sessao">
+      <main className="mx-auto flex h-[calc(100dvh-var(--demo-h))] max-w-xl flex-col" data-testid="tela-sessao">
         <BarraSessao />
         <Outlet />
       </main>

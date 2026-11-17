@@ -113,7 +113,7 @@ function TelaCardio({ sessao, cardio, settings, recarregar }: Props) {
   };
 
   return (
-    <main className="mx-auto flex h-dvh max-w-xl flex-col" data-testid="tela-cardio">
+    <main className="mx-auto flex h-[calc(100dvh-var(--demo-h))] max-w-xl flex-col" data-testid="tela-cardio">
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
         <h1 className="text-3xl font-bold text-primary-400">Cardio</h1>
         <p className="text-sm text-neutral-400">Depois de {sessao.planSnapshot.nome}</p>

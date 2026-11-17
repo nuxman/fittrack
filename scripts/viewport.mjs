@@ -111,6 +111,16 @@ async function avaliar(expr) {
 }
 
 await cdp('Emulation.setDeviceMetricsOverride', { width: LARGURA, height: ALTURA, deviceScaleFactor: 3, mobile: true });
+// --demo: modo demonstração ligado (faixa fixa no topo) antes de abrir o app.
+const comDemo = process.argv.includes('--demo');
+if (comDemo) {
+  await cdp('Page.navigate', { url: URL_APP });
+  await ate(() => avaliar(`document.readyState === 'complete'`), 'página inicial');
+  await avaliar(`localStorage.setItem('fittrack-modo', 'demo'), true`);
+  // O banco é escolhido na abertura: recarrega, como o app faz ao entrar no modo.
+  await cdp('Page.reload');
+  await ate(() => avaliar(`!!document.querySelector('[data-testid="faixa-demo"]')`), 'faixa da demonstração');
+}
 await cdp('Page.navigate', { url: `${URL_APP}#/treinar` });
 
 // Funções usadas dentro da página.
@@ -180,6 +190,7 @@ const medirExecucao = async (etapa) => {
 
 // Pior caso: exercício com foto (miniatura de 120 px). Grava uma imagem pelo app e recarrega.
 const comFoto = process.argv.includes('--com-foto');
+const etapaDe = (e) => (comDemo ? `demonstração, ${e}` : comFoto ? `com foto, ${e}` : e);
 if (comFoto) {
   await avaliar(`(async () => {
     const canvas = Object.assign(document.createElement('canvas'), { width: 400, height: 300 });
@@ -202,7 +213,11 @@ if (comFoto) {
   conferir('com foto: miniatura com no máximo 120 px de altura', await avaliar(`(() => { const h = document.querySelector('button[aria-label="Ampliar foto"]').getBoundingClientRect().height; return h <= 120 || 'altura ' + h; })()`));
 }
 
-const sem = await medirExecucao(comFoto ? 'com foto, sem descanso' : 'sem descanso');
+if (comDemo) {
+  conferir('demonstração: faixa visível no topo', await avaliar(`${AJUDA}; __visivel(__q('[data-testid="faixa-demo"]'))`));
+  conferir('demonstração: faixa não cobre o cabeçalho da sessão', await avaliar(`${AJUDA}; __q('[data-testid="faixa-demo"]').getBoundingClientRect().bottom <= __q('[data-testid="tela-sessao"] header').getBoundingClientRect().top || 'sobreposta'`));
+}
+const sem = await medirExecucao(etapaDe('sem descanso'));
 conferir('sem descanso: painel de contagem ausente', sem.contagem === 'ausente' ? true : `contagem: ${sem.contagem}`);
 conferir('sem descanso: linha "Descanso: 90 s · Alterar"', await avaliar(`${AJUDA}; /Descanso: 90 s · Alterar/.test(__q('[data-testid="linha-descanso"]')?.textContent ?? '')`));
 
@@ -215,13 +230,13 @@ await avaliar(`${AJUDA}; (() => {
 })()`);
 await avaliar(`${AJUDA}; __botao('Concluir série').click(), true`);
 await ate(() => avaliar(`!!document.querySelector('[data-testid="descanso"]')`), 'contagem do descanso');
-const com = await medirExecucao(comFoto ? 'com foto, com descanso' : 'com descanso');
+const com = await medirExecucao(etapaDe('com descanso'));
 conferir('com descanso: contagem visível', com.contagem);
 conferir('com descanso: contagem acima de "Concluir série"', await avaliar(`${AJUDA}; __q('[data-testid="descanso"]').getBoundingClientRect().bottom <= __botao('Concluir série').getBoundingClientRect().top || 'sobreposto'`));
 
 // Evolução (só na rodada sem foto): encerra a sessão e grava um treino anterior com uma série, direto no banco,
 // para ter dois pontos; o gráfico (Recharts, sob demanda) precisa desenhar a linha sem rolagem horizontal.
-if (!comFoto) {
+if (!comFoto && !comDemo) {
   await avaliar(`(async () => {
     const exId = location.hash.split('/').pop();
     const req = indexedDB.open('fittrack');

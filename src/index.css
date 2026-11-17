@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 /* Altura da navegação inferior (sem a área de gestos). */
-:root { --nav-h: 4rem; }
+:root { --nav-h: 4rem; --demo-h: 0px; }
+/* Faixa do modo demonstração: a tela da sessão desconta a altura dela (ver main.tsx). */
+:root[data-demo] { --demo-h: 2.5rem; }
 
 @layer components {
   /* Área de gestos do Android: usa o inset do sistema, com mínimo de 8 px. */
