@@ -173,7 +173,7 @@ Cardio padrão: esteira, 15 min, inclinação "nível 7".
 - Configurações → "Modo demonstração": "Entrar no modo demonstração", com explicação curta de que os dados reais não são lidos nem alterados.
 - Banco Dexie separado "fittrack-demo", escolhido na abertura do app (src/modo.ts: localStorage "fittrack-modo" = "demo"; o banco real é "fittrack"). Entrar, sair e recomeçar recarregam a página. Os repositories continuam sendo o único acesso ao banco; nada do modo lê ou grava o banco real.
 - O populate do banco de demonstração grava o seed e ~4 semanas de treinos fictícios concluídos (src/db/demo.ts): da segunda de 4 semanas atrás até ontem, um treino por dia com ficha (duas faltas), 18h30, cargas subindo aos poucos, cardio pós-treino às terças e quintas. Hoje fica livre, para iniciar um treino.
-- Faixa fixa no topo, em todas as telas: "Modo demonstração · Sair". Altura em --demo-h (0 fora do modo); as telas de altura total (sessão, cardio) descontam a faixa. Conferido no test:viewport (rodada --demo).
+- Faixa fixa no topo, em todas as telas: "Modo demonstração · Sair". Faixa e Configurações mostram o banco de fato aberto (db.name via demoRepository.ativo()), não o localStorage atual: outra aba que entra no modo não muda esta até recarregar. Altura em --demo-h (0 fora do modo); as telas de altura total (sessão, cardio) descontam a faixa. Conferido no test:viewport (rodada --demo).
 - No modo, Configurações mostra "Recomeçar demonstração" (com confirmação; apaga e recria só o banco de demonstração) e "Sair do modo demonstração".
 - Testes: entrar, criar e abandonar um treino, sair, e o banco real continua idêntico (todas as tabelas).
 

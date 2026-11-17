@@ -5,13 +5,13 @@ import { useAsync } from '../useAsync';
 import { isPersisted } from '../storage';
 import { AlertasDescanso } from '../components/AlertasDescanso';
 import { useDialog } from '../components/ConfirmDialog';
-import { emDemo, entrarDemo, sairDemo } from '../modo';
+import { entrarDemo, sairDemo } from '../modo';
 import { demoRepository } from '../db/repositories/demo';
 
 export function Configuracoes() {
   const [persistente] = useAsync(isPersisted);
   const { confirmar } = useDialog();
-  const demo = emDemo();
+  const demo = demoRepository.ativo();
   const recomecar = async () => {
     if (await confirmar('Recomeçar demonstração?', 'Apaga o que você fez na demonstração e cria de novo os treinos de exemplo.', 'Recomeçar')) {
       await demoRepository.recomecar();
