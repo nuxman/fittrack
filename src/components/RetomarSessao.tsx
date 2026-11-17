@@ -5,6 +5,7 @@ import { workoutSessionsRepository } from '../db/repositories/workoutSessions';
 import { exerciseSetsRepository } from '../db/repositories/exerciseSets';
 import { cardioSessionsRepository } from '../db/repositories/cardioSessions';
 import { settingsRepository } from '../db/repositories/settings';
+import { bancoFechado } from '../db/db';
 import { cardioEsquecido, rascunhoPadrao, validarCardio } from '../cardio';
 import { exercicioAtual, fimDaUltimaSerie, pulados, sessaoEsquecida, ultimaAtividade } from '../sessao';
 
@@ -22,7 +23,7 @@ export function RetomarSessao() {
   useEffect(() => {
     if (feito.current) return;
     feito.current = true;
-    void (async () => {
+    (async () => {
       const s = await workoutSessionsRepository.ativa();
       if (!s) return retomarCardio();
       const sets = await exerciseSetsRepository.listarDaSessao(s.id);
@@ -54,7 +55,10 @@ export function RetomarSessao() {
         return;
       }
       if (!inicial.current.startsWith('/sessao')) navigate(destino, { replace: true });
-    })();
+    })().catch((e: unknown) => {
+      // Banco fechado de propósito (recomeçar a demonstração recarrega a página logo em seguida): nada a retomar.
+      if (!bancoFechado(e)) throw e;
+    });
 
     /** Cardio pós-treino em curso: volta para a tela; esquecido (> 3 h), pergunta o que fazer. */
     async function retomarCardio() {

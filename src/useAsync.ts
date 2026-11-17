@@ -6,7 +6,13 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[] = []): [T | un
   const [versao, setVersao] = useState(0);
   useEffect(() => {
     let alive = true;
-    fn().then((v) => alive && setValue(v));
+    fn().then(
+      (v) => alive && setValue(v),
+      // Desmontada (ex.: banco fechado ao recomeçar a demonstração): ninguém espera o resultado. Montada: o erro segue.
+      (e: unknown) => {
+        if (alive) throw e;
+      },
+    );
     return () => {
       alive = false;
     };

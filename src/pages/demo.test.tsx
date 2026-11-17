@@ -20,10 +20,9 @@ beforeEach(async () => {
   await Dexie.delete('fittrack');
   await Dexie.delete('fittrack-demo');
 });
-afterEach(async () => {
-  // Desmonta a tela e espera as leituras dela antes de fechar o banco.
+afterEach(() => {
+  // Desmonta a tela antes de fechar o banco (leituras atrasadas são descartadas pelo useAsync).
   cleanup();
-  await new Promise((ok) => setTimeout(ok, 20));
   aberto?.close();
   vi.restoreAllMocks();
   localStorage.clear();

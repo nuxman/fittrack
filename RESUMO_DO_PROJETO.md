@@ -228,6 +228,7 @@ Cada parte com `git push`, deploy confirmado e versão própria (detalhes em `CL
 - **Local Academia/Casa**: `local ?? 'academia'` sem migração; treino em casa num dia cobre a pendência da ficha de academia desse dia.
 - **Teste de viewport em Chrome headless real**: jsdom não calcula layout; garante que tudo da série cabe na tela do S24 Ultra sem rolar.
 - **Modo demonstração em banco separado, escolhido na abertura**: o `db` é criado uma vez por carregamento; trocar de banco recarregando a página garante que nenhuma tela fique com o banco antigo aberto, e o banco real nunca é aberto no modo.
+- **Leituras do banco depois de a tela fechar são descartadas** (`useAsync` ignora a falha quando a tela já foi desmontada; `RetomarSessao` ignora banco fechado de propósito): isso eliminou o `DatabaseClosedError` intermitente nos testes, que chegou a derrubar o deploy.
 - **CI/deploy antecipado** (desde a 3a.1) para testar no celular de verdade a cada etapa.
 - **Versionamento**: funcionalidade nova sobe o número do meio, correção o último; commits só de CI/docs/CLAUDE.md não sobem versão. A versão sobe **antes** de rodar tsc/lint/testes/build.
 

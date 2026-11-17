@@ -10,11 +10,8 @@ globalThis.File = NodeFile as unknown as typeof File;
 import { afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
-// Desmonta a tela e espera as leituras do banco já iniciadas por ela terminarem. Sem isso, uma tela que ainda
-// está carregando (ex.: o Início depois de navegar) pode ter a leitura cortada pelo db.delete() do próximo teste
-// (DatabaseClosedError intermitente).
-afterEach(async () => {
+// Desmonta a tela antes do próximo teste apagar o banco: leituras que terminam depois disso são descartadas
+// pelo useAsync (tela desmontada), em vez de virarem DatabaseClosedError sem tratamento.
+afterEach(() => {
   cleanup();
-  // ponytail: espera fixa de 20 ms; se voltar a falhar, rastrear as leituras pendentes em useAsync e esperá-las.
-  await new Promise((ok) => setTimeout(ok, 20));
 });

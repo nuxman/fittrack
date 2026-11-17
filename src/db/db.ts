@@ -63,5 +63,8 @@ export class FitTrackDB extends Dexie {
   }
 }
 
+/** Erro de banco fechado de propósito (ex.: recomeçar a demonstração, que recarrega a página em seguida). */
+export const bancoFechado = (e: unknown) => e instanceof Dexie.DatabaseClosedError;
+
 /** Banco desta abertura do app: o real ou o de demonstração (ver modo.ts). */
 export const db = new FitTrackDB(nomeDoBanco());
