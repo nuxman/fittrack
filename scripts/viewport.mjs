@@ -145,7 +145,8 @@ const conferir = (nome, valor) => {
   if (!ok) falhas.push(nome);
 };
 
-await ate(() => avaliar(`${AJUDA}; !!__botao('Iniciar')`), 'aba Treinar');
+// Espera a aba Treinar de fato: o Início também tem "Iniciar treino" (ex.: na demonstração, que recarrega no Início).
+await ate(() => avaliar(`${AJUDA}; location.hash === '#/treinar' && !!__q('[data-testid="card-ficha"]') && !!__botao('Iniciar')`), 'aba Treinar');
 // Botões dos cards da aba Treinar em uma linha só (texto sem quebra).
 conferir('aba Treinar: "Iniciar" e "Editar" sem quebrar linha', await avaliar(`(() => {
   const card = document.querySelector('[data-testid="card-ficha"]');
