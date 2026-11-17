@@ -2,7 +2,7 @@
 
 > Documento para quem vai continuar o trabalho sem acesso às conversas anteriores.
 > A **especificação completa e oficial** está em `CLAUDE.md` (raiz). Em caso de conflito, o `CLAUDE.md` vale.
-> Situação em 17/11/2026: versão **0.8.0** (modo demonstração, depois da Etapa 4b), deploy confirmado com sucesso no GitHub Actions.
+> Situação em 17/11/2026: versão **0.8.1** (correção do modo demonstração, depois da Etapa 4b), deploy confirmado com sucesso no GitHub Actions.
 
 ---
 
@@ -83,7 +83,7 @@ src/somDescanso.ts             Bipes do descanso com Web Audio (OscillatorNode +
 src/image.ts                   Redimensiona foto para ≤1024 px, WebP 0.8 (fallback JPEG)
 src/format.ts                  Formatação de prescrição ("3×10–12"), duração etc.
 src/dias.ts                    Nomes dos dias e ordem da semana (segunda primeiro)
-src/modo.ts                    Modo demonstração: nome do banco (fittrack ou fittrack-demo) escolhido na abertura via localStorage
+src/modo.ts                    Modo demonstração: nome do banco (fittrack ou fittrack-demo) escolhido na abertura via sessionStorage
 src/db/demo.ts                 Treinos fictícios do banco de demonstração (populate)
 src/storage.ts                 navigator.storage.persist() e consulta de persistência
 src/useAgora.ts                Hook de relógio para cronômetros
@@ -131,7 +131,7 @@ src/evolucao.ts                         Regras puras da Evolução: pontos por s
 src/pages/evolucao/                     Aba Evolução (lista, detalhe com gráficos e tabela), carregada com React.lazy
 
 src/test/setup.ts, src/test/abrir.tsx   Configuração dos testes e helper para montar o app numa rota
-src/**/*.test.ts(x)                     ~188 testes (regras da semana, sessão, banco, cardio, telas, som, imagem)
+src/**/*.test.ts(x)                     ~191 testes (regras da semana, sessão, banco, cardio, telas, som, imagem)
 ```
 
 Rotas (com `#`): `/`, `/treinar`, `/sessao`, `/sessao/:exerciseId`, `/sessao/finalizar`, `/cardio/:sessionId`, `/fichas/nova`, `/fichas/:id`, `/exercicios`, `/exercicios/novo`, `/exercicios/:id`, `/exercicio/:id`, `/historico`, `/historico/:id`, `/evolucao`, `/evolucao/:id`, `/configuracoes`.
@@ -176,6 +176,7 @@ Publicação: `git push` no `master` dispara `.github/workflows/deploy.yml`. No 
 - **Etapa 3b** (0.3.4 a 0.4.1): regra de sugestão e pendências, local do treino (Academia/Casa), contador "X de Y treinos esta semana", aviso informativo de mesmo grupo em dias seguidos com RPE ≥ 8, Início (dashboard), aba Treinar completa com miniaturas, detalhe do exercício, aviso de alterações não salvas, mudanças durante a sessão (séries/reps/descanso/substituir exercício) com "Aplicar também na ficha?", explicação do RPE.
 - **Etapa 3c** (0.5.0): cardio pós-treino com cronômetro persistido, rascunho no banco, cardio esquecido, cancelar.
 - **Modo demonstração** (0.8.0, fora das etapas): Configurações → "Entrar no modo demonstração" abre o app num banco separado (`fittrack-demo`) com ~4 semanas de treinos fictícios; faixa "Modo demonstração · Sair" no topo; "Recomeçar demonstração". O banco real não é tocado.
+- **Correção 0.8.1**: o modo demonstração termina ao fechar o app (marca em sessionStorage; reabrir volta ao banco real) e "Entrar" sempre recria os dados de exemplo com datas atuais.
 - **Etapa 4b** (0.7.0): aba Evolução com lista de exercícios, recordes por unidade, gráficos de carga máxima e volume (Recharts, carregado sob demanda) e tabela.
 - **Correção 0.6.1**: botão de vídeo ao lado do nome na execução e ícone de vídeo em cada exercício da visão geral; sem link salvo, usa a busca no YouTube pelo nome.
 - **Etapa 4a** (0.6.0): Histórico agrupado por semana, detalhe do treino, editar/excluir série, editar RPE e observações, excluir treino (sessão + séries + cardio ligado, em transação) com "Desfazer" por 8 segundos.
@@ -247,7 +248,7 @@ Cada parte com `git push`, deploy confirmado e versão própria (detalhes em `CL
 O app **não usa variáveis de ambiente, senhas nem chaves** (não há `.env`; `.env*` está no `.gitignore`). Nada de credenciais no repositório.
 
 Configurações existentes:
-- `localStorage` chave `fittrack-modo` = `demo`: liga o modo demonstração (sem ela, banco real).
+- `sessionStorage` chave `fittrack-modo` = `demo`: liga o modo demonstração só nesta aba/abertura do app (fechar o app apaga; sem ela, banco real). Se existir em `localStorage` (0.8.0), é removida.
 - `CHROME_PATH` — opcional, caminho do executável do Chrome usado por `npm run test:viewport` (no CI: `/usr/bin/google-chrome`).
 - Constantes injetadas pelo Vite no build (não são variáveis de ambiente): `__APP_VERSION__` (de `package.json`), `__APP_COMMIT__` (hash do git), `__APP_BUILD_DATE__`.
 - GitHub: Pages com Source = "GitHub Actions"; o workflow usa as permissões `pages: write` e `id-token: write` (sem secrets próprios).

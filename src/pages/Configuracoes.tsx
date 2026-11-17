@@ -5,7 +5,7 @@ import { useAsync } from '../useAsync';
 import { isPersisted } from '../storage';
 import { AlertasDescanso } from '../components/AlertasDescanso';
 import { useDialog } from '../components/ConfirmDialog';
-import { entrarDemo, sairDemo } from '../modo';
+import { sairDemo } from '../modo';
 import { demoRepository } from '../db/repositories/demo';
 
 export function Configuracoes() {
@@ -40,16 +40,16 @@ export function Configuracoes() {
         <h2 className="text-lg font-semibold">Modo demonstração</h2>
         {demo ? (
           <>
-            <p className="text-neutral-300">Você está vendo dados de exemplo. Seus dados reais continuam guardados, sem nenhuma alteração.</p>
+            <p className="text-neutral-300">Você está vendo dados de exemplo. Seus dados reais continuam guardados, sem nenhuma alteração. A demonstração termina ao fechar o app.</p>
             <button type="button" className="btn-secondary w-full" onClick={() => void recomecar()}>Recomeçar demonstração</button>
             <button type="button" className="btn-primary w-full" onClick={() => sairDemo()}>Sair do modo demonstração</button>
           </>
         ) : (
           <>
             <p className="text-neutral-300">
-              Abre o app com cerca de 4 semanas de treinos de exemplo, num banco separado. Seus dados reais não são lidos nem alterados.
+              Abre o app com cerca de 4 semanas de treinos de exemplo, num banco separado. Seus dados reais não são lidos nem alterados. A demonstração termina ao fechar o app.
             </p>
-            <button type="button" className="btn-secondary w-full" onClick={() => entrarDemo()}>Entrar no modo demonstração</button>
+            <button type="button" className="btn-secondary w-full" onClick={() => void demoRepository.entrar()}>Entrar no modo demonstração</button>
           </>
         )}
       </section>

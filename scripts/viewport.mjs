@@ -117,7 +117,7 @@ if (comDemo) {
   await cdp('Page.navigate', { url: URL_APP });
   await ate(() => avaliar(`document.readyState === 'complete'`), 'página inicial');
   // Marca a página antiga: a espera abaixo só termina na página recarregada (Page.reload volta antes de recarregar).
-  await avaliar(`localStorage.setItem('fittrack-modo', 'demo'), window.__antiga = true, true`);
+  await avaliar(`sessionStorage.setItem('fittrack-modo', 'demo'), window.__antiga = true, true`);
   // O banco é escolhido na abertura: recarrega, como o app faz ao entrar no modo.
   await cdp('Page.reload');
   await ate(() => avaliar(`!window.__antiga && !!document.querySelector('[data-testid="faixa-demo"]')`), 'faixa da demonstração');

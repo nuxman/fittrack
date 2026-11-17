@@ -31,12 +31,14 @@ async function abrirApp() {
 
 beforeEach(async () => {
   localStorage.clear();
+  sessionStorage.clear();
   await Dexie.delete('fittrack');
   await Dexie.delete('fittrack-demo');
 });
 afterEach(() => {
   vi.restoreAllMocks();
   localStorage.clear();
+  sessionStorage.clear();
 });
 
 describe('dados fictícios', () => {
@@ -68,13 +70,12 @@ describe('modo demonstração isolado do banco real', () => {
     const s = await real.sessoes.iniciar((await real.planos.list())[0]!.id);
     await real.series.registrar({ sessionId: s.id, exerciseId: s.planSnapshot.itens[0]!.exerciseId, carga: 40, reps: 10 });
     await real.sessoes.finalizar(s.id, { rpe: 7, observacoes: 'real' });
-    real.db.close();
-    const antes = await despejar('fittrack');
-
     const recarga = vi.fn();
     real.modo.pagina.recarregar = recarga;
-    real.modo.entrarDemo();
+    await real.demo.entrar();
     expect(recarga).toHaveBeenCalledOnce();
+    real.db.close();
+    const antes = await despejar('fittrack');
 
     const demo = await abrirApp();
     expect(demo.db.name).toBe('fittrack-demo');
@@ -98,7 +99,7 @@ describe('modo demonstração isolado do banco real', () => {
     real.db.close();
     const antes = await despejar('fittrack');
 
-    localStorage.setItem('fittrack-modo', 'demo');
+    sessionStorage.setItem('fittrack-modo', 'demo');
     const demo = await abrirApp();
     const s = await demo.sessoes.iniciar((await demo.planos.list())[0]!.id);
     demo.modo.pagina.recarregar = vi.fn();
@@ -110,5 +111,50 @@ describe('modo demonstração isolado do banco real', () => {
     expect((await nova.sessoes.list()).every((x) => x.status === 'concluida')).toBe(true);
     nova.db.close();
     expect(await despejar('fittrack')).toEqual(antes);
+  });
+
+  it('nova abertura do app (sem a marca da aba) abre o banco real; marca antiga da 0.8.0 em localStorage é ignorada', async () => {
+    sessionStorage.setItem('fittrack-modo', 'demo');
+    const demo = await abrirApp();
+    expect(demo.db.name).toBe('fittrack-demo');
+    demo.db.close();
+
+    // Fechar o app apaga o sessionStorage; a 0.8.0 deixava a marca em localStorage.
+    sessionStorage.clear();
+    localStorage.setItem('fittrack-modo', 'demo');
+    const nova = await abrirApp();
+    expect(nova.db.name).toBe('fittrack');
+    expect(localStorage.getItem('fittrack-modo')).toBeNull();
+    nova.db.close();
+  });
+
+  it('"Entrar" sempre recria a demonstração com datas atuais, apagando o que foi feito antes', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date(2026, 0, 7, 10));
+      sessionStorage.setItem('fittrack-modo', 'demo');
+      const velha = await abrirApp();
+      const ultimaVelha = (await velha.sessoes.list()).map((x) => x.iniciadaEm).sort().at(-1)!;
+      const feita = await velha.sessoes.iniciar((await velha.planos.list())[0]!.id);
+      velha.db.close();
+
+      // Dias depois, fora do modo (app fechado), entra de novo.
+      vi.setSystemTime(new Date(2026, 1, 18, 10));
+      sessionStorage.clear();
+      const real = await abrirApp();
+      real.modo.pagina.recarregar = vi.fn();
+      await real.demo.entrar();
+      real.db.close();
+
+      const nova = await abrirApp();
+      expect(nova.db.name).toBe('fittrack-demo');
+      expect(await nova.sessoes.get(feita.id)).toBeUndefined();
+      const ultimaNova = (await nova.sessoes.list()).map((x) => x.iniciadaEm).sort().at(-1)!;
+      expect(ultimaNova > ultimaVelha).toBe(true);
+      expect(new Date(ultimaNova).getDate()).toBe(17);
+      nova.db.close();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

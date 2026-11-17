@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Dexie from 'dexie';
 
@@ -16,6 +16,7 @@ async function abrirApp(rota: string) {
 let aberto: Dexie | undefined;
 beforeEach(async () => {
   localStorage.clear();
+  sessionStorage.clear();
   await Dexie.delete('fittrack');
   await Dexie.delete('fittrack-demo');
 });
@@ -26,6 +27,7 @@ afterEach(async () => {
   aberto?.close();
   vi.restoreAllMocks();
   localStorage.clear();
+  sessionStorage.clear();
 });
 
 describe('modo demonstração nas telas', () => {
@@ -34,13 +36,15 @@ describe('modo demonstração nas telas', () => {
     aberto = app.db;
     expect(await screen.findByText(/Seus dados reais não são lidos nem alterados/)).toBeInTheDocument();
     expect(screen.queryByTestId('faixa-demo')).not.toBeInTheDocument();
+    expect(screen.getByText(/A demonstração termina ao fechar o app/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Entrar no modo demonstração' }));
-    expect(localStorage.getItem('fittrack-modo')).toBe('demo');
-    expect(app.recarregar).toHaveBeenCalledOnce();
+    await waitFor(() => expect(app.recarregar).toHaveBeenCalledOnce());
+    expect(sessionStorage.getItem('fittrack-modo')).toBe('demo');
+    expect(localStorage.getItem('fittrack-modo')).toBeNull();
   });
 
   it('no modo: faixa "Modo demonstração · Sair" em todas as telas, Recomeçar e Sair em Configurações', async () => {
-    localStorage.setItem('fittrack-modo', 'demo');
+    sessionStorage.setItem('fittrack-modo', 'demo');
     const app = await abrirApp('/');
     aberto = app.db;
     expect(await screen.findByTestId('faixa-demo')).toHaveTextContent('Modo demonstração · Sair');
@@ -51,18 +55,18 @@ describe('modo demonstração nas telas', () => {
     expect(screen.queryByRole('button', { name: 'Entrar no modo demonstração' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Sair' }));
-    expect(localStorage.getItem('fittrack-modo')).toBeNull();
+    expect(sessionStorage.getItem('fittrack-modo')).toBeNull();
     expect(app.recarregar).toHaveBeenCalledOnce();
-    localStorage.setItem('fittrack-modo', 'demo');
+    sessionStorage.setItem('fittrack-modo', 'demo');
     fireEvent.click(screen.getByRole('button', { name: 'Sair do modo demonstração' }));
-    expect(localStorage.getItem('fittrack-modo')).toBeNull();
+    expect(sessionStorage.getItem('fittrack-modo')).toBeNull();
   });
 
-  it('outra aba entra no modo: esta continua no banco real e sem a faixa até recarregar', async () => {
+  it('marca gravada depois de abrir (ex.: outra aba): esta continua no banco real e sem a faixa até recarregar', async () => {
     const app = await abrirApp('/configuracoes');
     aberto = app.db;
     await screen.findByRole('button', { name: 'Entrar no modo demonstração' });
-    localStorage.setItem('fittrack-modo', 'demo');
+    sessionStorage.setItem('fittrack-modo', 'demo');
     await app.router.navigate('/historico');
     await app.router.navigate('/configuracoes');
     expect(await screen.findByRole('button', { name: 'Entrar no modo demonstração' })).toBeInTheDocument();
