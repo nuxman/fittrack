@@ -45,7 +45,7 @@ export function ExercicioDetalhe() {
         {item && <p className="text-lg">Na ficha: {formatarPrescricao(item, ex)} · descanso {item.descansoSeg} s</p>}
         <p className="text-neutral-300">Última carga: {ultima ? formatarSerie(ultima, ex) : 'sem registro'}</p>
       </section>
-      <VerExecucao url={ex.videoUrl} />
+      <VerExecucao nome={ex.nome} url={ex.videoUrl} />
       <Anotacoes exerciseId={ex.id} inicial={ex.anotacoes ?? ''} onSalvo={recarregar} aberto />
       <details className="card" open>
         <summary className="cursor-pointer text-lg font-semibold">Grupos trabalhados</summary>

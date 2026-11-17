@@ -163,6 +163,7 @@ const medirExecucao = async (etapa) => {
     carga: __visivel(__campo('Carga (kg)')),
     reps: __visivel(__campo('Repetições')),
     concluir: __visivel(__botao('Concluir série')),
+    video: __visivel(__q('[data-testid="conteudo-execucao"] a[aria-label^="Ver execução de"]')),
     contagem: __visivel(__q('[data-testid="descanso"]')),
     rolagem: __rolagem(),
     conteudoRolado: __q('[data-testid="conteudo-execucao"]').scrollTop,
@@ -172,6 +173,7 @@ const medirExecucao = async (etapa) => {
   conferir(`${etapa}: campo de carga visível`, r.carga);
   conferir(`${etapa}: campo de reps visível`, r.reps);
   conferir(`${etapa}: "Concluir série" visível`, r.concluir);
+  conferir(`${etapa}: botão de vídeo ao lado do nome visível`, r.video);
   conferir(`${etapa}: página sem rolagem`, r.rolagem === 0 && r.conteudoRolado === 0 ? true : `scrollTop=${r.rolagem}/${r.conteudoRolado}`);
   return r;
 };

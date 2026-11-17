@@ -16,6 +16,44 @@ beforeEach(async () => {
   await db.open();
 });
 
+describe('ver execução', () => {
+  it('ícone de vídeo em cada exercício; sem link usa a busca no YouTube, com link usa o salvo', async () => {
+    const plano = await doDia(1);
+    const exId = plano.itens[0]!.exerciseId;
+    await exercisesRepository.update(exId, { videoUrl: 'https://exemplo.com/supino' });
+    const outro = plano.itens[1]!.exerciseId;
+    await exercisesRepository.update(outro, { videoUrl: '' });
+    await sessoes.iniciar(plano.id);
+    abrir('/sessao');
+    const lista = await screen.findAllByTestId('item-sessao');
+    for (const li of lista) expect(within(li).getByRole('link', { name: /^Ver execução de / })).toHaveAttribute('target', '_blank');
+    const salvo = within(lista[0]!).getByRole('link', { name: /^Ver execução de / });
+    expect(salvo).toHaveAttribute('href', 'https://exemplo.com/supino');
+    expect(salvo).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(within(lista[1]!).getByRole('link', { name: /^Ver execução de / })).toHaveAttribute(
+      'href',
+      'https://www.youtube.com/results?search_query=como%20fazer%20Supino%20inclinado%20articulado',
+    );
+
+    fireEvent.click(within(lista[0]!).getByRole('link', { name: /^(?!Editar|Ver).*Supino máquina/ }));
+    await titulo('Supino máquina');
+    expect(screen.getByRole('link', { name: 'Ver execução de Supino máquina' })).toHaveAttribute('href', 'https://exemplo.com/supino');
+  });
+
+  it('offline: o ícone avisa em vez de abrir', async () => {
+    await sessoes.iniciar((await doDia(1)).id);
+    abrir('/sessao');
+    const [li] = await screen.findAllByTestId('item-sessao');
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    try {
+      fireEvent.click(within(li!).getByRole('link', { name: /^Ver execução de / }));
+      expect(await screen.findByText('O vídeo precisa de internet.')).toBeInTheDocument();
+    } finally {
+      online.mockRestore();
+    }
+  });
+});
+
 describe('iniciar e retomar', () => {
   it('"Iniciar" na aba Treinar abre a visão geral da sessão', async () => {
     abrir('/treinar');
@@ -91,7 +129,7 @@ describe('navegação', () => {
     expect(await titulo('Supino máquina')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('link', { name: /Visão geral/ }));
     expect(await screen.findAllByTestId('item-sessao')).toHaveLength(5);
-    fireEvent.click(within(screen.getAllByTestId('item-sessao')[1]!).getByRole('link', { name: /^(?!Editar).*Supino inclinado articulado/ }));
+    fireEvent.click(within(screen.getAllByTestId('item-sessao')[1]!).getByRole('link', { name: /^(?!Editar|Ver).*Supino inclinado articulado/ }));
     expect(await titulo('Supino inclinado articulado')).toBeInTheDocument();
 
     await act(() => router.navigate(-1));
@@ -255,7 +293,7 @@ describe('mudanças durante a sessão (3b.3)', () => {
     const ex = s.planSnapshot.itens[0]!.exerciseId;
     abrir('/sessao');
     expect(await screen.findByRole('link', { name: 'Editar exercício Supino máquina' })).toHaveAttribute('href', `/exercicios/${ex}`);
-    fireEvent.click(within(screen.getAllByTestId('item-sessao')[0]!).getByRole('link', { name: /^(?!Editar).*Supino máquina/ }));
+    fireEvent.click(within(screen.getAllByTestId('item-sessao')[0]!).getByRole('link', { name: /^(?!Editar|Ver).*Supino máquina/ }));
     await titulo('Supino máquina');
     expect(screen.getByRole('link', { name: /Editar exercício/ })).toHaveAttribute('href', `/exercicios/${ex}`);
   });
@@ -349,7 +387,7 @@ describe('mudanças durante a sessão (3b.3)', () => {
     expect(lista[0]).toHaveTextContent('Trocado após 1 série');
     expect(within(lista[0]!).queryByRole('button', { name: /Pular/ })).not.toBeInTheDocument();
     expect(screen.getByTestId('progresso')).toHaveTextContent('0 de 6');
-    fireEvent.click(within(lista[0]!).getByRole('link', { name: /^(?!Editar).*Supino máquina/ }));
+    fireEvent.click(within(lista[0]!).getByRole('link', { name: /^(?!Editar|Ver).*Supino máquina/ }));
     expect(await screen.findByTestId('aviso-trocado')).toHaveTextContent('Trocado após 1 série por Flexão.');
     expect(screen.getByRole('button', { name: 'Concluir série' })).toBeDisabled();
 

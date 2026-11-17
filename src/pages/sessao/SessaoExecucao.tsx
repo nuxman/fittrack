@@ -6,7 +6,7 @@ import { ExercisePicker } from '../../components/ExercisePicker';
 import { EstadoTela, useSessao } from './SessaoLayout';
 import { FotoAmpliavel } from '../../components/FotoAmpliavel';
 import { Anotacoes } from '../../components/Anotacoes';
-import { VerExecucao } from '../../components/VerExecucao';
+import { VerExecucao, VideoIcone } from '../../components/VerExecucao';
 import { GrupoIcone } from '../../components/GrupoIcone';
 import { ContagemDescanso, FolhaDescanso } from '../../components/RestTimer';
 import { useDialog } from '../../components/ConfirmDialog';
@@ -122,11 +122,12 @@ function Execucao({ item }: { item: SnapshotItem }) {
               <GrupoIcone grupo={item.grupoPrincipal} size={28} />
             </span>
           )}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h2 className="text-xl font-bold leading-tight">{item.nome}</h2>
             <p className="text-neutral-300">{prescricaoSessao(item)}</p>
             <p className="text-sm text-neutral-400">Última carga: {ultima ? formatarSerie(ultima, item) : 'sem registro'}</p>
           </div>
+          <VideoIcone nome={item.nome} url={exercicio?.videoUrl} />
         </section>
 
         <p role="note" className="text-xs text-red-300">
@@ -196,7 +197,7 @@ function Execucao({ item }: { item: SnapshotItem }) {
           </Link>
         )}
 
-        <VerExecucao url={exercicio?.videoUrl} />
+        <VerExecucao nome={item.nome} url={exercicio?.videoUrl} />
 
         {exercicio && (
           <Link to={`/exercicios/${exercicio.id}`} className="btn-secondary w-full">

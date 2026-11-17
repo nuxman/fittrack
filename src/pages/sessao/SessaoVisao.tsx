@@ -2,13 +2,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Flag, Pencil, SkipForward, Undo2 } from 'lucide-react';
 import { EstadoTela, useSessao } from './SessaoLayout';
 import { FotoExercicio } from '../../components/FotoExercicio';
+import { VideoIcone } from '../../components/VerExecucao';
 import { workoutSessionsRepository } from '../../db/repositories/workoutSessions';
 import { formatarSerie, prescricaoSessao, pulados, seriesFeitas, statusExercicio, textoTrocado, type StatusExercicio } from '../../sessao';
 
 const ROTULO: Record<Exclude<StatusExercicio, 'parcial'>, string> = { pendente: 'Pendente', concluido: 'Concluído', pulado: 'Pulado' };
 
 export function SessaoVisao() {
-  const { sessao, sets, imagens, ultimas, agir } = useSessao();
+  const { sessao, sets, exercicios, imagens, ultimas, agir } = useSessao();
   const navigate = useNavigate();
   const pul = pulados(sessao);
   const itens = [...sessao.planSnapshot.itens].sort((a, b) => a.ordem - b.ordem);
@@ -36,6 +37,7 @@ export function SessaoVisao() {
                   </p>
                 </div>
               </Link>
+              <VideoIcone nome={i.nome} url={exercicios.get(i.exerciseId)?.videoUrl} />
               {st === 'pulado' && (
                 <button type="button" className="btn-secondary shrink-0 px-3" onClick={() => agir((s) => workoutSessionsRepository.despular(s.id, i.exerciseId))}>
                   <Undo2 size={20} /> Desfazer pulo
