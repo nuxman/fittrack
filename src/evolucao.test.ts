@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ExerciseSet, SnapshotItem, StatusSessao, TipoExercicio, UnidadeCarga } from './db/types';
-import { exerciciosComSeries, pontosDoExercicio, porMedida, recordes } from './evolucao';
+import type { ExerciseSet, SnapshotItem, StatusSessao, TipoExercicio, UnidadeCarga, WorkoutSession } from './db/types';
+import { compararPontos, exerciciosComSeries, pontoNaSessao, pontosDoExercicio, porMedida, recordes, treinoAnterior } from './evolucao';
 
 const item = (exerciseId: string, tipo: TipoExercicio = 'carga', unidadeCarga: UnidadeCarga = 'kg', porLado = false) =>
   ({ exerciseId, nome: exerciseId, tipo, unidadeCarga, porLado, grupoPrincipal: 'peito' }) as SnapshotItem;
@@ -93,5 +93,39 @@ describe('lista de exercícios com séries', () => {
     const sets = porSessao([set('a', 'sup', 40, 10), set('a', 'old', 10, 10), set('b', 'sup', 40, 10), set('c', 'ext', 40, 10)]);
     const lista = exerciciosComSeries(sessoes, sets, new Map([['sup', 'Supino máquina']]));
     expect(lista.map((e) => [e.nome, e.sessoes])).toEqual([['Supino máquina', 2], ['old', 1]]);
+  });
+});
+
+describe('comparação com o treino anterior da ficha', () => {
+  const ponto = (id: string, it: SnapshotItem, sets: ExerciseSet[]) => pontoNaSessao(it.exerciseId, sessao(id, 5, [it]), sets);
+
+  it('kg: carga máxima e volume, com sinal', () => {
+    const it2 = item('sup');
+    const antes = ponto('a', it2, [set('a', 'sup', 40, 10), set('a', 'sup', 40, 10)]);
+    const agora = ponto('b', it2, [set('b', 'sup', 42.5, 10), set('b', 'sup', 40, 8)]);
+    expect(compararPontos(agora, antes)).toEqual({ anterior: '40 kg × 10 · volume 800 kg', mudanca: 'carga +2,5 kg · volume −55 kg' });
+  });
+
+  it('placa e peso corporal; mesma marca vira "igual"', () => {
+    const pl = item('leg', 'carga', 'placa');
+    expect(compararPontos(ponto('b', pl, [set('b', 'leg', 8, 10)]), ponto('a', pl, [set('a', 'leg', 8, 12)]))).toEqual({
+      anterior: 'placa 8 × 12', mudanca: 'placa igual',
+    });
+    const pc = item('bird', 'peso_corporal', 'kg', true);
+    expect(compararPontos(ponto('b', pc, [set('b', 'bird', null, 12)]), ponto('a', pc, [set('a', 'bird', null, 10)]))!.mudanca).toBe('reps +4');
+  });
+
+  it('unidade diferente não compara; sem séries em um dos treinos não há comparação', () => {
+    const c = compararPontos(ponto('b', item('rem', 'carga', 'placa'), [set('b', 'rem', 9, 10)]), ponto('a', item('rem'), [set('a', 'rem', 30, 10)]));
+    expect(c).toEqual({ anterior: '30 kg × 10 · volume 300 kg', mudanca: null });
+    expect(compararPontos(null, ponto('a', item('rem'), [set('a', 'rem', 30, 10)]))).toBeNull();
+  });
+
+  it('treino anterior = concluído mais recente da mesma ficha antes deste; abandonados e outras fichas não contam', () => {
+    const s = (id: string, planId: string, dia: number, status: StatusSessao = 'concluida') =>
+      ({ id, planId, status, iniciadaEm: new Date(2026, 0, dia, 10).toISOString(), planSnapshot: { itens: [] } }) as unknown as WorkoutSession;
+    const lista = [s('a', 'seg', 5), s('b', 'seg', 12, 'abandonada'), s('c', 'ter', 13), s('d', 'seg', 19), s('e', 'seg', 26)];
+    expect(treinoAnterior(lista, lista[3]!)?.id).toBe('a');
+    expect(treinoAnterior(lista, lista[0]!)).toBeUndefined();
   });
 });

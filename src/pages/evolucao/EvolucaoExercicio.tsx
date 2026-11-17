@@ -1,31 +1,12 @@
 import { useParams } from 'react-router-dom';
 import { Trophy } from 'lucide-react';
 import { Page } from '../../components/Page';
-import { num } from '../../components/CampoSerie';
 import { useAsync } from '../../useAsync';
-import { exerciciosComSeries, pontosDoExercicio, porMedida, recordes, type Medida, type Ponto, type Recorde } from '../../evolucao';
-import { carregarEvolucao, ddmm } from './dados';
+import { exerciciosComSeries, pontosDoExercicio, porMedida, recordes, type Medida, type Recorde } from '../../evolucao';
+import { carregarEvolucao, ddmm, kg, SERIES } from './dados';
 import { Grafico } from './Grafico';
 
 const TITULO: Record<Medida, string> = { kg: 'Carga em kg', placa: 'Carga em placa', peso_corporal: 'Peso corporal', tempo: 'Tempo' };
-
-interface Serie {
-  titulo: string;
-  valor: (p: Ponto) => number | null;
-  formatar: (v: number) => string;
-}
-
-const kg = (v: number) => `${num(v)} kg`;
-/** Gráficos de cada medida. Placa: só progressão de placa (sem volume em kg). Peso corporal: total de reps. */
-const SERIES: Record<Medida, Serie[]> = {
-  kg: [
-    { titulo: 'Carga máxima por treino', valor: (p) => p.cargaMax, formatar: kg },
-    { titulo: 'Volume por treino', valor: (p) => p.volume, formatar: kg },
-  ],
-  placa: [{ titulo: 'Progressão de placa', valor: (p) => p.cargaMax, formatar: (v) => `placa ${num(v)}` }],
-  peso_corporal: [{ titulo: 'Total de repetições por treino', valor: (p) => p.reps, formatar: (v) => `${num(v)} reps` }],
-  tempo: [{ titulo: 'Maior tempo por treino', valor: (p) => p.tempoMax, formatar: (v) => `${num(v)} s` }],
-};
 
 /** Maior volume em kg; os outros recordes na unidade do primeiro gráfico da medida. */
 const formatarRecorde = (medida: Medida, r: Recorde) =>

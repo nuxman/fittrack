@@ -2,7 +2,7 @@
 
 > Documento para quem vai continuar o trabalho sem acesso às conversas anteriores.
 > A **especificação completa e oficial** está em `CLAUDE.md` (raiz). Em caso de conflito, o `CLAUDE.md` vale.
-> Situação em 17/11/2026: versão **0.8.1** (correção do modo demonstração, depois da Etapa 4b), deploy confirmado com sucesso no GitHub Actions.
+> Situação em 17/11/2026: versão **0.9.0** (Etapa 4c: comparação com o treino anterior e mini gráfico), deploy confirmado com sucesso no GitHub Actions.
 
 ---
 
@@ -127,11 +127,12 @@ src/pages/Cardio.tsx                    Cardio pós-treino (/cardio/:sessionId)
 src/pages/historico/Historico.tsx       Lista do histórico agrupada por semana
 src/pages/historico/HistoricoDetalhe.tsx Detalhe do treino: editar/excluir séries, RPE, excluir treino com desfazer
 src/pages/Configuracoes.tsx             Versão, armazenamento persistente, alertas de descanso
-src/evolucao.ts                         Regras puras da Evolução: pontos por sessão, medidas por unidade, recordes
-src/pages/evolucao/                     Aba Evolução (lista, detalhe com gráficos e tabela), carregada com React.lazy
+src/evolucao.ts                         Regras puras da Evolução: pontos por sessão, medidas por unidade, recordes, comparação com o treino anterior
+src/pages/evolucao/                     Aba Evolução (lista, detalhe com gráficos e tabela) e MiniGrafico, carregados com React.lazy
+src/components/EvolucaoCarga.tsx        Seção recolhível "Evolução de carga" (execução e detalhe do exercício); carrega o mini gráfico só ao abrir
 
 src/test/setup.ts, src/test/abrir.tsx   Configuração dos testes e helper para montar o app numa rota
-src/**/*.test.ts(x)                     ~191 testes (regras da semana, sessão, banco, cardio, telas, som, imagem)
+src/**/*.test.ts(x)                     ~199 testes (regras da semana, sessão, banco, cardio, telas, som, imagem)
 ```
 
 Rotas (com `#`): `/`, `/treinar`, `/sessao`, `/sessao/:exerciseId`, `/sessao/finalizar`, `/cardio/:sessionId`, `/fichas/nova`, `/fichas/:id`, `/exercicios`, `/exercicios/novo`, `/exercicios/:id`, `/exercicio/:id`, `/historico`, `/historico/:id`, `/evolucao`, `/evolucao/:id`, `/configuracoes`.
@@ -175,6 +176,7 @@ Publicação: `git push` no `master` dispara `.github/workflows/deploy.yml`. No 
 - **Etapa 3a.5**: alerta sonoro do descanso (Web Audio), configurações de som/aviso antecipado/3-2-1/volume, "Testar som", permissão de notificações.
 - **Etapa 3b** (0.3.4 a 0.4.1): regra de sugestão e pendências, local do treino (Academia/Casa), contador "X de Y treinos esta semana", aviso informativo de mesmo grupo em dias seguidos com RPE ≥ 8, Início (dashboard), aba Treinar completa com miniaturas, detalhe do exercício, aviso de alterações não salvas, mudanças durante a sessão (séries/reps/descanso/substituir exercício) com "Aplicar também na ficha?", explicação do RPE.
 - **Etapa 3c** (0.5.0): cardio pós-treino com cronômetro persistido, rascunho no banco, cardio esquecido, cancelar.
+- **Etapa 4c** (0.9.0): no detalhe do Histórico, comparação com o treino concluído anterior da mesma ficha (volume total e, por exercício, carga/volume, placa, reps ou tempo); seção recolhível "Evolução de carga" com mini gráfico na execução e no detalhe do exercício, carregada só ao abrir.
 - **Modo demonstração** (0.8.0, fora das etapas): Configurações → "Entrar no modo demonstração" abre o app num banco separado (`fittrack-demo`) com ~4 semanas de treinos fictícios; faixa "Modo demonstração · Sair" no topo; "Recomeçar demonstração". O banco real não é tocado.
 - **Correção 0.8.1**: o modo demonstração termina ao fechar o app (marca em sessionStorage; reabrir volta ao banco real) e "Entrar" sempre recria os dados de exemplo com datas atuais.
 - **Etapa 4b** (0.7.0): aba Evolução com lista de exercícios, recordes por unidade, gráficos de carga máxima e volume (Recharts, carregado sob demanda) e tabela.
@@ -198,12 +200,11 @@ Publicação: `git push` no `master` dispara `.github/workflows/deploy.yml`. No 
 
 Cada parte com `git push`, deploy confirmado e versão própria (detalhes em `CLAUDE.md` → "Etapas e critérios de aceite"):
 
-1. **4c (0.9.0)**: comparação com o treino anterior da mesma ficha no detalhe do Histórico; mini gráfico "Evolução de carga" na execução (recolhido) e no detalhe do exercício, carregado sob demanda.
-2. **Etapa 5**: cardio avulso e gráficos, medidas corporais, fotos corporais, tela de Equipment, bloco de peso no Início.
-3. **Etapa 6**: backup JSON (com schemaVersion, imagens de exercício em base64, sem fotos corporais), importação com Zod + pré-visualização + confirmação, CSV de séries e medidas, aviso permanente de perda de dados.
-4. **Etapa 7**: PWA e offline (instala no Chrome Android, ícones 192 e 512, manifest com `start_url`/`scope` `/fittrack/`).
-5. **Etapa 8**: README com instalação no S24 Ultra e revisão do workflow. Versão 1.0.0 ao concluir as 8 etapas.
-6. Futuro sem etapa: login e sincronização (Supabase) — **não fazer até o usuário pedir**.
+1. **Etapa 5**: cardio avulso e gráficos, medidas corporais, fotos corporais, tela de Equipment, bloco de peso no Início.
+2. **Etapa 6**: backup JSON (com schemaVersion, imagens de exercício em base64, sem fotos corporais), importação com Zod + pré-visualização + confirmação, CSV de séries e medidas, aviso permanente de perda de dados.
+3. **Etapa 7**: PWA e offline (instala no Chrome Android, ícones 192 e 512, manifest com `start_url`/`scope` `/fittrack/`).
+4. **Etapa 8**: README com instalação no S24 Ultra e revisão do workflow. Versão 1.0.0 ao concluir as 8 etapas.
+5. Futuro sem etapa: login e sincronização (Supabase) — **não fazer até o usuário pedir**.
 
 ---
 

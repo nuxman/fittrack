@@ -9,17 +9,18 @@ const GRADE = '#262626';
 const TEXTO = '#a3a3a3';
 
 /** Uma série por gráfico (o título nomeia o dado, sem legenda): linha de 2 px, pontos com anel da cor do fundo e tooltip. */
-export function Grafico({ titulo, pontos, valor, formatar }: {
+export function Grafico({ titulo, pontos, valor, formatar, altura = 'h-44' }: {
   titulo: string;
   pontos: Ponto[];
   valor: (p: Ponto) => number | null;
   formatar: (v: number) => string;
+  altura?: string;
 }) {
   const dados = pontos.map((p) => ({ data: ddmm(p.data), v: valor(p) })).filter((d) => d.v != null);
   return (
     <figure className="space-y-1" aria-label={titulo}>
       <figcaption className="font-semibold text-neutral-200">{titulo}</figcaption>
-      <div className="h-44" aria-hidden>
+      <div className={altura} aria-hidden>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={dados} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
             <CartesianGrid stroke={GRADE} strokeWidth={1} vertical={false} />

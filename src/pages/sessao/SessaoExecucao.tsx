@@ -6,6 +6,7 @@ import { ExercisePicker } from '../../components/ExercisePicker';
 import { EstadoTela, useSessao } from './SessaoLayout';
 import { FotoAmpliavel } from '../../components/FotoAmpliavel';
 import { Anotacoes } from '../../components/Anotacoes';
+import { EvolucaoCarga } from '../../components/EvolucaoCarga';
 import { VerExecucao, VideoIcone } from '../../components/VerExecucao';
 import { GrupoIcone } from '../../components/GrupoIcone';
 import { ContagemDescanso, FolhaDescanso } from '../../components/RestTimer';
@@ -213,6 +214,8 @@ function Execucao({ item }: { item: SnapshotItem }) {
         ) : (
           <AjustarNoTreino key={`${item.series}-${item.repsMin}-${item.repsMax}`} item={item} />
         )}
+
+        <EvolucaoCarga exerciseId={item.exerciseId} />
 
         {exercicio && <Anotacoes exerciseId={exercicio.id} inicial={exercicio.anotacoes ?? ''} onSalvo={() => void recarregar()} />}
 

@@ -30,28 +30,29 @@ type Sessao = Pick<WorkoutSession, 'id' | 'status' | 'iniciadaEm' | 'planSnapsho
 const encerradas = <S extends Sessao>(sessoes: S[]) =>
   sessoes.filter((s) => !ATIVOS.includes(s.status)).sort((a, b) => a.iniciadaEm.localeCompare(b.iniciadaEm));
 
+/** O exercício numa sessão, ou null se ele não teve séries nela. */
+export function pontoNaSessao(exerciseId: string, s: Sessao, setsDaSessao: ExerciseSet[]): Ponto | null {
+  const item = s.planSnapshot.itens.find((i) => i.exerciseId === exerciseId);
+  const sets = setsDaSessao.filter((x) => x.exerciseId === exerciseId);
+  if (!item || sets.length === 0) return null;
+  const medida = medidaDe(item);
+  const comCarga = medida === 'kg' || medida === 'placa';
+  const max = comCarga ? sets.reduce<ExerciseSet | null>((m, x) => (x.carga != null && (m === null || x.carga > m.carga!) ? x : m), null) : null;
+  return {
+    sessionId: s.id,
+    data: s.iniciadaEm,
+    medida,
+    cargaMax: max?.carga ?? null,
+    repsNaCargaMax: max?.reps ?? null,
+    volume: medida === 'kg' ? volumeKg(sets, [item]) : null,
+    reps: sets.reduce((t, x) => t + totalReps(x, item), 0),
+    tempoMax: medida === 'tempo' ? Math.max(...sets.map((x) => x.reps)) : null,
+  };
+}
+
 /** Pontos do exercício, um por sessão em que ele tem séries, do mais antigo ao mais recente. */
 export function pontosDoExercicio(exerciseId: string, sessoes: Sessao[], setsPorSessao: Map<string, ExerciseSet[]>): Ponto[] {
-  const pontos: Ponto[] = [];
-  for (const s of encerradas(sessoes)) {
-    const item = s.planSnapshot.itens.find((i) => i.exerciseId === exerciseId);
-    const sets = (setsPorSessao.get(s.id) ?? []).filter((x) => x.exerciseId === exerciseId);
-    if (!item || sets.length === 0) continue;
-    const medida = medidaDe(item);
-    const comCarga = medida === 'kg' || medida === 'placa';
-    const max = comCarga ? sets.reduce<ExerciseSet | null>((m, x) => (x.carga != null && (m === null || x.carga > m.carga!) ? x : m), null) : null;
-    pontos.push({
-      sessionId: s.id,
-      data: s.iniciadaEm,
-      medida,
-      cargaMax: max?.carga ?? null,
-      repsNaCargaMax: max?.reps ?? null,
-      volume: medida === 'kg' ? volumeKg(sets, [item]) : null,
-      reps: sets.reduce((t, x) => t + totalReps(x, item), 0),
-      tempoMax: medida === 'tempo' ? Math.max(...sets.map((x) => x.reps)) : null,
-    });
-  }
-  return pontos;
+  return encerradas(sessoes).flatMap((s) => pontoNaSessao(exerciseId, s, setsPorSessao.get(s.id) ?? []) ?? []);
 }
 
 /** Pontos separados por medida (um exercício que mudou de kg para placa tem dois grupos). */
@@ -118,4 +119,44 @@ export function exerciciosComSeries(
     }
   }
   return [...m.values()].sort((a, b) => b.ultima.localeCompare(a.ultima));
+}
+
+const n = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+/** "+2,5 kg", "−4 reps", "igual". */
+export const diferenca = (d: number, un: string) => (d === 0 ? 'igual' : `${d > 0 ? '+' : '−'}${n(Math.abs(d))}${un}`);
+
+/** Valor principal da medida, como texto: "45 kg × 10", "placa 8 × 10", "36 reps", "45 s". */
+export function resumoPonto(p: Ponto): string {
+  if (p.medida === 'kg' || p.medida === 'placa') {
+    const carga = p.medida === 'kg' ? `${n(p.cargaMax!)} kg` : `placa ${n(p.cargaMax!)}`;
+    return `${carga} × ${p.repsNaCargaMax}${p.volume != null ? ` · volume ${n(p.volume)} kg` : ''}`;
+  }
+  return p.medida === 'tempo' ? `${n(p.tempoMax!)} s` : `${n(p.reps)} reps no total`;
+}
+
+export interface Comparacao {
+  /** "45 kg × 10 · volume 850 kg" */
+  anterior: string;
+  /** "carga +2,5 kg · volume +40 kg"; null quando a unidade mudou (não se compara kg com placa). */
+  mudanca: string | null;
+}
+
+/** Exercício neste treino comparado ao treino anterior da ficha; null se não houve séries em algum dos dois. */
+export function compararPontos(atual: Ponto | null, anterior: Ponto | null): Comparacao | null {
+  if (!atual || !anterior) return null;
+  if (atual.medida !== anterior.medida) return { anterior: resumoPonto(anterior), mudanca: null };
+  const partes: string[] = [];
+  if (atual.medida === 'kg') partes.push(`carga ${diferenca(atual.cargaMax! - anterior.cargaMax!, ' kg')}`, `volume ${diferenca(atual.volume! - anterior.volume!, ' kg')}`);
+  if (atual.medida === 'placa') partes.push(`placa ${diferenca(atual.cargaMax! - anterior.cargaMax!, '')}`);
+  if (atual.medida === 'peso_corporal') partes.push(`reps ${diferenca(atual.reps - anterior.reps, '')}`);
+  if (atual.medida === 'tempo') partes.push(`tempo ${diferenca(atual.tempoMax! - anterior.tempoMax!, ' s')}`);
+  return { anterior: resumoPonto(anterior), mudanca: partes.join(' · ') };
+}
+
+/** Treino concluído mais recente da mesma ficha antes deste (abandonados não servem de base). */
+export function treinoAnterior<S extends Sessao & Pick<WorkoutSession, 'planId'>>(sessoes: S[], atual: S): S | undefined {
+  return sessoes
+    .filter((s) => s.planId === atual.planId && s.id !== atual.id && s.status === 'concluida' && s.iniciadaEm < atual.iniciadaEm)
+    .sort((a, b) => a.iniciadaEm.localeCompare(b.iniciadaEm))
+    .at(-1);
 }

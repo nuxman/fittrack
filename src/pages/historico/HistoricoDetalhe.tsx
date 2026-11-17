@@ -15,6 +15,7 @@ import {
 } from '../../sessao';
 import type { Excluido } from './Historico';
 import { linhaCardio } from '../../cardio';
+import { compararPontos, diferenca, pontoNaSessao, treinoAnterior, type Comparacao } from '../../evolucao';
 
 const erroDe = (e: unknown, padrao: string) => (e instanceof Error ? e.message : padrao);
 
@@ -25,20 +26,27 @@ export function HistoricoDetalhe() {
   const { confirmar } = useDialog();
   const [erro, setErro] = useState<string | null>(null);
   const [dados, recarregar] = useAsync(async () => {
-    const [sessao, sets, cardio] = await Promise.all([
+    const [sessao, sets, cardio, sessoes] = await Promise.all([
       workoutSessionsRepository.get(id),
       exerciseSetsRepository.listarDaSessao(id),
       cardioSessionsRepository.list(),
+      workoutSessionsRepository.list(),
     ]);
-    return { sessao, sets, cardio: cardio.filter((c) => c.sessionId === id) };
+    const anterior = sessao && treinoAnterior(sessoes, sessao);
+    const setsAnterior = anterior ? await exerciseSetsRepository.listarDaSessao(anterior.id) : [];
+    return { sessao, sets, cardio: cardio.filter((c) => c.sessionId === id), anterior, setsAnterior };
   }, [id]);
 
   if (!dados) return <Page title="Treino" voltar>Carregando…</Page>;
-  const { sessao, sets, cardio } = dados;
+  const { sessao, sets, cardio, anterior, setsAnterior } = dados;
   if (!sessao || ATIVOS.includes(sessao.status)) return <Page title="Treino" voltar><p className="card">Treino não encontrado.</p></Page>;
 
   const vol = volumeKg(sets, sessao.planSnapshot.itens);
   const itens = [...sessao.planSnapshot.itens].sort((a, b) => a.ordem - b.ordem);
+  const volAnterior = anterior ? volumeKg(setsAnterior, anterior.planSnapshot.itens) : null;
+  const comparar = (exerciseId: string) =>
+    anterior ? compararPontos(pontoNaSessao(exerciseId, sessao, sets), pontoNaSessao(exerciseId, anterior, setsAnterior)) : null;
+  const dataAnterior = anterior && new Date(anterior.iniciadaEm).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
   const excluir = async () => {
     const msg = cardio.length ? 'O treino, as séries e o cardio feito depois dele serão excluídos.' : 'O treino e as séries serão excluídos.';
@@ -65,12 +73,17 @@ export function HistoricoDetalhe() {
         {cardio.map((c) => (
           <p key={c.id} className="text-neutral-300">{linhaCardio(c)}</p>
         ))}
+        <p className="text-sm text-neutral-400" data-testid="comparacao-treino">
+          {!anterior
+            ? 'Primeiro treino concluído desta ficha: sem treino anterior para comparar.'
+            : `Comparado a ${dataAnterior}${vol !== null && volAnterior !== null ? `: volume ${diferenca(vol - volAnterior, ' kg')}` : ''}`}
+        </p>
       </section>
 
       <Avaliacao key={`${sessao.rpe}-${sessao.observacoes}`} sessao={sessao} onSalvo={recarregar} />
 
       {itens.map((item) => (
-        <ExercicioHistorico key={item.exerciseId} item={item} sessao={sessao} sets={sets} onMudou={recarregar} />
+        <ExercicioHistorico key={item.exerciseId} item={item} sessao={sessao} sets={sets} comparacao={comparar(item.exerciseId)} dataAnterior={dataAnterior} onMudou={recarregar} />
       ))}
 
       {erro && <p role="alert" className="text-red-400">{erro}</p>}
@@ -120,7 +133,14 @@ function Avaliacao({ sessao, onSalvo }: { sessao: WorkoutSession; onSalvo: () =>
   );
 }
 
-function ExercicioHistorico({ item, sessao, sets, onMudou }: { item: SnapshotItem; sessao: WorkoutSession; sets: ExerciseSet[]; onMudou: () => void }) {
+function ExercicioHistorico({ item, sessao, sets, comparacao, dataAnterior, onMudou }: {
+  item: SnapshotItem;
+  sessao: WorkoutSession;
+  sets: ExerciseSet[];
+  comparacao: Comparacao | null;
+  dataAnterior: string | undefined;
+  onMudou: () => void;
+}) {
   const [editando, setEditando] = useState<string | null>(null);
   const daqui = sets.filter((s) => s.exerciseId === item.exerciseId);
   const status = statusExercicio(item, sets, pulados(sessao));
@@ -136,6 +156,12 @@ function ExercicioHistorico({ item, sessao, sets, onMudou }: { item: SnapshotIte
         </p>
       </div>
       {daqui.length === 0 && <p className="text-neutral-400">Nenhuma série registrada.</p>}
+      {comparacao && (
+        <p className="text-sm text-neutral-300" data-testid="comparacao-exercicio">
+          Em {dataAnterior}: {comparacao.anterior}
+          {comparacao.mudanca ? ` → ${comparacao.mudanca}` : ' (outra unidade)'}
+        </p>
+      )}
       <ol className="space-y-1">
         {daqui.map((s) =>
           editando === s.id ? (

@@ -4,6 +4,7 @@ import { Page } from '../components/Page';
 import { GrupoIcone } from '../components/GrupoIcone';
 import { FotoAmpliavel } from '../components/FotoAmpliavel';
 import { Anotacoes } from '../components/Anotacoes';
+import { EvolucaoCarga } from '../components/EvolucaoCarga';
 import { VerExecucao } from '../components/VerExecucao';
 import { useAsync } from '../useAsync';
 import { exercisesRepository } from '../db/repositories/exercises';
@@ -46,6 +47,7 @@ export function ExercicioDetalhe() {
         <p className="text-neutral-300">Última carga: {ultima ? formatarSerie(ultima, ex) : 'sem registro'}</p>
       </section>
       <VerExecucao nome={ex.nome} url={ex.videoUrl} />
+      <EvolucaoCarga exerciseId={ex.id} />
       <Anotacoes exerciseId={ex.id} inicial={ex.anotacoes ?? ''} onSalvo={recarregar} aberto />
       <details className="card" open>
         <summary className="cursor-pointer text-lg font-semibold">Grupos trabalhados</summary>
