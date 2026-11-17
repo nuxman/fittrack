@@ -77,6 +77,8 @@ describe('cardio pós-treino', () => {
     expect(dlg).toHaveTextContent('Fazer cardio agora?');
     fireEvent.click(within(dlg).getByRole('button', { name: 'Hoje não' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+    // Espera o Início terminar de ler o banco: senão o db.delete() do próximo teste fecha o banco no meio da leitura.
+    await screen.findByTestId('ultimo-treino');
     expect(await cardios.list()).toEqual([]);
     expect((await sessoes.get(s.id))!.cardio).toBeUndefined();
   });
