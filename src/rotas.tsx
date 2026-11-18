@@ -10,6 +10,7 @@ import { FichaEditor } from './pages/FichaEditor';
 import { Exercicios } from './pages/Exercicios';
 import { ExercicioEditor } from './pages/ExercicioEditor';
 import { ExercicioDetalhe } from './pages/ExercicioDetalhe';
+import { ErroTela } from './components/ErroTela';
 import { RetomarSessao } from './components/RetomarSessao';
 import { SessaoLayout } from './pages/sessao/SessaoLayout';
 import { SessaoVisao } from './pages/sessao/SessaoVisao';
@@ -23,6 +24,9 @@ import { HistoricoDetalhe } from './pages/historico/HistoricoDetalhe';
 const Evolucao = lazy(() => import('./pages/evolucao/Evolucao'));
 const EvolucaoExercicio = lazy(() => import('./pages/evolucao/EvolucaoExercicio'));
 const sobDemanda = (el: ReactNode) => <Suspense fallback={<p className="p-4">Carregando…</p>}>{el}</Suspense>;
+
+// Falha ao carregar a Evolução (sem internet, ou arquivo antigo apagado por um deploy novo).
+const erroEvolucao = <ErroTela titulo="Não foi possível abrir a Evolução." />;
 
 /** Raiz: diálogo, retomada da sessão e navegação inferior em volta de todas as telas. */
 // Arquivo de configuração de rotas, não de componentes: fast refresh recarrega a página inteira, sem problema.
@@ -42,6 +46,7 @@ function Raiz() {
 export const ROTAS: RouteObject[] = [
   {
     element: <Raiz />,
+    errorElement: <ErroTela />,
     children: [
       { path: '/', element: <Inicio /> },
       { path: '/treinar', element: <Fichas /> },
@@ -63,8 +68,8 @@ export const ROTAS: RouteObject[] = [
       { path: '/exercicio/:id', element: <ExercicioDetalhe /> },
       { path: '/historico', element: <Historico /> },
       { path: '/historico/:id', element: <HistoricoDetalhe /> },
-      { path: '/evolucao', element: sobDemanda(<Evolucao />) },
-      { path: '/evolucao/:id', element: sobDemanda(<EvolucaoExercicio />) },
+      { path: '/evolucao', element: sobDemanda(<Evolucao />), errorElement: erroEvolucao },
+      { path: '/evolucao/:id', element: sobDemanda(<EvolucaoExercicio />), errorElement: erroEvolucao },
       { path: '/configuracoes', element: <Configuracoes /> },
     ],
   },
