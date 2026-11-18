@@ -52,7 +52,13 @@ describe('dados fictícios', () => {
     expect(sessions.every((s) => Date.parse(s.iniciadaEm) < hoje)).toBe(true);
     expect(new Date(sessions[0]!.iniciadaEm).getDay()).toBe(1);
     expect(cardio.length).toBeGreaterThan(0);
-    expect(cardio.every((c) => sessions.some((s) => s.id === c.sessionId))).toBe(true);
+    const ligados = cardio.filter((c) => c.sessionId);
+    expect(ligados.length).toBeGreaterThan(0);
+    expect(ligados.every((c) => sessions.some((s) => s.id === c.sessionId))).toBe(true);
+    // Cardio avulso aos sábados (sem treino), antes de hoje.
+    const avulsos = cardio.filter((c) => !c.sessionId);
+    expect(avulsos).toHaveLength(4);
+    expect(avulsos.every((c) => c.modalidade === 'caminhada' && new Date(`${c.data}T12:00`).getDay() === 6 && c.data < '2026-11-18')).toBe(true);
 
     const supino = seed.exercises.find((e) => e.nome === 'Supino máquina')!;
     const cargas = pontosDoExercicio(supino.id, sessions, new Map(sessions.map((s) => [s.id, sets.filter((x) => x.sessionId === s.id)])))

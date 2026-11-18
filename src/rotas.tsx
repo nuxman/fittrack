@@ -19,6 +19,7 @@ import { SessaoFinalizar } from './pages/sessao/SessaoFinalizar';
 import { Cardio } from './pages/Cardio';
 import { Historico } from './pages/historico/Historico';
 import { HistoricoDetalhe } from './pages/historico/HistoricoDetalhe';
+import { CardioAvulso } from './pages/historico/CardioAvulso';
 
 // Evolução e Recharts sob demanda: não pesam a abertura do app.
 const Evolucao = lazy(() => import('./pages/evolucao/Evolucao'));
@@ -67,6 +68,7 @@ export const ROTAS: RouteObject[] = [
       { path: '/exercicios/:id', element: <ExercicioEditor /> },
       { path: '/exercicio/:id', element: <ExercicioDetalhe /> },
       { path: '/historico', element: <Historico /> },
+      { path: '/historico/cardio/:id', element: <CardioAvulso /> },
       { path: '/historico/:id', element: <HistoricoDetalhe /> },
       { path: '/evolucao', element: sobDemanda(<Evolucao />), errorElement: erroEvolucao },
       { path: '/evolucao/:id', element: sobDemanda(<EvolucaoExercicio />), errorElement: erroEvolucao },

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Check, Play } from 'lucide-react';
 import { useAsync } from '../useAsync';
@@ -7,14 +7,13 @@ import { useWakeLock } from '../useWakeLock';
 import { useDialog } from '../components/ConfirmDialog';
 import { ContagemDescanso } from '../components/RestTimer';
 import { EscolhaRpe } from '../components/EscolhaRpe';
+import { CamposCardio } from '../components/CamposCardio';
 import { workoutSessionsRepository } from '../db/repositories/workoutSessions';
 import { cardioSessionsRepository } from '../db/repositories/cardioSessions';
 import { settingsRepository } from '../db/repositories/settings';
 import { opcoesSom, prepararAudio } from '../somDescanso';
-import { minutosEntre, NOME_MODALIDADE, rascunhoPadrao, validarCardio } from '../cardio';
-import type { CardioEmCurso, ModalidadeCardio, RascunhoCardio, UserSettings, WorkoutSession } from '../db/types';
-
-const MODALIDADES = Object.entries(NOME_MODALIDADE) as [ModalidadeCardio, string][];
+import { minutosEntre, rascunhoPadrao, validarCardio } from '../cardio';
+import type { CardioEmCurso, RascunhoCardio, UserSettings, WorkoutSession } from '../db/types';
 const AVISO_CARDIO = ['Cardio terminado', 'Tempo concluído.'] as const;
 
 /** Cardio pós-treino: /cardio/:sessionId. ?duracao=1 abre com o campo de duração em foco. */
@@ -118,25 +117,7 @@ function TelaCardio({ sessao, cardio, settings, recarregar }: Props) {
         <h1 className="text-3xl font-bold text-primary-400">Cardio</h1>
         <p className="text-sm text-neutral-400">Depois de {sessao.planSnapshot.nome}</p>
 
-        <fieldset className="space-y-1">
-          <legend className="text-sm text-neutral-400">Modalidade</legend>
-          <div className="grid grid-cols-3 gap-2">
-            {MODALIDADES.map(([v, rotulo]) => (
-              <button key={v} type="button" aria-pressed={r.modalidade === v} className={r.modalidade === v ? 'btn-primary px-1' : 'btn-secondary px-1'} onClick={() => mudar({ modalidade: v })}>
-                {rotulo}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Campo rotulo="Duração (min)" valor={r.duracaoMin} inputMode="numeric" desabilitado={contando} entrada={duracaoRef} onChange={(v) => mudar({ duracaoMin: v })} />
-          <Campo rotulo="Inclinação" valor={r.inclinacao} placeholder='ex.: "nível 7"' onChange={(v) => mudar({ inclinacao: v })} />
-          <Campo rotulo="Velocidade (km/h)" valor={r.velocidade} inputMode="decimal" onChange={(v) => mudar({ velocidade: v })} />
-          <Campo rotulo="Distância (km)" valor={r.distancia} inputMode="decimal" onChange={(v) => mudar({ distancia: v })} />
-          <Campo rotulo="FC média (bpm)" valor={r.fc} inputMode="numeric" onChange={(v) => mudar({ fc: v })} />
-        </div>
-        <p className="text-xs text-neutral-500">"Nível 7" é o nível do aparelho, não 7% de inclinação.</p>
+        <CamposCardio r={r} mudar={mudar} duracaoRef={duracaoRef} duracaoDesabilitada={contando} />
 
         {concluido && (
           <p role="status" className="card text-center text-2xl font-bold text-primary-400">
@@ -186,27 +167,5 @@ function TelaCardio({ sessao, cardio, settings, recarregar }: Props) {
         </button>
       </footer>
     </main>
-  );
-}
-
-interface CampoProps {
-  rotulo: string;
-  valor: string;
-  inputMode?: 'decimal' | 'numeric';
-  placeholder?: string;
-  desabilitado?: boolean;
-  entrada?: React.Ref<HTMLInputElement>;
-  onChange: (v: string) => void;
-}
-
-function Campo({ rotulo, valor, inputMode, placeholder, desabilitado, entrada, onChange }: CampoProps) {
-  const id = useId();
-  return (
-    <div>
-      <label htmlFor={id} className="mb-1 block text-sm text-neutral-300">
-        {rotulo}
-      </label>
-      <input id={id} ref={entrada} className="input" inputMode={inputMode} placeholder={placeholder} value={valor} disabled={desabilitado} onChange={(e) => onChange(e.target.value)} />
-    </div>
   );
 }

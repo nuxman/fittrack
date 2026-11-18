@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Play, Plus } from 'lucide-react';
+import { HeartPulse, Play, Plus } from 'lucide-react';
 import { Page } from '../components/Page';
 import { CardFicha } from '../components/CardFicha';
 import { CriarFicha, SeletorLocal } from '../components/SeletorLocal';
@@ -60,6 +60,9 @@ export function Fichas() {
           </Link>
         )
       )}
+      <Link to="/historico/cardio/novo" className="btn-secondary w-full">
+        <HeartPulse size={22} /> Registrar cardio
+      </Link>
     </Page>
   );
 }

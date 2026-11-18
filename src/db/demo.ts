@@ -1,4 +1,4 @@
-/** Dados fictícios do banco de demonstração: cerca de 4 semanas de treinos concluídos, cargas subindo aos poucos e cardio. */
+/** Dados fictícios do banco de demonstração: cerca de 4 semanas de treinos concluídos, cargas subindo aos poucos, cardio pós-treino e avulso. */
 import type {
   BaseRecord, CardioSession, Exercise, ExerciseSet, GrupoMuscular, SnapshotItem, WorkoutPlan, WorkoutSession,
 } from './types';
@@ -35,6 +35,14 @@ export function gerarDemo(exercises: Exercise[], planos: WorkoutPlan[], agora = 
     if (dia >= hoje) break;
     const plano = planos.find((p) => p.diaSemana === dia.getDay());
     const semana = Math.floor(n / 7);
+    // Cardio avulso (sem treino) aos sábados: caminhada de manhã, um pouco mais longa a cada semana.
+    if (dia.getDay() === 6) {
+      const manha = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), 8);
+      cardio.push(registro<CardioSession>({
+        modalidade: 'caminhada', duracaoMin: 35 + semana * 5, velocidadeKmh: 5.2, inclinacaoNivel: null,
+        distanciaKm: Math.round((35 + semana * 5) * 5.2 / 6) / 10, rpe: 4, observacoes: '', data: chaveDia(dia),
+      }, manha.toISOString()));
+    }
     // Duas faltas: quinta da 2ª semana e terça da 4ª.
     if (!plano || (semana === 1 && dia.getDay() === 4) || (semana === 3 && dia.getDay() === 2)) continue;
 

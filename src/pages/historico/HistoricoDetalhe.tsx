@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Pencil, Trash2 } from 'lucide-react';
 import { Page } from '../../components/Page';
 import { Campo, ajustarTexto, num } from '../../components/CampoSerie';
@@ -71,7 +71,9 @@ export function HistoricoDetalhe() {
           {vol !== null && ` · ${num(vol)} kg de volume`}
         </p>
         {cardio.map((c) => (
-          <p key={c.id} className="text-neutral-300">{linhaCardio(c)}</p>
+          <Link key={c.id} to={`/historico/cardio/${c.id}`} className="flex min-h-11 items-center gap-2 text-neutral-300 underline" aria-label={`Editar cardio: ${linhaCardio(c)}`}>
+            {linhaCardio(c)} <Pencil size={16} />
+          </Link>
         ))}
         <p className="text-sm text-neutral-400" data-testid="comparacao-treino">
           {!anterior

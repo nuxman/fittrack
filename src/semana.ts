@@ -8,6 +8,12 @@ import { SEMANA } from './dias';
 export const chaveDia = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+/** 'AAAA-MM-DD' → Date às 00:00 (local). */
+export const deChave = (k: string) => {
+  const [a, m, d] = k.split('-').map(Number);
+  return new Date(a!, m! - 1, d!);
+};
+
 /** Segunda-feira 00:00 (local) da semana de `d`. */
 export function inicioSemana(d: Date): Date {
   const r = new Date(d.getFullYear(), d.getMonth(), d.getDate());

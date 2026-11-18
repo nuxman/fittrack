@@ -14,6 +14,18 @@ export const rascunhoPadrao = (p: CardioPadrao): RascunhoCardio => ({
   modalidade: p.modalidade, duracaoMin: String(p.duracaoMin), inclinacao: p.inclinacaoNivel.rotulo, velocidade: '', distancia: '', fc: '',
 });
 
+const texto = (n: number | null | undefined) => (n == null ? '' : n.toLocaleString('pt-BR', { maximumFractionDigits: 2 }));
+
+/** Campos do formulário a partir de um cardio gravado (correção pelo Histórico). */
+export const rascunhoDe = (c: CardioSession): RascunhoCardio => ({
+  modalidade: c.modalidade, duracaoMin: String(c.duracaoMin), inclinacao: c.inclinacaoNivel?.rotulo ?? '',
+  velocidade: texto(c.velocidadeKmh), distancia: texto(c.distanciaKm), fc: texto(c.fcMedia),
+});
+
+/** Card do cardio avulso no Histórico: "40 min · 3,2 km". */
+export const resumoCardio = (c: Pick<CardioSession, 'duracaoMin' | 'distanciaKm'>) =>
+  `${c.duracaoMin} min${c.distanciaKm != null ? ` · ${texto(c.distanciaKm)} km` : ''}`;
+
 /** Opcional: vazio = null; senão número de min a max (vírgula ou ponto). */
 function opcional(texto: string, rotulo: string, min: number, max: number, inteiro = false): number | null {
   if (!texto.trim()) return null;
