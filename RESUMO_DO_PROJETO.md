@@ -2,7 +2,7 @@
 
 > Documento para quem vai continuar o trabalho sem acesso às conversas anteriores.
 > A **especificação completa e oficial** está em `CLAUDE.md` (raiz). Em caso de conflito, o `CLAUDE.md` vale.
-> Situação em 19/11/2026: versão **0.13.0** (Etapa 5c: medidas e bloco de peso), deploy confirmado com sucesso no GitHub Actions.
+> Situação em 19/11/2026: versão **0.13.1** (correção da meta de peso com direção), deploy confirmado com sucesso no GitHub Actions.
 
 ---
 
@@ -132,7 +132,7 @@ src/pages/evolucao/                     Aba Evolução (lista, detalhe com gráf
 src/components/EvolucaoCarga.tsx        Seção recolhível "Evolução de carga" (execução e detalhe do exercício); carrega o mini gráfico só ao abrir
 
 src/test/setup.ts, src/test/abrir.tsx   Configuração dos testes e helper para montar o app numa rota
-src/**/*.test.ts(x)                     ~239 testes (regras da semana, sessão, banco, cardio, telas, som, imagem)
+src/**/*.test.ts(x)                     ~245 testes (regras da semana, sessão, banco, cardio, telas, som, imagem)
 ```
 
 Rotas (com `#`): `/`, `/treinar`, `/sessao`, `/sessao/:exerciseId`, `/sessao/finalizar`, `/cardio/:sessionId`, `/fichas/nova`, `/fichas/:id`, `/exercicios`, `/exercicios/novo`, `/exercicios/:id`, `/exercicio/:id`, `/historico`, `/historico/cardio/novo`, `/historico/cardio/:id`, `/historico/:id`, `/medidas`, `/medidas/nova`, `/medidas/:id`, `/evolucao`, `/evolucao/:id`, `/configuracoes`.
@@ -187,6 +187,7 @@ Publicação: `git push` no `master` dispara `.github/workflows/deploy.yml`. No 
 - **Etapa 5a.1** (0.11.0): modalidade "escada" (nível e andares, sem velocidade e distância); campos do formulário mudam com a modalidade e a troca limpa os que não valem.
 - **Etapa 5b** (0.12.0): aba Evolução com "Exercícios | Cardio"; no Cardio, por modalidade, recordes (maior duração e distância; escada: duração e andares), gráficos de duração, distância e velocidade (escada: duração e andares) e tabela.
 - **Etapa 5c** (0.13.0): medidas de peso e cintura (/medidas, registrar, editar, excluir com "Desfazer"); bloco de peso no Início (peso atual, variação de cerca de 7 dias, meta); meta de peso em Configurações; Evolução → Corpo com gráficos de peso e cintura.
+- **Correção 0.13.1**: meta de peso com direção (perder/ganhar), gravada ao salvar; passar da meta mostra "meta alcançada".
 - CI/CD funcionando (último deploy: sucesso).
 
 ---

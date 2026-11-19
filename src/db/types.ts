@@ -188,9 +188,13 @@ export interface CardioPadrao {
   inclinacaoNivel: Inclinacao;
 }
 
+export type DirecaoMeta = 'perder' | 'ganhar';
+
 export interface UserSettings extends BaseRecord {
   descansoPadraoSeg: number;
   metaPesoKg?: number;
+  /** Opcional (0.13.1): direção da meta, gravada ao salvar. Meta antiga sem direção: ver direcaoMeta em medidas.ts. */
+  metaDirecao?: DirecaoMeta;
   cardioPadrao: CardioPadrao;
   /**
    * Opcionais, lidos com valor padrão (sem migração): avisoNotificacoesVisto ?? false;

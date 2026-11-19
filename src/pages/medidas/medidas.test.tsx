@@ -4,7 +4,7 @@ import { db } from '../../db/db';
 import { abrir } from '../../test/abrir';
 import { bodyMeasurementsRepository as medidas } from '../../db/repositories/bodyMeasurements';
 import { settingsRepository } from '../../db/repositories/settings';
-import { resumoPeso, textoMeta, textoVariacao } from '../../medidas';
+import { direcaoMeta, resumoPeso, textoMeta, textoVariacao } from '../../medidas';
 
 // O Recharts mede o contêiner com ResizeObserver, que o jsdom não tem.
 class ResizeObserverFalso {
@@ -60,10 +60,30 @@ describe('peso atual e variação (regras)', () => {
     expect(resumoPeso([m('2026-01-14', 84, '2026-01-14T07:00:00.000Z'), m('2026-01-14', 83.6, '2026-01-14T20:00:00.000Z')])!.atual.pesoKg).toBe(83.6);
   });
 
-  it('meta sem julgamento', () => {
-    expect(textoMeta(84.2, 80)).toBe('faltam 4,2 kg para a meta (80 kg)');
-    expect(textoMeta(78, 80)).toBe('faltam 2 kg para a meta (80 kg)');
-    expect(textoMeta(80, 80)).toBe('meta de 80 kg alcançada');
+  it('meta de perder: passar da meta conta como alcançada; peso exatamente na meta também', () => {
+    expect(textoMeta(84.2, 80, 'perder')).toBe('faltam 4,2 kg para a meta (80 kg)');
+    expect(textoMeta(80, 80, 'perder')).toBe('meta de 80 kg alcançada');
+    expect(textoMeta(79, 80, 'perder')).toBe('meta de 80 kg alcançada');
+  });
+
+  it('meta de ganhar: o contrário', () => {
+    expect(textoMeta(70, 75, 'ganhar')).toBe('faltam 5 kg para a meta (75 kg)');
+    expect(textoMeta(75, 75, 'ganhar')).toBe('meta de 75 kg alcançada');
+    expect(textoMeta(76, 75, 'ganhar')).toBe('meta de 75 kg alcançada');
+  });
+
+  it('meta antiga sem direção: deduz pela medição mais antiga com peso', () => {
+    const lista = [m('2026-01-14', 79), m('2026-01-01', null), m('2026-01-02', 84)];
+    expect(direcaoMeta({ metaPesoKg: 80 }, lista)).toBe('perder');
+    expect(textoMeta(79, 80, direcaoMeta({ metaPesoKg: 80 }, lista))).toBe('meta de 80 kg alcançada');
+    expect(direcaoMeta({ metaPesoKg: 90 }, lista)).toBe('ganhar');
+    // Direção gravada vale mais que a dedução.
+    expect(direcaoMeta({ metaPesoKg: 80, metaDirecao: 'ganhar' }, lista)).toBe('ganhar');
+    // Sem peso registrado (ou o mais antigo igual à meta): sem direção, só "alcançada" exatamente na meta.
+    expect(direcaoMeta({ metaPesoKg: 80 }, [])).toBeNull();
+    expect(direcaoMeta({ metaPesoKg: 84 }, lista)).toBeNull();
+    expect(textoMeta(80, 80, null)).toBe('meta de 80 kg alcançada');
+    expect(textoMeta(79, 80, null)).toBe('faltam 1 kg para a meta (80 kg)');
   });
 
   it('repositório: pelo menos peso ou cintura; limites; sem data futura', async () => {
@@ -88,7 +108,7 @@ describe('bloco de peso no Início', () => {
   it('peso atual, variação de 7 dias e meta; tocar abre a lista', async () => {
     await medir('2026-01-07', 85);
     await medir('2026-01-14', 84.2, 92);
-    await settingsRepository.update({ metaPesoKg: 80 });
+    await settingsRepository.update({ metaPesoKg: 80, metaDirecao: 'perder' });
     const { router } = abrir('/');
     expect(await screen.findByTestId('peso-atual')).toHaveTextContent('84,2 kg');
     expect(screen.getByTestId('variacao-peso')).toHaveTextContent('−0,8 kg em 7 dias');
@@ -105,7 +125,7 @@ describe('bloco de peso no Início', () => {
     fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Excluir medida' }));
     expect(await screen.findByRole('status')).toHaveTextContent('Medida excluída');
     expect(router.state.location.pathname).toBe('/medidas');
-    expect(screen.getAllByTestId('item-medida')).toHaveLength(1);
+    expect(await screen.findAllByTestId('item-medida')).toHaveLength(1);
 
     await act(() => router.navigate('/'));
     expect(await screen.findByTestId('peso-atual')).toHaveTextContent('85 kg');
@@ -158,6 +178,56 @@ describe('telas de medidas', () => {
     expect(await medidas.list()).toHaveLength(0);
   });
 
+  it('meta abaixo do peso grava "perder"; ao passar da meta, o Início mostra "alcançada"', async () => {
+    await medir('2026-01-07', 82);
+    const { router } = abrir('/configuracoes');
+    fireEvent.change(await screen.findByLabelText('Meta (kg), opcional'), { target: { value: '80' } });
+    // Com peso registrado, não pergunta.
+    expect(screen.queryByRole('group', { name: 'Direção da meta' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar meta' }));
+    expect(await screen.findByText('Meta salva.')).toBeInTheDocument();
+    expect(await settingsRepository.get()).toMatchObject({ metaPesoKg: 80, metaDirecao: 'perder' });
+
+    await medir('2026-01-14', 79);
+    await act(() => router.navigate('/'));
+    expect(await screen.findByTestId('meta-peso')).toHaveTextContent('meta de 80 kg alcançada');
+  });
+
+  it('meta acima do peso grava "ganhar"', async () => {
+    await medir('2026-01-14', 70);
+    abrir('/configuracoes');
+    fireEvent.change(await screen.findByLabelText('Meta (kg), opcional'), { target: { value: '75' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar meta' }));
+    expect(await screen.findByText('Meta salva.')).toBeInTheDocument();
+    expect((await settingsRepository.get()).metaDirecao).toBe('ganhar');
+  });
+
+  it('sem peso registrado: pergunta "Quero perder | Quero ganhar" e exige a escolha', async () => {
+    const { router } = abrir('/configuracoes');
+    fireEvent.change(await screen.findByLabelText('Meta (kg), opcional'), { target: { value: '75' } });
+    const grupo = screen.getByRole('group', { name: 'Direção da meta' });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar meta' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Escolha se quer perder ou ganhar peso.');
+    expect((await settingsRepository.get()).metaPesoKg).toBeUndefined();
+
+    fireEvent.click(within(grupo).getByRole('button', { name: 'Quero ganhar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar meta' }));
+    expect(await screen.findByText('Meta salva.')).toBeInTheDocument();
+    expect(await settingsRepository.get()).toMatchObject({ metaPesoKg: 75, metaDirecao: 'ganhar' });
+
+    await medir('2026-01-14', 76);
+    await act(() => router.navigate('/'));
+    expect(await screen.findByTestId('meta-peso')).toHaveTextContent('meta de 75 kg alcançada');
+  });
+
+  it('meta antiga sem direção (antes da 0.13.1): o Início deduz pela medição mais antiga', async () => {
+    await medir('2026-01-01', 84);
+    await medir('2026-01-14', 79);
+    await settingsRepository.update({ metaPesoKg: 80 });
+    abrir('/');
+    expect(await screen.findByTestId('meta-peso')).toHaveTextContent('meta de 80 kg alcançada');
+  });
+
   it('meta de peso em Configurações: salva, aparece no Início e vazio remove', async () => {
     await medir('2026-01-14', 82);
     const { router } = abrir('/configuracoes');
@@ -174,6 +244,7 @@ describe('telas de medidas', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Salvar meta' }));
     expect(await screen.findByText('Meta removida.')).toBeInTheDocument();
     expect((await settingsRepository.get()).metaPesoKg).toBeUndefined();
+    expect((await settingsRepository.get()).metaDirecao).toBeUndefined();
   });
 });
 

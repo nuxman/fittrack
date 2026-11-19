@@ -1,4 +1,4 @@
-import type { BodyMeasurement } from './db/types';
+import type { BodyMeasurement, DirecaoMeta } from './db/types';
 import { deChave } from './semana';
 import { parseNumero } from './sessao';
 
@@ -43,10 +43,31 @@ const um = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 1 }
 export const textoVariacao = (v: { kg: number; dias: number }) =>
   `${v.kg === 0 ? 'igual' : `${v.kg > 0 ? '+' : '−'}${um(Math.abs(v.kg))} kg`} em ${v.dias} ${v.dias === 1 ? 'dia' : 'dias'}`;
 
-/** Meta de peso, sem julgamento: "faltam 2,5 kg para a meta (80 kg)" ou "meta de 80 kg alcançada". */
-export function textoMeta(atual: number, meta: number): string {
+/**
+ * Direção da meta: a gravada; meta antiga (antes da 0.13.1) sem direção: pela medição mais antiga com peso
+ * (acima da meta = perder; abaixo = ganhar). Sem como deduzir (sem peso, ou o mais antigo igual à meta): null.
+ */
+export function direcaoMeta(
+  settings: { metaPesoKg?: number; metaDirecao?: DirecaoMeta },
+  medicoes: Pick<BodyMeasurement, 'data' | 'pesoKg' | 'createdAt'>[],
+): DirecaoMeta | null {
+  if (settings.metaPesoKg == null) return null;
+  if (settings.metaDirecao) return settings.metaDirecao;
+  const primeira = maisRecentesPrimeiro(medicoes).reverse().find((m) => m.pesoKg !== null);
+  return primeira ? direcaoPorPeso(settings.metaPesoKg, primeira.pesoKg!) : null;
+}
+
+/** Ao salvar: meta abaixo do peso = perder, acima = ganhar; igual: null (perguntar). */
+export const direcaoPorPeso = (meta: number, peso: number): DirecaoMeta | null => (meta < peso ? 'perder' : meta > peso ? 'ganhar' : null);
+
+/**
+ * Meta de peso, sem julgamento. Perder: peso ≤ meta = "meta de 80 kg alcançada"; senão "faltam X kg para a meta (80 kg)".
+ * Ganhar: o contrário. Sem direção conhecida: só "faltam" ou "alcançada" quando o peso está exatamente na meta.
+ */
+export function textoMeta(atual: number, meta: number, direcao: DirecaoMeta | null): string {
   const falta = Math.round(Math.abs(atual - meta) * 10) / 10;
-  return falta === 0 ? `meta de ${um(meta)} kg alcançada` : `faltam ${um(falta)} kg para a meta (${um(meta)} kg)`;
+  const alcancada = direcao === 'perder' ? atual <= meta : direcao === 'ganhar' ? atual >= meta : falta === 0;
+  return alcancada || falta === 0 ? `meta de ${um(meta)} kg alcançada` : `faltam ${um(falta)} kg para a meta (${um(meta)} kg)`;
 }
 
 /** Campos digitados (vírgula ou ponto): vazio = null. Lança Error com a mensagem do primeiro inválido. */

@@ -12,7 +12,7 @@ import type { LocalTreino, WorkoutPlan, WorkoutSession } from '../db/types';
 import { DIAS } from '../dias';
 import { chaveDia, concluidasNaSemana, contadorSemana, diasDaSemana, sugestao } from '../semana';
 import { formatarDuracao, volumeKg } from '../sessao';
-import { resumoPeso, textoMeta, textoVariacao } from '../medidas';
+import { direcaoMeta, resumoPeso, textoMeta, textoVariacao } from '../medidas';
 
 const LETRAS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 const num = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
@@ -205,7 +205,7 @@ function BlocoPeso({ painel }: { painel: Painel }) {
       <div className="min-w-0 flex-1">
         <p className="text-2xl font-bold" data-testid="peso-atual">{num(r.atual.pesoKg)} kg</p>
         {r.variacao && <p className="text-neutral-300" data-testid="variacao-peso">{textoVariacao(r.variacao)}</p>}
-        {meta != null && <p className="text-sm text-neutral-400" data-testid="meta-peso">{textoMeta(r.atual.pesoKg, meta)}</p>}
+        {meta != null && <p className="text-sm text-neutral-400" data-testid="meta-peso">{textoMeta(r.atual.pesoKg, meta, direcaoMeta(painel.settings, painel.medidas))}</p>}
       </div>
       <ChevronRight size={22} className="shrink-0 text-neutral-500" />
     </Link>
