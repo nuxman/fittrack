@@ -151,6 +151,7 @@ await ate(() => avaliar(`${AJUDA}; location.hash === '#/treinar' && !!__q('[data
 // Botões dos cards da aba Treinar em uma linha só (texto sem quebra).
 conferir('aba Treinar: "Iniciar" e "Editar" sem quebrar linha', await avaliar(`(() => {
   const card = document.querySelector('[data-testid="card-ficha"]');
+  if (!card) return 'sem card: ' + location.hash + ' | ' + document.body.innerText.slice(0, 400);
   const botoes = [...card.querySelectorAll('a, button')].filter((b) => /^(Iniciar|Editar|Retomar)/.test(b.textContent.trim()));
   const altos = botoes.filter((b) => {
     const linha = parseFloat(getComputedStyle(b).lineHeight) || 24;
