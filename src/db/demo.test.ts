@@ -3,6 +3,7 @@ import Dexie from 'dexie';
 import { gerarDemo } from './demo';
 import { buildSeed } from './seed';
 import { pontosDoExercicio } from '../evolucao';
+import { resumoPeso } from '../medidas';
 
 /** Conteúdo completo de um banco (todas as tabelas, ordenadas por id), aberto pelo nome sem passar pelo app. */
 async function despejar(nome: string) {
@@ -45,7 +46,7 @@ describe('dados fictícios', () => {
   it('cerca de 4 semanas de treinos concluídos até ontem, com cargas subindo e cardio em alguns dias', () => {
     const seed = buildSeed();
     const agora = new Date(2026, 10, 18, 9); // quarta
-    const { sessions, sets, cardio } = gerarDemo(seed.exercises, seed.workoutPlans, agora);
+    const { sessions, sets, cardio, medidas } = gerarDemo(seed.exercises, seed.workoutPlans, agora);
     expect(sessions.length).toBeGreaterThanOrEqual(18);
     expect(sessions.every((s) => s.status === 'concluida' && s.rpe !== null && s.duracaoAtivaSeg > 600)).toBe(true);
     const hoje = new Date(2026, 10, 18).getTime();
@@ -62,6 +63,14 @@ describe('dados fictícios', () => {
     expect(avulsos.map((c) => c.modalidade)).toEqual(['caminhada', 'escada', 'caminhada', 'escada']);
     const escadas = avulsos.filter((c) => c.modalidade === 'escada');
     expect(escadas.every((c) => c.andares! > 0 && c.velocidadeKmh === null && c.distanciaKm === null)).toBe(true);
+
+    // Medidas: ~6 semanas, até hoje, peso e cintura; pelo menos uma a cerca de 7 dias da mais recente.
+    expect(medidas.length).toBeGreaterThanOrEqual(11);
+    expect(medidas[0]!.data).toBe('2026-10-12');
+    expect(medidas.every((m) => m.data <= '2026-11-18' && m.pesoKg! > 70)).toBe(true);
+    expect(medidas.filter((m) => m.cinturaCm !== null).length).toBe(6);
+    expect(resumoPeso(medidas)!.variacao).not.toBeNull();
+    expect(medidas.at(-1)!.pesoKg!).toBeLessThan(medidas[0]!.pesoKg!);
 
     const supino = seed.exercises.find((e) => e.nome === 'Supino máquina')!;
     const cargas = pontosDoExercicio(supino.id, sessions, new Map(sessions.map((s) => [s.id, sets.filter((x) => x.sessionId === s.id)])))

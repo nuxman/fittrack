@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Check, Moon, Play } from 'lucide-react';
+import { Check, ChevronRight, Moon, Play, Plus, Scale } from 'lucide-react';
 import { Page } from '../components/Page';
 import { CardFicha } from '../components/CardFicha';
 import { CriarFicha, SeletorLocal } from '../components/SeletorLocal';
@@ -12,12 +12,13 @@ import type { LocalTreino, WorkoutPlan, WorkoutSession } from '../db/types';
 import { DIAS } from '../dias';
 import { chaveDia, concluidasNaSemana, contadorSemana, diasDaSemana, sugestao } from '../semana';
 import { formatarDuracao, volumeKg } from '../sessao';
+import { resumoPeso, textoMeta, textoVariacao } from '../medidas';
 
 const LETRAS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 const num = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
 const saudacao = (h: number) => (h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite');
 
-/** Dashboard. O bloco de peso só entra na Etapa 5. */
+/** Dashboard. */
 export function Inicio() {
   const [painel, recarregar] = useAsync(carregarPainel);
   const [local, setLocal] = useLocalHoje(painel, recarregar);
@@ -37,6 +38,7 @@ export function Inicio() {
           <FaixaSemana painel={painel} agora={agora} />
           <Sugerido painel={painel} local={local} agora={agora} iniciando={iniciando} onIniciar={iniciar} />
           <ResumoSemana painel={painel} agora={agora} />
+          <BlocoPeso painel={painel} />
           <UltimoTreino painel={painel} />
         </>
       )}
@@ -183,6 +185,30 @@ function ResumoSemana({ painel, agora }: { painel: Painel; agora: Date }) {
         <p className="text-sm text-neutral-400">min de cardio</p>
       </div>
     </section>
+  );
+}
+
+/** Peso atual, variação de cerca de 7 dias e meta (sem julgamento). Abre a lista de medidas. */
+function BlocoPeso({ painel }: { painel: Painel }) {
+  const r = resumoPeso(painel.medidas);
+  if (!r) {
+    return (
+      <Link to="/medidas/nova" className="card flex min-h-16 items-center gap-3 text-lg font-semibold" data-testid="bloco-peso">
+        <Plus className="text-primary-400" /> Registrar peso
+      </Link>
+    );
+  }
+  const meta = painel.settings.metaPesoKg;
+  return (
+    <Link to="/medidas" className="card flex items-center gap-3" aria-label="Peso" data-testid="bloco-peso">
+      <Scale className="shrink-0 text-primary-400" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <p className="text-2xl font-bold" data-testid="peso-atual">{num(r.atual.pesoKg)} kg</p>
+        {r.variacao && <p className="text-neutral-300" data-testid="variacao-peso">{textoVariacao(r.variacao)}</p>}
+        {meta != null && <p className="text-sm text-neutral-400" data-testid="meta-peso">{textoMeta(r.atual.pesoKg, meta)}</p>}
+      </div>
+      <ChevronRight size={22} className="shrink-0 text-neutral-500" />
+    </Link>
   );
 }
 

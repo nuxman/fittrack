@@ -5,12 +5,13 @@ import { exerciseImagesRepository } from './db/repositories/exerciseImages';
 import { exerciseSetsRepository } from './db/repositories/exerciseSets';
 import { cardioSessionsRepository } from './db/repositories/cardioSessions';
 import { restDaysRepository } from './db/repositories/restDays';
+import { bodyMeasurementsRepository } from './db/repositories/bodyMeasurements';
 import { settingsRepository } from './db/repositories/settings';
 import { SEMANA } from './dias';
 
 /** Dados do Início e da aba Treinar, numa leitura só. */
 export async function carregarPainel() {
-  const [planos, sessoes, exercicios, imagens, cardio, descansos, settings, ativa, seriesPorSessao] = await Promise.all([
+  const [planos, sessoes, exercicios, imagens, cardio, descansos, settings, ativa, seriesPorSessao, medidas] = await Promise.all([
     workoutPlansRepository.list(),
     workoutSessionsRepository.list(),
     exercisesRepository.list(),
@@ -20,6 +21,7 @@ export async function carregarPainel() {
     settingsRepository.get(),
     workoutSessionsRepository.ativa(),
     exerciseSetsRepository.contagemPorSessao(),
+    bodyMeasurementsRepository.list(),
   ]);
   const ultima = sessoes.filter((s) => s.status === 'concluida').sort((a, b) => b.iniciadaEm.localeCompare(a.iniciadaEm))[0];
   return {
@@ -30,6 +32,7 @@ export async function carregarPainel() {
     imagens,
     cardio,
     descansos,
+    medidas,
     settings,
     ativa,
     ultima: ultima && { sessao: ultima, sets: await exerciseSetsRepository.listarDaSessao(ultima.id) },

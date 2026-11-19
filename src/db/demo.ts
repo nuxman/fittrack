@@ -1,6 +1,6 @@
 /** Dados fictícios do banco de demonstração: cerca de 4 semanas de treinos concluídos, cargas subindo aos poucos, cardio pós-treino e avulso. */
 import type {
-  BaseRecord, CardioSession, Exercise, ExerciseSet, GrupoMuscular, SnapshotItem, WorkoutPlan, WorkoutSession,
+  BaseRecord, BodyMeasurement, CardioSession, Exercise, ExerciseSet, GrupoMuscular, SnapshotItem, WorkoutPlan, WorkoutSession,
 } from './types';
 
 /** Carga inicial (kg) por grupo principal; sobe 2,5 kg por semana (5 kg nos de perna). */
@@ -84,5 +84,20 @@ export function gerarDemo(exercises: Exercise[], planos: WorkoutPlan[], agora = 
       }, finalizadaEm));
     }
   }
-  return { sessions, sets, cardio };
+  // Medidas: ~6 semanas, duas por semana (segunda e quinta, 7h), peso caindo devagar com oscilação; cintura uma vez por semana.
+  const medidas: BodyMeasurement[] = [];
+  const inicioMedidas = new Date(hoje.getTime() - (((hoje.getDay() + 6) % 7) + 5 * 7) * DIA_MS);
+  for (let n = 0; ; n++) {
+    const dia = new Date(inicioMedidas.getFullYear(), inicioMedidas.getMonth(), inicioMedidas.getDate() + n, 7);
+    if (dia > agora) break;
+    if (dia.getDay() !== 1 && dia.getDay() !== 4) continue;
+    const semana = Math.floor(n / 7);
+    medidas.push(registro<BodyMeasurement>({
+      data: chaveDia(dia),
+      pesoKg: Math.round((84.6 - n * 0.06 + (n % 3 === 0 ? 0.3 : 0)) * 10) / 10,
+      cinturaCm: dia.getDay() === 1 ? 94 - semana * 0.5 : null,
+      observacoes: '',
+    }, dia.toISOString()));
+  }
+  return { sessions, sets, cardio, medidas };
 }

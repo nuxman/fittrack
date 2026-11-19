@@ -88,8 +88,6 @@ describe('aba Evolução → Cardio', () => {
     expect(screen.getByRole('link', { name: 'Registrar cardio' })).toHaveAttribute('href', '/historico/cardio/novo');
     expect(router.state.location.search).toBe('?ver=cardio');
     expect(screen.getByRole('button', { name: 'Cardio' })).toHaveAttribute('aria-pressed', 'true');
-    // "Corpo" só na 5c.
-    expect(screen.queryByRole('button', { name: 'Corpo' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Exercícios' }));
     expect(router.state.location.search).toBe('');
   });

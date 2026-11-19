@@ -5,34 +5,35 @@ import { useAsync } from '../../useAsync';
 import { exerciciosComSeries } from '../../evolucao';
 import { carregarEvolucao, ddmm } from './dados';
 import { EvolucaoCardio } from './EvolucaoCardio';
+import { EvolucaoCorpo } from './EvolucaoCorpo';
 
-// "Corpo" entra na 5c.
 const ABAS = [
   ['exercicios', 'Exercícios'],
   ['cardio', 'Cardio'],
+  ['corpo', 'Corpo'],
 ] as const;
 type Aba = (typeof ABAS)[number][0];
 
-/** Aba Evolução: "Exercícios | Cardio" no topo. A escolha fica na URL (?ver=cardio), para o Voltar voltar a ela. */
+/** Aba Evolução: "Exercícios | Cardio | Corpo" no topo. A escolha fica na URL (?ver=cardio, ?ver=corpo), para o Voltar voltar a ela. */
 export default function Evolucao() {
   const [params, setParams] = useSearchParams();
-  const aba: Aba = params.get('ver') === 'cardio' ? 'cardio' : 'exercicios';
+  const aba: Aba = ABAS.find(([v]) => v === params.get('ver'))?.[0] ?? 'exercicios';
   return (
     <Page title="Evolução">
-      <div role="group" aria-label="O que ver" className="grid grid-cols-2 gap-2 rounded-2xl bg-surface p-1">
+      <div role="group" aria-label="O que ver" className="grid grid-cols-3 gap-1 rounded-2xl bg-surface p-1">
         {ABAS.map(([v, rotulo]) => (
           <button
             key={v}
             type="button"
             aria-pressed={v === aba}
-            className={v === aba ? 'btn-primary' : 'btn text-neutral-300'}
+            className={v === aba ? 'btn-primary px-1' : 'btn px-1 text-neutral-300'}
             onClick={() => setParams(v === 'exercicios' ? {} : { ver: v }, { replace: true })}
           >
             {rotulo}
           </button>
         ))}
       </div>
-      {aba === 'cardio' ? <EvolucaoCardio /> : <Exercicios />}
+      {aba === 'cardio' ? <EvolucaoCardio /> : aba === 'corpo' ? <EvolucaoCorpo /> : <Exercicios />}
     </Page>
   );
 }

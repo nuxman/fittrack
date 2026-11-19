@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { Desfazer } from '../../components/Desfazer';
 import { HeartPulse, Plus } from 'lucide-react';
 import { Page } from '../../components/Page';
 import { useAsync } from '../../useAsync';
@@ -11,7 +11,6 @@ import { ATIVOS, formatarDuracao, volumeKg } from '../../sessao';
 import { chaveDia, deChave, inicioSemana } from '../../semana';
 import { linhaCardio, NOME_MODALIDADE, resumoCardio } from '../../cardio';
 
-const DESFAZER_MS = 8000;
 /** Estado da navegação depois de excluir um treino no detalhe. */
 export interface Excluido extends ExclusaoTreino {
   em: number;
@@ -103,7 +102,18 @@ export function Historico() {
           })}
         </>
       )}
-      {excluido && <Desfazer key={excluido.em} excluido={excluido} onDesfeito={recarregar} />}
+      {excluido && (
+        <Desfazer
+          key={excluido.em}
+          em={excluido.em}
+          texto={'cardioAvulso' in excluido ? 'Cardio excluído' : 'Treino excluído'}
+          onDesfazer={async () => {
+            if ('cardioAvulso' in excluido) await cardioSessionsRepository.restaurar(excluido.cardioAvulso);
+            else await workoutSessionsRepository.restaurar(excluido);
+            recarregar();
+          }}
+        />
+      )}
     </Page>
   );
 }
@@ -118,32 +128,5 @@ function CardCardio({ c }: { c: CardioSession }) {
         {deChave(c.data).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })} · {resumoCardio(c)}
       </p>
     </Link>
-  );
-}
-
-/** "Treino excluído · Desfazer" (ou "Cardio excluído") por 8 s a partir da exclusão (recarregar a página não estende o prazo). */
-function Desfazer({ excluido, onDesfeito }: { excluido: EstadoHistorico; onDesfeito: () => void }) {
-  const navigate = useNavigate();
-  const [visivel, setVisivel] = useState(() => Date.now() - excluido.em < DESFAZER_MS);
-  useEffect(() => {
-    if (!visivel) return;
-    const t = setTimeout(() => setVisivel(false), excluido.em + DESFAZER_MS - Date.now());
-    return () => clearTimeout(t);
-  }, [visivel, excluido.em]);
-  if (!visivel) return null;
-  const desfazer = async () => {
-    setVisivel(false);
-    if ('cardioAvulso' in excluido) await cardioSessionsRepository.restaurar(excluido.cardioAvulso);
-    else await workoutSessionsRepository.restaurar(excluido);
-    navigate('.', { replace: true, state: null });
-    onDesfeito();
-  };
-  return (
-    <div role="status" className="fixed inset-x-4 bottom-[calc(var(--nav-h)+max(env(safe-area-inset-bottom),8px)+0.75rem)] z-20 mx-auto flex max-w-md items-center justify-between rounded-2xl bg-surface-raised px-4 py-2 shadow-lg">
-      <span>{'cardioAvulso' in excluido ? 'Cardio excluído' : 'Treino excluído'}</span>
-      <button type="button" className="min-h-11 px-2 font-semibold text-primary-400" onClick={() => void desfazer()}>
-        Desfazer
-      </button>
-    </div>
   );
 }
