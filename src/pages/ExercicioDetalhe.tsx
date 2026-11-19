@@ -11,6 +11,7 @@ import { exercisesRepository } from '../db/repositories/exercises';
 import { exerciseImagesRepository } from '../db/repositories/exerciseImages';
 import { exerciseSetsRepository } from '../db/repositories/exerciseSets';
 import { workoutPlansRepository } from '../db/repositories/workoutPlans';
+import { equipmentRepository } from '../db/repositories/equipment';
 import { formatarPrescricao } from '../format';
 import { formatarSerie } from '../sessao';
 
@@ -26,11 +27,12 @@ export function ExercicioDetalhe() {
       exerciseSetsRepository.ultimaDoExercicio(id),
       fichaId ? workoutPlansRepository.get(fichaId) : undefined,
     ]);
-    return { ex, foto: img && img.blob.size > 0 ? img.blob : undefined, ultima, item: ficha?.itens.find((i) => i.exerciseId === id) };
+    const aparelho = ex?.equipmentId ? await equipmentRepository.get(ex.equipmentId) : undefined;
+    return { ex, aparelho, foto: img && img.blob.size > 0 ? img.blob : undefined, ultima, item: ficha?.itens.find((i) => i.exerciseId === id) };
   }, [id, fichaId]);
 
   if (!dados) return <Page title="Exercício" voltar>Carregando…</Page>;
-  const { ex, foto, ultima, item } = dados;
+  const { ex, aparelho, foto, ultima, item } = dados;
   if (!ex) return <Page title="Exercício" voltar><p className="card">Exercício não encontrado.</p></Page>;
 
   return (
@@ -44,6 +46,7 @@ export function ExercicioDetalhe() {
       )}
       <section className="card space-y-1" aria-label="Prescrição">
         {item && <p className="text-lg">Na ficha: {formatarPrescricao(item, ex)} · descanso {item.descansoSeg} s</p>}
+        {aparelho && <p className="text-neutral-300" data-testid="aparelho">Aparelho: {aparelho.nome}{aparelho.observacoes && ` · ${aparelho.observacoes}`}</p>}
         <p className="text-neutral-300">Última carga: {ultima ? formatarSerie(ultima, ex) : 'sem registro'}</p>
       </section>
       <VerExecucao nome={ex.nome} url={ex.videoUrl} />

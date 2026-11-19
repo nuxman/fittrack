@@ -11,6 +11,7 @@ import {
   ExercicioEmUsoError, exerciseSchema, exercisesRepository, NomeDuplicadoError,
 } from '../db/repositories/exercises';
 import { exerciseImagesRepository } from '../db/repositories/exerciseImages';
+import { equipmentRepository } from '../db/repositories/equipment';
 import { resizeImage } from '../image';
 
 type Form = NewRecord<Exercise>;
@@ -33,6 +34,7 @@ export function ExercicioEditor() {
   const [imagem, recarregarImagem] = useAsync(
     () => (id ? exerciseImagesRepository.getForExercise(id) : Promise.resolve(undefined)), [id],
   );
+  const [aparelhos] = useAsync(() => equipmentRepository.list());
   const [form, setForm] = useState<Form>(VAZIO);
   const [erros, setErros] = useState<string[]>([]);
   const [processandoFoto, setProcessandoFoto] = useState(false);
@@ -161,6 +163,14 @@ export function ExercicioEditor() {
           })}
         </div>
       </fieldset>
+
+      <label className="block space-y-1">
+        <span className="text-sm text-neutral-400">Aparelho (opcional)</span>
+        <select className="input" value={form.equipmentId ?? ''} onChange={(e) => set('equipmentId', e.target.value || undefined)}>
+          <option value="">Nenhum</option>
+          {aparelhos?.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
+        </select>
+      </label>
 
       <label className="flex min-h-14 items-center gap-3">
         <input type="checkbox" className="h-6 w-6 accent-amber-400" checked={form.porLado} onChange={(e) => set('porLado', e.target.checked)} />

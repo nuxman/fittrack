@@ -24,6 +24,9 @@ export function Configuracoes() {
       <Link to="/exercicios" className="card flex min-h-16 items-center justify-between text-lg font-semibold">
         Exercícios <ChevronRight className="text-neutral-500" />
       </Link>
+      <Link to="/aparelhos" className="card flex min-h-16 items-center justify-between text-lg font-semibold">
+        Aparelhos <ChevronRight className="text-neutral-500" />
+      </Link>
       <section className="card">
         <h2 className="text-lg font-semibold">Armazenamento</h2>
         <p className="mt-1 text-neutral-300" data-testid="persistencia">

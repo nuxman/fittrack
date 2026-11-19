@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, ChevronRight, Moon, Play, Plus, Scale } from 'lucide-react';
 import { Page } from '../components/Page';
@@ -8,6 +9,7 @@ import { textoAviso, useIniciar } from '../useIniciar';
 import { useLocalHoje } from '../useLocalHoje';
 import { carregarPainel, type Painel } from '../painel';
 import { localDe, NOME_LOCAL } from '../db/repositories/workoutPlans';
+import { restDaysRepository } from '../db/repositories/restDays';
 import type { LocalTreino, WorkoutPlan, WorkoutSession } from '../db/types';
 import { DIAS } from '../dias';
 import { chaveDia, concluidasNaSemana, contadorSemana, diasDaSemana, sugestao } from '../semana';
@@ -37,6 +39,7 @@ export function Inicio() {
         <>
           <FaixaSemana painel={painel} agora={agora} />
           <Sugerido painel={painel} local={local} agora={agora} iniciando={iniciando} onIniciar={iniciar} />
+          <DescansoHoje painel={painel} agora={agora} onMudou={recarregar} />
           <ResumoSemana painel={painel} agora={agora} />
           <BlocoPeso painel={painel} />
           <UltimoTreino painel={painel} />
@@ -78,6 +81,45 @@ function FaixaSemana({ painel, agora }: { painel: Painel; agora: Date }) {
       <p className="text-center text-neutral-300" data-testid="contador-semana">
         {feitos} de {planejados} treinos esta semana
       </p>
+    </section>
+  );
+}
+
+/** "Marcar hoje como descanso" (só sem treino concluído nem cardio hoje); marcado: observação opcional e "Desmarcar". Não mexe nas pendências. */
+function DescansoHoje({ painel, agora, onMudou }: { painel: Painel; agora: Date; onMudou: () => void }) {
+  const hoje = chaveDia(agora);
+  const marcado = painel.descansos.find((d) => d.data === hoje);
+  const [obs, setObs] = useState(marcado?.observacoes ?? '');
+  const treinou = painel.sessoes.some((s) => s.status === 'concluida' && chaveDia(new Date(s.iniciadaEm)) === hoje) || painel.cardio.some((c) => c.data === hoje);
+  if (treinou || painel.ativa) return null;
+  const alternar = async () => {
+    await restDaysRepository.alternar(hoje);
+    setObs('');
+    onMudou();
+  };
+  if (!marcado) {
+    return (
+      <button type="button" className="mx-auto block min-h-11 text-sm text-primary-400 underline" onClick={() => void alternar()}>
+        Marcar hoje como descanso
+      </button>
+    );
+  }
+  return (
+    <section className="card space-y-2" aria-label="Descanso de hoje" data-testid="descanso-hoje">
+      <p className="flex items-center gap-2 font-semibold">
+        <Moon size={18} className="text-neutral-400" aria-hidden /> Hoje marcado como descanso
+      </p>
+      <input
+        className="input"
+        aria-label="Observação do descanso (opcional)"
+        placeholder="Observação (opcional)"
+        value={obs}
+        onChange={(e) => setObs(e.target.value)}
+        onBlur={() => obs.trim() !== marcado.observacoes && void restDaysRepository.update(marcado.id, { observacoes: obs.trim() })}
+      />
+      <button type="button" className="min-h-11 text-sm text-primary-400 underline" onClick={() => void alternar()}>
+        Desmarcar descanso
+      </button>
     </section>
   );
 }

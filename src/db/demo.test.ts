@@ -46,7 +46,7 @@ describe('dados fictícios', () => {
   it('cerca de 4 semanas de treinos concluídos até ontem, com cargas subindo e cardio em alguns dias', () => {
     const seed = buildSeed();
     const agora = new Date(2026, 10, 18, 9); // quarta
-    const { sessions, sets, cardio, medidas } = gerarDemo(seed.exercises, seed.workoutPlans, agora);
+    const { sessions, sets, cardio, medidas, aparelhos, ligacoes } = gerarDemo(seed.exercises, seed.workoutPlans, agora);
     expect(sessions.length).toBeGreaterThanOrEqual(18);
     expect(sessions.every((s) => s.status === 'concluida' && s.rpe !== null && s.duracaoAtivaSeg > 600)).toBe(true);
     const hoje = new Date(2026, 10, 18).getTime();
@@ -71,6 +71,11 @@ describe('dados fictícios', () => {
     expect(medidas.filter((m) => m.cinturaCm !== null).length).toBe(6);
     expect(resumoPeso(medidas)!.variacao).not.toBeNull();
     expect(medidas.at(-1)!.pesoKg!).toBeLessThan(medidas[0]!.pesoKg!);
+
+    // Aparelhos: 3, ligados a 6 exercícios do seed.
+    expect(aparelhos).toHaveLength(3);
+    expect(ligacoes).toHaveLength(6);
+    expect(ligacoes.every(([e, a]) => seed.exercises.some((x) => x.id === e) && aparelhos.some((x) => x.id === a))).toBe(true);
 
     const supino = seed.exercises.find((e) => e.nome === 'Supino máquina')!;
     const cargas = pontosDoExercicio(supino.id, sessions, new Map(sessions.map((s) => [s.id, sets.filter((x) => x.sessionId === s.id)])))

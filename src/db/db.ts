@@ -59,6 +59,8 @@ export class FitTrackDB extends Dexie {
         await tx.table('exerciseSets').bulkAdd(demo.sets);
         await tx.table('cardioSessions').bulkAdd(demo.cardio);
         await tx.table('bodyMeasurements').bulkAdd(demo.medidas);
+        await tx.table('equipment').bulkAdd(demo.aparelhos);
+        for (const [exerciseId, equipmentId] of demo.ligacoes) await tx.table('exercises').update(exerciseId, { equipmentId });
         // Meta de peso de exemplo (Configurações), para o bloco de peso do Início mostrar "faltam X kg".
         await tx.table('settings').update(seed.settings.id, { metaPesoKg: 80, metaDirecao: 'perder' });
       }
