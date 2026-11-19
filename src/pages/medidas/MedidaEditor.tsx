@@ -1,27 +1,33 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Check, Trash2 } from 'lucide-react';
 import { Page } from '../../components/Page';
 import { useDialog } from '../../components/ConfirmDialog';
+import { CampoFotos } from '../../components/FotosCorporais';
 import { num } from '../../components/CampoSerie';
 import { useAsync } from '../../useAsync';
 import { useAvisoNaoSalvo } from '../../useAvisoNaoSalvo';
 import { bodyMeasurementsRepository } from '../../db/repositories/bodyMeasurements';
+import { bodyPhotosRepository } from '../../db/repositories/bodyPhotos';
+import { resizeImage } from '../../image';
 import { lerMedida, LIMITES } from '../../medidas';
 import { chaveDia } from '../../semana';
-import type { BodyMeasurement } from '../../db/types';
+import type { BodyMeasurement, BodyPhoto } from '../../db/types';
 import type { MedidaExcluida } from './Medidas';
 
 /** /medidas/nova e /medidas/:id: data, peso, cintura e observações (pelo menos peso ou cintura). */
 export function MedidaEditor() {
   const { id = 'nova' } = useParams();
-  const [dados] = useAsync(async () => ({ m: id === 'nova' ? undefined : await bodyMeasurementsRepository.get(id) }), [id]);
+  const [dados] = useAsync(
+    async () => (id === 'nova' ? { m: undefined, fotos: [] } : { m: await bodyMeasurementsRepository.get(id), fotos: await bodyPhotosRepository.daMedicao(id) }),
+    [id],
+  );
   if (!dados) return <Page title="Medida" voltar>Carregando…</Page>;
   if (id !== 'nova' && !dados.m) return <Page title="Medida" voltar><p className="card">Medida não encontrada.</p></Page>;
-  return <Formulario key={id} m={dados.m} />;
+  return <Formulario key={id} m={dados.m} fotosSalvas={dados.fotos} />;
 }
 
-function Formulario({ m }: { m?: BodyMeasurement }) {
+function Formulario({ m, fotosSalvas }: { m?: BodyMeasurement; fotosSalvas: BodyPhoto[] }) {
   const navigate = useNavigate();
   const { confirmar } = useDialog();
   const hoje = chaveDia(new Date());
@@ -33,6 +39,39 @@ function Formulario({ m }: { m?: BodyMeasurement }) {
   const [gravando, setGravando] = useState(false);
   const [sujo, setSujo] = useState(false);
   const liberar = useAvisoNaoSalvo(sujo);
+  // Fotos: adicionadas (já redimensionadas) e removidas só valem ao salvar, como os outros campos.
+  const [novas, setNovas] = useState<Blob[]>([]);
+  const [removidas, setRemovidas] = useState<string[]>([]);
+  const [processando, setProcessando] = useState(false);
+  // "Mostrar fotos" vale só enquanto a tela estiver aberta.
+  const [fotosVisiveis, setFotosVisiveis] = useState(false);
+  const fotos = useMemo(() => {
+    const ts = new Date().toISOString();
+    return [
+      ...fotosSalvas.filter((f) => !removidas.includes(f.id)),
+      ...novas.map((blob, k): BodyPhoto => ({ id: `nova-${k}`, measurementId: m?.id ?? '', blob, createdAt: ts, updatedAt: ts, deletedAt: null })),
+    ];
+  }, [fotosSalvas, removidas, novas, m]);
+
+  const adicionarFoto = async (file: File) => {
+    setProcessando(true);
+    try {
+      const { blob } = await resizeImage(file); // nunca o original
+      setNovas((l) => [...l, blob]);
+      setSujo(true);
+      // Quem acabou de escolher a foto já a viu.
+      setFotosVisiveis(true);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Erro ao processar a imagem');
+    } finally {
+      setProcessando(false);
+    }
+  };
+  const removerFoto = (f: BodyPhoto) => {
+    if (f.id.startsWith('nova-')) setNovas((l) => l.filter((_, k) => `nova-${k}` !== f.id));
+    else setRemovidas((l) => [...l, f.id]);
+    setSujo(true);
+  };
 
   const mexeu = (set: (v: string) => void) => (v: string) => {
     set(v);
@@ -49,8 +88,7 @@ function Formulario({ m }: { m?: BodyMeasurement }) {
         cinturaCm: lerMedida(cintura, 'Cintura (cm)', ...LIMITES.cintura),
         observacoes: obs,
       };
-      if (m) await bodyMeasurementsRepository.editar(m.id, d);
-      else await bodyMeasurementsRepository.registrar(d);
+      await bodyMeasurementsRepository.salvar(m?.id ?? null, d, { novas, removidas });
       liberar();
       navigate(-1);
     } catch (e) {
@@ -60,10 +98,11 @@ function Formulario({ m }: { m?: BodyMeasurement }) {
   };
 
   const excluir = async () => {
-    if (!m || !(await confirmar('Excluir medida?', 'A medida sai da lista, do Início e dos gráficos.', 'Excluir medida', true))) return;
-    await bodyMeasurementsRepository.remove(m.id);
+    const msg = fotosSalvas.length ? 'A medida e as fotos dela saem da lista, do Início e dos gráficos.' : 'A medida sai da lista, do Início e dos gráficos.';
+    if (!m || !(await confirmar('Excluir medida?', msg, 'Excluir medida', true))) return;
+    const exclusao = await bodyMeasurementsRepository.excluir(m.id);
     liberar();
-    navigate('/medidas', { replace: true, state: { medidaExcluida: m.id, em: Date.now() } satisfies MedidaExcluida });
+    navigate('/medidas', { replace: true, state: { medidaExcluida: exclusao, em: Date.now() } satisfies MedidaExcluida });
   };
 
   return (
@@ -87,8 +126,16 @@ function Formulario({ m }: { m?: BodyMeasurement }) {
         <span className="text-lg font-semibold">Observações</span>
         <textarea className="input mt-2 min-h-24 py-3" value={obs} onChange={(e) => mexeu(setObs)(e.target.value)} />
       </label>
+      <CampoFotos
+        fotos={fotos}
+        visiveis={fotosVisiveis}
+        ocupado={processando || gravando}
+        onMostrar={() => setFotosVisiveis(true)}
+        onAdicionar={(f) => void adicionarFoto(f)}
+        onRemover={removerFoto}
+      />
       {erro && <p role="alert" className="text-red-400">{erro}</p>}
-      <button type="button" className="btn-primary w-full" disabled={gravando} onClick={() => void salvar()}>
+      <button type="button" className="btn-primary w-full" disabled={gravando || processando} onClick={() => void salvar()}>
         <Check size={22} /> {m ? 'Salvar' : 'Registrar medida'}
       </button>
       {m && (

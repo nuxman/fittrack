@@ -3,11 +3,14 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { requestPersistence } from './storage';
 import { demoRepository } from './db/repositories/demo';
+import { bodyPhotosRepository } from './db/repositories/bodyPhotos';
 import './index.css';
 
 if (demoRepository.ativo()) document.documentElement.dataset.demo = '';
 
 void requestPersistence();
+// Fotos corporais de medições excluídas há mais que o prazo do "Desfazer" (ex.: app fechado durante o aviso): libera o espaço.
+void bodyPhotosRepository.esvaziarExcluidas();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

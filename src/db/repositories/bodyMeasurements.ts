@@ -4,8 +4,20 @@ import type { BodyMeasurement } from '../types';
 import { createRepository, now } from './base';
 import { chaveDia } from '../../semana';
 import { LIMITES } from '../../medidas';
+import { bodyPhotosRepository } from './bodyPhotos';
 
 const base = createRepository<BodyMeasurement>(db.bodyMeasurements);
+
+export interface ExclusaoMedida {
+  id: string;
+  fotos: string[];
+}
+
+/** Fotos adicionadas (blobs redimensionados) e removidas (ids) no editor, gravadas ao salvar a medição. */
+export interface MudancaFotos {
+  novas: Blob[];
+  removidas: string[];
+}
 
 export type DadosMedida = Pick<BodyMeasurement, 'data' | 'pesoKg' | 'cinturaCm' | 'observacoes'>;
 
@@ -32,12 +44,35 @@ function validar(dados: DadosMedida): DadosMedida {
 
 export const bodyMeasurementsRepository = {
   ...base,
-  async registrar(dados: DadosMedida): Promise<BodyMeasurement> {
-    return base.create(validar(dados));
+  /** Grava a medição (nova se `id` vazio) e, na mesma transação, as fotos novas (já redimensionadas) e as removidas. */
+  async salvar(id: string | null, dados: DadosMedida, fotos: MudancaFotos = { novas: [], removidas: [] }): Promise<BodyMeasurement> {
+    const v = validar(dados);
+    return db.transaction('rw', db.bodyMeasurements, db.bodyPhotos, async () => {
+      const m = id ? await base.update(id, v) : await base.create(v);
+      for (const blob of fotos.novas) await bodyPhotosRepository.adicionar(m.id, blob);
+      for (const f of fotos.removidas) await bodyPhotosRepository.remover(f);
+      return m;
+    });
   },
-  async editar(id: string, dados: DadosMedida): Promise<BodyMeasurement> {
-    return base.update(id, validar(dados));
+  registrar: (dados: DadosMedida) => bodyMeasurementsRepository.salvar(null, dados),
+  editar: (id: string, dados: DadosMedida) => bodyMeasurementsRepository.salvar(id, dados),
+  /**
+   * Exclui (soft delete) a medição e as fotos dela, numa transação. As fotos mantêm o blob até passar o prazo do
+   * "Desfazer" (bodyPhotosRepository.esvaziarExcluidas). Devolve o que `restaurar` precisa.
+   */
+  excluir(id: string): Promise<ExclusaoMedida> {
+    return db.transaction('rw', db.bodyMeasurements, db.bodyPhotos, async () => {
+      if (!(await base.get(id))) throw new Error('Medida não encontrada');
+      const ts = now();
+      await db.bodyMeasurements.update(id, { deletedAt: ts, updatedAt: ts });
+      return { id, fotos: await bodyPhotosRepository.excluirDaMedicao(id, ts) };
+    });
   },
-  /** Desfaz `remove` (soft delete). */
-  restaurar: (id: string) => db.bodyMeasurements.update(id, { deletedAt: null, updatedAt: now() }).then(() => undefined),
+  /** Desfaz `excluir`: a medição e as fotos daquela exclusão. */
+  restaurar(e: ExclusaoMedida): Promise<void> {
+    return db.transaction('rw', db.bodyMeasurements, db.bodyPhotos, async () => {
+      await db.bodyMeasurements.update(e.id, { deletedAt: null, updatedAt: now() });
+      await bodyPhotosRepository.restaurar(e.fotos);
+    });
+  },
 };

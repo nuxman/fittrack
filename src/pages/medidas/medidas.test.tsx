@@ -131,7 +131,7 @@ describe('bloco de peso no Início', () => {
     expect(await screen.findByTestId('peso-atual')).toHaveTextContent('85 kg');
     expect(screen.queryByTestId('variacao-peso')).not.toBeInTheDocument();
 
-    await medidas.restaurar(nova.id);
+    await medidas.restaurar({ id: nova.id, fotos: [] });
     await act(() => router.navigate('/medidas'));
     await act(() => router.navigate('/'));
     expect(await screen.findByTestId('peso-atual')).toHaveTextContent('84,2 kg');

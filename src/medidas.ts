@@ -5,6 +5,8 @@ import { parseNumero } from './sessao';
 /** Regras puras das medidas corporais. */
 
 const DIA_MS = 864e5;
+/** Prazo do "Desfazer" depois de excluir (treino, cardio, medida). */
+export const DESFAZER_MS = 8000;
 /** "Cerca de 7 dias antes": a medição de peso mais próxima de 7 dias, entre 4 e 10 dias antes da atual. */
 const JANELA = { min: 4, max: 10, alvo: 7 };
 

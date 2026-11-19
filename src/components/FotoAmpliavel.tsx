@@ -3,16 +3,16 @@ import { X } from 'lucide-react';
 import type { GrupoMuscular } from '../db/types';
 import { FotoExercicio } from './FotoExercicio';
 
-/** Foto do exercício; toque amplia em tela cheia. Sem foto, não renderiza nada. */
-export function FotoAmpliavel({ blob, grupo, className }: { blob?: Blob; grupo: GrupoMuscular; className: string }) {
+/** Foto (do exercício ou corporal); toque amplia em tela cheia. Sem foto, não renderiza nada. `rotulo`: nome acessível do botão. */
+export function FotoAmpliavel({ blob, grupo, className, alt, rotulo = 'Ampliar foto' }: { blob?: Blob; grupo?: GrupoMuscular; className: string; alt?: string; rotulo?: string }) {
   const [ampliada, setAmpliada] = useState(false);
   if (!blob) return null;
   return (
     <>
-      <button type="button" className="shrink-0" aria-label="Ampliar foto" onClick={() => setAmpliada(true)}>
-        <FotoExercicio blob={blob} grupo={grupo} className={className} />
+      <button type="button" className="shrink-0" aria-label={rotulo} onClick={() => setAmpliada(true)}>
+        <FotoExercicio blob={blob} grupo={grupo} className={className} alt={alt} />
       </button>
-      {ampliada && <TelaCheia blob={blob} grupo={grupo} onFechar={() => setAmpliada(false)} />}
+      {ampliada && <TelaCheia blob={blob} grupo={grupo} alt={alt} onFechar={() => setAmpliada(false)} />}
     </>
   );
 }
@@ -25,7 +25,7 @@ const dist = (a: Ponto, b: Ponto) => Math.hypot(a.x - b.x, a.y - b.y);
  * Tela cheia com zoom de dois dedos (1× a 5×) e arrastar quando ampliada; toque duplo volta a 1×.
  * Fecha pelo botão X ou por um toque simples sem zoom.
  */
-function TelaCheia({ blob, grupo, onFechar }: { blob: Blob; grupo: GrupoMuscular; onFechar: () => void }) {
+function TelaCheia({ blob, grupo, alt, onFechar }: { blob: Blob; grupo?: GrupoMuscular; alt?: string; onFechar: () => void }) {
   const [zoom, setZoom] = useState({ escala: 1, x: 0, y: 0 });
   const dedos = useRef(new Map<number, Ponto>());
   // Início do gesto atual: distância entre os dedos (pinça) ou ponto do dedo (arrastar).
@@ -90,7 +90,7 @@ function TelaCheia({ blob, grupo, onFechar }: { blob: Blob; grupo: GrupoMuscular
         onPointerUp={up}
         onPointerCancel={up}
       >
-        <FotoExercicio blob={blob} grupo={grupo} className="h-full w-full bg-black" />
+        <FotoExercicio blob={blob} grupo={grupo} alt={alt} className="h-full w-full bg-black" />
       </div>
       <button type="button" aria-label="Fechar foto" className="absolute right-4 top-4 rounded-full bg-neutral-800 p-3" onClick={onFechar}>
         <X size={28} />

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-export const DESFAZER_MS = 8000;
+import { DESFAZER_MS } from '../medidas';
 
 /**
  * "<texto> · Desfazer" por 8 s a partir de `em` (horário da exclusão; recarregar a página não estende o prazo).
