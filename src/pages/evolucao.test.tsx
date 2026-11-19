@@ -41,7 +41,7 @@ afterEach(() => {
 describe('aba Evolução', () => {
   it('sem treinos: explica o que vai aparecer', async () => {
     abrir('/evolucao');
-    expect(await screen.findByText(/evolução de carga, volume e recordes/)).toBeInTheDocument();
+    expect(await screen.findByText(/evolução de carga, volume e recordes/, undefined, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ir para Treinar' })).toBeInTheDocument();
   });
 

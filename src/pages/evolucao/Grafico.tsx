@@ -1,5 +1,4 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import type { Ponto } from '../../evolucao';
 import { ddmm } from './dados';
 
 // Âmbar 600: passa no validador de paleta contra o fundo do card (#171717); o amarelo 400 dos botões é claro demais para linha.
@@ -9,10 +8,10 @@ const GRADE = '#262626';
 const TEXTO = '#a3a3a3';
 
 /** Uma série por gráfico (o título nomeia o dado, sem legenda): linha de 2 px, pontos com anel da cor do fundo e tooltip. */
-export function Grafico({ titulo, pontos, valor, formatar, altura = 'h-44' }: {
+export function Grafico<P extends { data: string }>({ titulo, pontos, valor, formatar, altura = 'h-44' }: {
   titulo: string;
-  pontos: Ponto[];
-  valor: (p: Ponto) => number | null;
+  pontos: P[];
+  valor: (p: P) => number | null;
   formatar: (v: number) => string;
   altura?: string;
 }) {

@@ -2,7 +2,7 @@
 
 > Documento para quem vai continuar o trabalho sem acesso às conversas anteriores.
 > A **especificação completa e oficial** está em `CLAUDE.md` (raiz). Em caso de conflito, o `CLAUDE.md` vale.
-> Situação em 19/11/2026: versão **0.11.0** (Etapa 5a.1: cardio "escada"), deploy confirmado com sucesso no GitHub Actions.
+> Situação em 19/11/2026: versão **0.12.0** (Etapa 5b: gráficos de cardio), deploy confirmado com sucesso no GitHub Actions.
 
 ---
 
@@ -132,7 +132,7 @@ src/pages/evolucao/                     Aba Evolução (lista, detalhe com gráf
 src/components/EvolucaoCarga.tsx        Seção recolhível "Evolução de carga" (execução e detalhe do exercício); carrega o mini gráfico só ao abrir
 
 src/test/setup.ts, src/test/abrir.tsx   Configuração dos testes e helper para montar o app numa rota
-src/**/*.test.ts(x)                     ~217 testes (regras da semana, sessão, banco, cardio, telas, som, imagem)
+src/**/*.test.ts(x)                     ~223 testes (regras da semana, sessão, banco, cardio, telas, som, imagem)
 ```
 
 Rotas (com `#`): `/`, `/treinar`, `/sessao`, `/sessao/:exerciseId`, `/sessao/finalizar`, `/cardio/:sessionId`, `/fichas/nova`, `/fichas/:id`, `/exercicios`, `/exercicios/novo`, `/exercicios/:id`, `/exercicio/:id`, `/historico`, `/historico/cardio/novo`, `/historico/cardio/:id`, `/historico/:id`, `/evolucao`, `/evolucao/:id`, `/configuracoes`.
@@ -185,6 +185,7 @@ Publicação: `git push` no `master` dispara `.github/workflows/deploy.yml`. No 
 - **Correção 0.9.1**: falha ao carregar as partes sob demanda (sem internet ou depois de deploy novo) não derruba a tela: mini gráfico com "Tentar de novo" na própria seção; telas de erro em português nas rotas da Evolução e no layout raiz.
 - **Etapa 5a** (0.10.0): cardio avulso ("Registrar cardio" na aba Treinar e no Histórico, sem cronômetro), card próprio no Histórico, editar e excluir com "Desfazer"; o cardio pós-treino também fica editável pelo detalhe do treino. Cardio avulso conta nos minutos e no check da faixa da semana, mas não no "X de Y" nem nas pendências.
 - **Etapa 5a.1** (0.11.0): modalidade "escada" (nível e andares, sem velocidade e distância); campos do formulário mudam com a modalidade e a troca limpa os que não valem.
+- **Etapa 5b** (0.12.0): aba Evolução com "Exercícios | Cardio"; no Cardio, por modalidade, recordes (maior duração e distância; escada: duração e andares), gráficos de duração, distância e velocidade (escada: duração e andares) e tabela.
 - CI/CD funcionando (último deploy: sucesso).
 
 ---
@@ -203,7 +204,7 @@ Publicação: `git push` no `master` dispara `.github/workflows/deploy.yml`. No 
 
 Cada parte com `git push`, deploy confirmado e versão própria (detalhes em `CLAUDE.md` → "Etapas e critérios de aceite"):
 
-1. **Etapa 5** (restante): 5b gráficos de cardio (0.12.0), 5c medidas e bloco de peso no Início (0.13.0), 5d fotos corporais (0.14.0), 5e aparelhos e dia de descanso (0.15.0). Depois da Etapa 5: decidir o "Iniciar cardio" avulso com cronômetro.
+1. **Etapa 5** (restante): 5c medidas e bloco de peso no Início (0.13.0), 5d fotos corporais (0.14.0), 5e aparelhos e dia de descanso (0.15.0). Depois da Etapa 5: decidir o "Iniciar cardio" avulso com cronômetro.
 2. **Etapa 6**: backup JSON (com schemaVersion, imagens de exercício em base64, sem fotos corporais), importação com Zod + pré-visualização + confirmação, CSV de séries e medidas, aviso permanente de perda de dados.
 3. **Etapa 7**: PWA e offline (instala no Chrome Android, ícones 192 e 512, manifest com `start_url`/`scope` `/fittrack/`).
 4. **Etapa 8**: README com instalação no S24 Ultra e revisão do workflow. Versão 1.0.0 ao concluir as 8 etapas.

@@ -1,7 +1,7 @@
-import type { CardioEmCurso, CardioPadrao, CardioSession, ModalidadeCardio, RascunhoCardio } from './db/types';
+import { MODALIDADES_CARDIO, type CardioEmCurso, type CardioPadrao, type CardioSession, type ModalidadeCardio, type RascunhoCardio } from './db/types';
 import { ESQUECIDA_MS, parseNumero } from './sessao';
 
-/** Regras puras do cardio pós-treino. */
+/** Regras puras do cardio (pós-treino, avulso e evolução). */
 
 export const NOME_MODALIDADE: Record<ModalidadeCardio, string> = { esteira: 'Esteira', bicicleta: 'Bicicleta', caminhada: 'Caminhada', escada: 'Escada' };
 
@@ -75,3 +75,38 @@ export const minutosEntre = (inicio: number, fim: number) => Math.max(1, Math.ro
 
 /** Esquecido: o horário final (ou o início, se parado) passou há mais de 3 horas. */
 export const cardioEsquecido = (c: CardioEmCurso, agora: number) => agora - (c.fimEm ?? c.iniciouEm ?? c.desde) > ESQUECIDA_MS;
+
+/** Cardio por modalidade, na ordem da lista fixa e, dentro dela, em ordem cronológica (data e horário de registro). */
+export function cardioPorModalidade<C extends Pick<CardioSession, 'modalidade' | 'data' | 'createdAt'>>(cardios: C[]): [ModalidadeCardio, C[]][] {
+  const ordenados = [...cardios].sort((a, b) => a.data.localeCompare(b.data) || a.createdAt.localeCompare(b.createdAt));
+  return MODALIDADES_CARDIO.map((m) => [m, ordenados.filter((c) => c.modalidade === m)] as [ModalidadeCardio, C[]]).filter(([, l]) => l.length > 0);
+}
+
+export interface RecordeCardio {
+  rotulo: string;
+  valor: number;
+  unidade: 'min' | 'km' | 'andares';
+  data: string;
+}
+
+/** Maior valor; empate fica com o primeiro (lista em ordem cronológica). */
+function maiorDe<C>(lista: C[], valor: (c: C) => number | null | undefined): C | undefined {
+  let m: C | undefined;
+  for (const c of lista) {
+    const v = valor(c);
+    if (v != null && (m === undefined || v > valor(m)!)) m = c;
+  }
+  return m;
+}
+
+/** Recordes de uma modalidade: maior duração e maior distância; escada: maior duração e mais andares. */
+export function recordesCardio(modalidade: ModalidadeCardio, lista: CardioSession[]): RecordeCardio[] {
+  const campos: [string, RecordeCardio['unidade'], (c: CardioSession) => number | null | undefined][] = [
+    ['Maior duração', 'min', (c) => c.duracaoMin],
+    ehEscada(modalidade) ? ['Mais andares', 'andares', (c) => c.andares] : ['Maior distância', 'km', (c) => c.distanciaKm],
+  ];
+  return campos.flatMap(([rotulo, unidade, valor]) => {
+    const c = maiorDe(lista, valor);
+    return c ? [{ rotulo, valor: valor(c)!, unidade, data: c.data }] : [];
+  });
+}

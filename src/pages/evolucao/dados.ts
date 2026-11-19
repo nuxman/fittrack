@@ -1,4 +1,6 @@
 import type { Medida, Ponto } from '../../evolucao';
+import type { CardioSession, ModalidadeCardio } from '../../db/types';
+import { ehEscada } from '../../cardio';
 import { num } from '../../components/CampoSerie';
 import { workoutSessionsRepository } from '../../db/repositories/workoutSessions';
 import { exerciseSetsRepository } from '../../db/repositories/exerciseSets';
@@ -14,11 +16,13 @@ export async function carregarEvolucao() {
   return { sessoes, sets, nomes: new Map(exercicios.map((e) => [e.id, e.nome])) };
 }
 
-export const ddmm = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+/** "DD/MM" de um ISO com horário ou de uma data 'AAAA-MM-DD' (cardio), sem desvio de fuso. */
+export const ddmm = (iso: string) =>
+  (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T12:00`) : new Date(iso)).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
-export interface Serie {
+export interface Serie<P = Ponto> {
   titulo: string;
-  valor: (p: Ponto) => number | null;
+  valor: (p: P) => number | null;
   formatar: (v: number) => string;
 }
 
@@ -34,3 +38,14 @@ export const SERIES: Record<Medida, Serie[]> = {
   tempo: [{ titulo: 'Maior tempo por treino', valor: (p) => p.tempoMax, formatar: (v) => `${num(v)} s` }],
 };
 
+
+/** Gráficos do cardio: duração e distância; velocidade só das sessões com velocidade. Escada: duração e andares. Inclinação/nível só na tabela. */
+export function seriesCardio(m: ModalidadeCardio): Serie<CardioSession>[] {
+  const duracao: Serie<CardioSession> = { titulo: 'Duração por sessão', valor: (c) => c.duracaoMin, formatar: (v) => `${num(v)} min` };
+  if (ehEscada(m)) return [duracao, { titulo: 'Andares por sessão', valor: (c) => c.andares ?? null, formatar: (v) => `${num(v)} andares` }];
+  return [
+    duracao,
+    { titulo: 'Distância por sessão', valor: (c) => c.distanciaKm, formatar: (v) => `${num(v)} km` },
+    { titulo: 'Velocidade média', valor: (c) => c.velocidadeKmh, formatar: (v) => `${num(v)} km/h` },
+  ];
+}
