@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { db } from '../db';
-import type { CardioSession } from '../types';
+import { MODALIDADES_CARDIO, type CardioSession } from '../types';
 import { createRepository, now } from './base';
 import { workoutSessionsRepository } from './workoutSessions';
 import { chaveDia } from '../../semana';
@@ -15,14 +15,17 @@ const opcional = (min: number, max: number, rotulo: string) =>
 
 /** Validação de tudo que é gravado num cardio (avulso ou correção do ligado ao treino). */
 const cardioSchema = z.object({
-  modalidade: z.enum(['esteira', 'bicicleta', 'caminhada']),
+  modalidade: z.enum(MODALIDADES_CARDIO),
   duracaoMin: z.number().int('Duração (min): de 1 a 300').min(1, 'Duração (min): de 1 a 300').max(300, 'Duração (min): de 1 a 300'),
   velocidadeKmh: opcional(0, 30, 'Velocidade (km/h)'),
   inclinacaoNivel: z.object({ valor: z.number().min(0), rotulo: z.string().min(1) }).nullable(),
   distanciaKm: opcional(0, 100, 'Distância (km)'),
+  andares: z.number().int('Andares: número inteiro de 0 a 1000').min(0, 'Andares: número inteiro de 0 a 1000').max(1000, 'Andares: número inteiro de 0 a 1000').optional(),
   fcMedia: z.number().int().min(30, 'FC média: de 30 a 250').max(250, 'FC média: de 30 a 250').optional(),
   rpe: z.number().int().min(0, 'RPE deve ser de 0 a 10').max(10, 'RPE deve ser de 0 a 10').nullable(),
   observacoes: z.string().trim(),
+}).refine((c) => (c.modalidade === 'escada' ? c.velocidadeKmh === null && c.distanciaKm === null : c.andares === undefined), {
+  message: 'Escada não tem velocidade nem distância; andares só na escada',
 });
 
 const dataSchema = z
@@ -66,7 +69,9 @@ export const cardioSessionsRepository = {
     const v = validar(cardioSchema, dados);
     const data = atual.sessionId || dados.data === undefined ? atual.data : validar(dataSchema, dados.data);
     const next: CardioSession = { ...atual, ...v, data, updatedAt: now() };
-    if (v.fcMedia === undefined) delete next.fcMedia; // FC apagada some do registro
+    // Opcionais apagados (ou que não valem para a modalidade) somem do registro.
+    if (v.fcMedia === undefined) delete next.fcMedia;
+    if (v.andares === undefined) delete next.andares;
     await db.cardioSessions.put(next);
     return next;
   },

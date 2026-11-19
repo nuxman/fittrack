@@ -98,6 +98,49 @@ describe('cardio avulso: telas', () => {
     expect(screen.getByTestId('card-cardio')).toHaveTextContent('25 min · 8,5 km');
   });
 
+  it('escada avulsa: grava e edita sem velocidade e distância; card "Escada · 20 min · 45 andares"', async () => {
+    const { router } = abrir('/historico/cardio/novo');
+    fireEvent.change(await screen.findByLabelText('Distância (km)'), { target: { value: '3' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Escada' }));
+    fireEvent.change(screen.getByLabelText('Duração (min)'), { target: { value: '20' } });
+    fireEvent.change(screen.getByLabelText('Nível'), { target: { value: 'nível 8' } });
+    fireEvent.change(screen.getByLabelText('Andares'), { target: { value: '45' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar cardio' }));
+    await vi.waitFor(async () => expect(await cardios.list()).toHaveLength(1));
+    const [c] = await cardios.list();
+    expect(c).toMatchObject({ modalidade: 'escada', duracaoMin: 20, andares: 45, velocidadeKmh: null, distanciaKm: null });
+
+    await act(() => router.navigate('/historico'));
+    expect(await screen.findByTestId('card-cardio')).toHaveTextContent('Escada');
+    expect(screen.getByTestId('card-cardio')).toHaveTextContent('20 min · 45 andares');
+
+    // Editar: os campos de escada vêm preenchidos; apagar os andares tira do registro e do card.
+    fireEvent.click(screen.getByTestId('card-cardio'));
+    const andares = await screen.findByLabelText('Andares');
+    expect(andares).toHaveValue('45');
+    expect(screen.queryByLabelText('Velocidade (km/h)')).not.toBeInTheDocument();
+    fireEvent.change(andares, { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await vi.waitFor(async () => expect(await cardios.get(c!.id)).not.toHaveProperty('andares'));
+    expect(await screen.findByTestId('card-cardio')).toHaveTextContent(/20 min$/);
+
+    // Trocar a escada por esteira na edição: andares não são gravados.
+    await cardios.editar(c!.id, { modalidade: 'escada', duracaoMin: 20, velocidadeKmh: null, inclinacaoNivel: null, distanciaKm: null, andares: 30, rpe: null, observacoes: '' });
+    fireEvent.click(screen.getByTestId('card-cardio'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Esteira' }));
+    expect(screen.queryByLabelText('Andares')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Distância (km)'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await vi.waitFor(async () => expect(await cardios.get(c!.id)).toMatchObject({ modalidade: 'esteira', distanciaKm: 2 }));
+    expect(await cardios.get(c!.id)).not.toHaveProperty('andares');
+  });
+
+  it('o banco recusa escada com distância e andares fora da escada', async () => {
+    const base = { duracaoMin: 20, velocidadeKmh: null, inclinacaoNivel: null, rpe: null, observacoes: '', data: '2026-01-07' };
+    await expect(cardios.registrarAvulso({ ...base, modalidade: 'escada', distanciaKm: 1 })).rejects.toThrow('Escada não tem');
+    await expect(cardios.registrarAvulso({ ...base, modalidade: 'esteira', distanciaKm: null, andares: 10 })).rejects.toThrow('andares só na escada');
+  });
+
   it('erro de validação aparece na tela, sem gravar', async () => {
     abrir('/historico/cardio/novo');
     fireEvent.change(await screen.findByLabelText('Duração (min)'), { target: { value: '' } });

@@ -58,7 +58,10 @@ describe('dados fictícios', () => {
     // Cardio avulso aos sábados (sem treino), antes de hoje.
     const avulsos = cardio.filter((c) => !c.sessionId);
     expect(avulsos).toHaveLength(4);
-    expect(avulsos.every((c) => c.modalidade === 'caminhada' && new Date(`${c.data}T12:00`).getDay() === 6 && c.data < '2026-11-18')).toBe(true);
+    expect(avulsos.every((c) => new Date(`${c.data}T12:00`).getDay() === 6 && c.data < '2026-11-18')).toBe(true);
+    expect(avulsos.map((c) => c.modalidade)).toEqual(['caminhada', 'escada', 'caminhada', 'escada']);
+    const escadas = avulsos.filter((c) => c.modalidade === 'escada');
+    expect(escadas.every((c) => c.andares! > 0 && c.velocidadeKmh === null && c.distanciaKm === null)).toBe(true);
 
     const supino = seed.exercises.find((e) => e.nome === 'Supino máquina')!;
     const cargas = pontosDoExercicio(supino.id, sessions, new Map(sessions.map((s) => [s.id, sets.filter((x) => x.sessionId === s.id)])))

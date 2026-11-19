@@ -35,13 +35,14 @@ export function gerarDemo(exercises: Exercise[], planos: WorkoutPlan[], agora = 
     if (dia >= hoje) break;
     const plano = planos.find((p) => p.diaSemana === dia.getDay());
     const semana = Math.floor(n / 7);
-    // Cardio avulso (sem treino) aos sábados: caminhada de manhã, um pouco mais longa a cada semana.
+    // Cardio avulso (sem treino) aos sábados, de manhã: caminhada nas semanas pares, escada nas ímpares.
     if (dia.getDay() === 6) {
-      const manha = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), 8);
-      cardio.push(registro<CardioSession>({
-        modalidade: 'caminhada', duracaoMin: 35 + semana * 5, velocidadeKmh: 5.2, inclinacaoNivel: null,
-        distanciaKm: Math.round((35 + semana * 5) * 5.2 / 6) / 10, rpe: 4, observacoes: '', data: chaveDia(dia),
-      }, manha.toISOString()));
+      const manha = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), 8).toISOString();
+      const comum = { rpe: semana % 2 ? 7 : 4, observacoes: '', data: chaveDia(dia) };
+      cardio.push(registro<CardioSession>(semana % 2
+        ? { ...comum, modalidade: 'escada', duracaoMin: 15 + semana * 2, velocidadeKmh: null, inclinacaoNivel: { valor: 8, rotulo: 'nível 8' }, distanciaKm: null, andares: 40 + semana * 5 }
+        : { ...comum, modalidade: 'caminhada', duracaoMin: 35 + semana * 5, velocidadeKmh: 5.2, inclinacaoNivel: null, distanciaKm: Math.round((35 + semana * 5) * 5.2 / 6) / 10 },
+      manha));
     }
     // Duas faltas: quinta da 2ª semana e terça da 4ª.
     if (!plano || (semana === 1 && dia.getDay() === 4) || (semana === 3 && dia.getDay() === 2)) continue;

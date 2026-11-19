@@ -2,7 +2,7 @@
 
 > Documento para quem vai continuar o trabalho sem acesso às conversas anteriores.
 > A **especificação completa e oficial** está em `CLAUDE.md` (raiz). Em caso de conflito, o `CLAUDE.md` vale.
-> Situação em 17/11/2026: versão **0.9.0** (Etapa 4c: comparação com o treino anterior e mini gráfico), deploy confirmado com sucesso no GitHub Actions.
+> Situação em 19/11/2026: versão **0.11.0** (Etapa 5a.1: cardio "escada"), deploy confirmado com sucesso no GitHub Actions.
 
 ---
 
@@ -14,7 +14,7 @@ Ele permite:
 - montar fichas de treino por dia da semana (academia ou casa);
 - executar o treino na academia, registrando carga e repetições de cada série, com cronômetro de descanso e alerta sonoro;
 - saber qual treino fazer hoje (incluindo treinos pendentes da semana);
-- registrar cardio depois do treino;
+- registrar cardio depois do treino ou avulso (esteira, bicicleta, caminhada, escada);
 - consultar e corrigir o histórico de treinos.
 
 Funciona **100% offline e local**: sem servidor, sem login, sem APIs externas. Todos os dados ficam no IndexedDB do navegador. Interface em português do Brasil, tema escuro, cor principal amarelo/dourado, botões grandes.
@@ -77,7 +77,7 @@ src/db/repositories/*.ts       Um repository por entidade (único acesso permiti
 
 src/semana.ts                  Regras da semana: ficha feita, pendências, sugestão, contador "X de Y", aviso de grupo seguido
 src/sessao.ts                  Regras puras da sessão: status do exercício, tempo ativo, mudanças para "Aplicar na ficha"
-src/cardio.ts                  Regras puras do cardio pós-treino
+src/cardio.ts                  Regras puras do cardio (pós-treino e avulso, modalidades)
 src/painel.ts                  Carrega numa leitura só os dados do Início e da aba Treinar
 src/somDescanso.ts             Bipes do descanso com Web Audio (OscillatorNode + DynamicsCompressor)
 src/image.ts                   Redimensiona foto para ≤1024 px, WebP 0.8 (fallback JPEG)
@@ -132,10 +132,10 @@ src/pages/evolucao/                     Aba Evolução (lista, detalhe com gráf
 src/components/EvolucaoCarga.tsx        Seção recolhível "Evolução de carga" (execução e detalhe do exercício); carrega o mini gráfico só ao abrir
 
 src/test/setup.ts, src/test/abrir.tsx   Configuração dos testes e helper para montar o app numa rota
-src/**/*.test.ts(x)                     ~199 testes (regras da semana, sessão, banco, cardio, telas, som, imagem)
+src/**/*.test.ts(x)                     ~217 testes (regras da semana, sessão, banco, cardio, telas, som, imagem)
 ```
 
-Rotas (com `#`): `/`, `/treinar`, `/sessao`, `/sessao/:exerciseId`, `/sessao/finalizar`, `/cardio/:sessionId`, `/fichas/nova`, `/fichas/:id`, `/exercicios`, `/exercicios/novo`, `/exercicios/:id`, `/exercicio/:id`, `/historico`, `/historico/:id`, `/evolucao`, `/evolucao/:id`, `/configuracoes`.
+Rotas (com `#`): `/`, `/treinar`, `/sessao`, `/sessao/:exerciseId`, `/sessao/finalizar`, `/cardio/:sessionId`, `/fichas/nova`, `/fichas/:id`, `/exercicios`, `/exercicios/novo`, `/exercicios/:id`, `/exercicio/:id`, `/historico`, `/historico/cardio/novo`, `/historico/cardio/:id`, `/historico/:id`, `/evolucao`, `/evolucao/:id`, `/configuracoes`.
 
 ---
 
@@ -182,7 +182,10 @@ Publicação: `git push` no `master` dispara `.github/workflows/deploy.yml`. No 
 - **Etapa 4b** (0.7.0): aba Evolução com lista de exercícios, recordes por unidade, gráficos de carga máxima e volume (Recharts, carregado sob demanda) e tabela.
 - **Correção 0.6.1**: botão de vídeo ao lado do nome na execução e ícone de vídeo em cada exercício da visão geral; sem link salvo, usa a busca no YouTube pelo nome.
 - **Etapa 4a** (0.6.0): Histórico agrupado por semana, detalhe do treino, editar/excluir série, editar RPE e observações, excluir treino (sessão + séries + cardio ligado, em transação) com "Desfazer" por 8 segundos.
-- CI/CD funcionando (último deploy da 4a: sucesso).
+- **Correção 0.9.1**: falha ao carregar as partes sob demanda (sem internet ou depois de deploy novo) não derruba a tela: mini gráfico com "Tentar de novo" na própria seção; telas de erro em português nas rotas da Evolução e no layout raiz.
+- **Etapa 5a** (0.10.0): cardio avulso ("Registrar cardio" na aba Treinar e no Histórico, sem cronômetro), card próprio no Histórico, editar e excluir com "Desfazer"; o cardio pós-treino também fica editável pelo detalhe do treino. Cardio avulso conta nos minutos e no check da faixa da semana, mas não no "X de Y" nem nas pendências.
+- **Etapa 5a.1** (0.11.0): modalidade "escada" (nível e andares, sem velocidade e distância); campos do formulário mudam com a modalidade e a troca limpa os que não valem.
+- CI/CD funcionando (último deploy: sucesso).
 
 ---
 
@@ -200,7 +203,7 @@ Publicação: `git push` no `master` dispara `.github/workflows/deploy.yml`. No 
 
 Cada parte com `git push`, deploy confirmado e versão própria (detalhes em `CLAUDE.md` → "Etapas e critérios de aceite"):
 
-1. **Etapa 5**: cardio avulso e gráficos, medidas corporais, fotos corporais, tela de Equipment, bloco de peso no Início.
+1. **Etapa 5** (restante): 5b gráficos de cardio (0.12.0), 5c medidas e bloco de peso no Início (0.13.0), 5d fotos corporais (0.14.0), 5e aparelhos e dia de descanso (0.15.0). Depois da Etapa 5: decidir o "Iniciar cardio" avulso com cronômetro.
 2. **Etapa 6**: backup JSON (com schemaVersion, imagens de exercício em base64, sem fotos corporais), importação com Zod + pré-visualização + confirmação, CSV de séries e medidas, aviso permanente de perda de dados.
 3. **Etapa 7**: PWA e offline (instala no Chrome Android, ícones 192 e 512, manifest com `start_url`/`scope` `/fittrack/`).
 4. **Etapa 8**: README com instalação no S24 Ultra e revisão do workflow. Versão 1.0.0 ao concluir as 8 etapas.

@@ -6,7 +6,7 @@ import { workoutPlansRepository } from '../db/repositories/workoutPlans';
 import { workoutSessionsRepository as sessoes } from '../db/repositories/workoutSessions';
 import { cardioSessionsRepository as cardios } from '../db/repositories/cardioSessions';
 import { settingsRepository } from '../db/repositories/settings';
-import { cardioEsquecido, minutosEntre, validarCardio } from '../cardio';
+import { cardioEsquecido, minutosEntre, resumoCardio, trocarModalidade, validarCardio } from '../cardio';
 
 /** AudioContext simulado: guarda o início de cada bipe (segundos a partir de currentTime = 0). */
 let bipes: { inicio: number; parado: boolean }[] = [];
@@ -56,6 +56,30 @@ describe('regras do cardio', () => {
     });
     expect(() => validarCardio({ modalidade: 'esteira', duracaoMin: '0', inclinacao: '', velocidade: '', distancia: '', fc: '' })).toThrow('Duração');
     expect(() => validarCardio({ modalidade: 'esteira', duracaoMin: '15', inclinacao: 'alta', velocidade: '', distancia: '', fc: '' })).toThrow('Inclinação');
+  });
+
+  it('escada: grava nível e andares; velocidade e distância não são gravadas', () => {
+    const r = { modalidade: 'escada' as const, duracaoMin: '20', inclinacao: 'nível 8', velocidade: '6', distancia: '2', andares: '45', fc: '' };
+    expect(validarCardio(r)).toEqual({ modalidade: 'escada', duracaoMin: 20, velocidadeKmh: null, inclinacaoNivel: { valor: 8, rotulo: 'nível 8' }, distanciaKm: null, andares: 45 });
+    expect(() => validarCardio({ ...r, andares: '4,5' })).toThrow('Andares');
+    // Andares não valem para as outras modalidades.
+    expect(validarCardio({ ...r, modalidade: 'esteira' })).not.toHaveProperty('andares');
+    // Rascunho antigo (antes da 0.11.0), sem o campo andares.
+    expect(validarCardio({ ...r, andares: undefined })).not.toHaveProperty('andares');
+  });
+
+  it('trocar de modalidade limpa os campos que não valem para a nova', () => {
+    const r = { modalidade: 'esteira' as const, duracaoMin: '15', inclinacao: 'nível 7', velocidade: '6', distancia: '1,5', andares: '', fc: '120' };
+    const escada = trocarModalidade(r, 'escada');
+    expect(escada).toEqual({ ...r, modalidade: 'escada', velocidade: '', distancia: '' });
+    expect(trocarModalidade({ ...escada, andares: '30' }, 'bicicleta')).toEqual({ ...escada, modalidade: 'bicicleta', andares: '' });
+  });
+
+  it('card do Histórico: "Escada · 20 min · 45 andares"; sem andares, só a duração', () => {
+    expect(resumoCardio({ modalidade: 'escada', duracaoMin: 20, distanciaKm: null, andares: 45 })).toBe('20 min · 45 andares');
+    expect(resumoCardio({ modalidade: 'escada', duracaoMin: 20, distanciaKm: null, andares: 1 })).toBe('20 min · 1 andar');
+    expect(resumoCardio({ modalidade: 'escada', duracaoMin: 20, distanciaKm: null })).toBe('20 min');
+    expect(resumoCardio({ modalidade: 'esteira', duracaoMin: 15, distanciaKm: 1.4 })).toBe('15 min · 1,4 km');
   });
 
   it('esquecido: fim (ou início, se parado) há mais de 3 h', () => {
@@ -108,6 +132,21 @@ describe('cardio pós-treino', () => {
     });
     expect((await sessoes.get(s.id))!.cardio).toBeUndefined();
     expect(await screen.findByTestId('min-cardio')).toHaveTextContent('15');
+  });
+
+  it('pós-treino com escada: campos de escada na tela, grava sem velocidade e distância', async () => {
+    const s = await treinoComCardio();
+    abrir(`/cardio/${s.id}`);
+    fireEvent.change(await screen.findByLabelText('Velocidade (km/h)'), { target: { value: '6' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Escada' }));
+    expect(screen.queryByLabelText('Velocidade (km/h)')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Distância (km)')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Nível'), { target: { value: 'nível 8' } });
+    fireEvent.change(screen.getByLabelText('Andares'), { target: { value: '45' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Concluir cardio' }));
+    await waitFor(async () => expect(await cardios.list()).toHaveLength(1));
+    const [c] = await cardios.list();
+    expect(c).toMatchObject({ sessionId: s.id, modalidade: 'escada', andares: 45, velocidadeKmh: null, distanciaKm: null, inclinacaoNivel: { valor: 8, rotulo: 'nível 8' } });
   });
 
   it('cronômetro: horário final no banco, bipes agendados, recarregar retoma', async () => {

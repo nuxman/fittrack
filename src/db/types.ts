@@ -114,6 +114,8 @@ export interface RascunhoCardio {
   inclinacao: string;
   velocidade: string;
   distancia: string;
+  /** Opcional (0.11.0): ler com ?? ''. */
+  andares?: string;
   fc: string;
 }
 
@@ -143,7 +145,9 @@ export interface Inclinacao {
   rotulo: string;
 }
 
-export type ModalidadeCardio = 'esteira' | 'bicicleta' | 'caminhada';
+/** Lista fixa. 'escada' (0.11.0) é valor novo, sem migração: registros antigos não mudam. */
+export const MODALIDADES_CARDIO = ['esteira', 'bicicleta', 'caminhada', 'escada'] as const;
+export type ModalidadeCardio = (typeof MODALIDADES_CARDIO)[number];
 
 export interface CardioSession extends BaseRecord {
   /** Opcional: treino ao qual o cardio pós-treino pertence. */
@@ -153,6 +157,8 @@ export interface CardioSession extends BaseRecord {
   velocidadeKmh: number | null;
   inclinacaoNivel: Inclinacao | null;
   distanciaKm: number | null;
+  /** Só escada: andares subidos (inteiro, opcional). Na escada, velocidade e distância ficam null. */
+  andares?: number;
   fcMedia?: number;
   rpe: number | null;
   observacoes: string;
