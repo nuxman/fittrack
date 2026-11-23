@@ -37,8 +37,8 @@ describe('CSV', () => {
       ({ id: data, data, pesoKg, cinturaCm, observacoes, createdAt: `${data}T10:00:00Z`, updatedAt: '', deletedAt: null });
     expect(linhas(csvMedidas([m('2026-01-14', 84.2, null, 'após "jejum"; manhã'), m('2026-01-07', 85, 92.5, '')]))).toEqual([
       'data;peso (kg);cintura (cm);observações',
-      '2026-01-07;85;92,5;',
-      '2026-01-14;84,2;;"após ""jejum""; manhã"',
+      '07/01/2026;85;92,5;',
+      '14/01/2026;84,2;;"após ""jejum""; manhã"',
     ]);
   });
 
@@ -57,9 +57,9 @@ describe('CSV', () => {
     await series.registrar({ sessionId: ativa.id, exerciseId: dev!.exerciseId, carga: 30, reps: 10 });
 
     expect(linhas(await backupRepository.csvSeries())).toEqual([
-      'data;ficha;exercício;série;carga;unidade;reps;por lado;lado;status do treino',
-      '2026-01-14 18:30;Ombros e core;Desenvolvimento máquina;1;22,5;kg;10;não;;concluído',
-      '2026-01-14 18:30;Ombros e core;Bird dog;1;;peso corporal;10;sim;;concluído',
+      'data;hora;ficha;exercício;série;carga;unidade;reps;por lado;lado;status do treino',
+      '14/01/2026;18:30;Ombros e core;Desenvolvimento máquina;1;22,5;kg;10;não;;concluído',
+      '14/01/2026;18:30;Ombros e core;Bird dog;1;;peso corporal;10;sim;;concluído',
     ]);
   });
 
@@ -67,6 +67,6 @@ describe('CSV', () => {
     await medidas.registrar({ data: '2026-01-10', pesoKg: 85, cinturaCm: null, observacoes: '' });
     const x = await medidas.registrar({ data: '2026-01-12', pesoKg: 84, cinturaCm: null, observacoes: '' });
     await medidas.excluir(x.id);
-    expect(linhas(await backupRepository.csvMedidas())).toEqual(['data;peso (kg);cintura (cm);observações', '2026-01-10;85;;']);
+    expect(linhas(await backupRepository.csvMedidas())).toEqual(['data;peso (kg);cintura (cm);observações', '10/01/2026;85;;']);
   });
 });

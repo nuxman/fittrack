@@ -110,7 +110,7 @@ export function Backup() {
       <button type="button" className="btn-secondary w-full" disabled={ocupado} onClick={() => input.current?.click()}>
         <Upload size={22} /> Importar backup
       </button>
-      <p className="text-sm text-neutral-400">Planilhas (CSV) para abrir no Excel ou no Google Planilhas. Não servem para restaurar.</p>
+      <p className="text-sm text-neutral-400">Planilhas (CSV) para abrir no Excel ou no Google Planilhas. Não servem para restaurar. No LibreOffice, marque 'Detectar números especiais' ao abrir.</p>
       <div className="grid grid-cols-2 gap-2">
         <button type="button" className="btn-secondary px-2" disabled={ocupado} onClick={() => void exportarCsv('series')}>
           <Sheet size={20} /> Séries (CSV)

@@ -19,11 +19,13 @@ const UNIDADE = (i: Pick<SnapshotItem, 'tipo' | 'unidadeCarga'> | undefined) =>
 const STATUS: Record<WorkoutSession['status'], string> = { concluida: 'concluído', abandonada: 'abandonado', em_andamento: 'em andamento', pausada: 'pausado' };
 const LADO = { esq: 'esquerdo', dir: 'direito' } as const;
 
-/** Data e hora locais (AAAA-MM-DD HH:MM), que as planilhas reconhecem. */
+const p2 = (n: number) => String(n).padStart(2, '0');
+/** dd/mm/aaaa de uma chave de dia (AAAA-MM-DD). */
+const dataBr = (chave: string) => chave.split('-').reverse().join('/');
+/** Data (dd/mm/aaaa) e hora (hh:mm) locais de um instante ISO. */
 const dataHora = (iso: string) => {
   const d = new Date(iso);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  return [`${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()}`, `${p2(d.getHours())}:${p2(d.getMinutes())}`];
 };
 
 /**
@@ -42,17 +44,17 @@ export function csvSeries(sessoes: WorkoutSession[], series: ExerciseSet[], nome
       const s = porId.get(x.sessionId)!;
       const it = item(x);
       return [
-        dataHora(x.concluidaEm), s.planSnapshot.nome, it?.nome ?? nomeAtual(x.exerciseId) ?? '', x.numeroSerie,
+        ...dataHora(x.concluidaEm), s.planSnapshot.nome, it?.nome ?? nomeAtual(x.exerciseId) ?? '', x.numeroSerie,
         x.carga, UNIDADE(it), x.reps, it?.porLado ? 'sim' : 'não', x.lado ? LADO[x.lado] : '', STATUS[s.status],
       ];
     });
-  return montarCsv(['data', 'ficha', 'exercício', 'série', 'carga', 'unidade', 'reps', 'por lado', 'lado', 'status do treino'], linhas);
+  return montarCsv(['data', 'hora', 'ficha', 'exercício', 'série', 'carga', 'unidade', 'reps', 'por lado', 'lado', 'status do treino'], linhas);
 }
 
 /** Uma linha por medição, da mais antiga para a mais recente. */
 export function csvMedidas(medidas: BodyMeasurement[]): string {
   const linhas = [...medidas]
     .sort((a, b) => a.data.localeCompare(b.data) || a.createdAt.localeCompare(b.createdAt))
-    .map((m) => [m.data, m.pesoKg, m.cinturaCm, m.observacoes]);
+    .map((m) => [dataBr(m.data), m.pesoKg, m.cinturaCm, m.observacoes]);
   return montarCsv(['data', 'peso (kg)', 'cintura (cm)', 'observações'], linhas);
 }
