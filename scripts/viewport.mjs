@@ -1,4 +1,4 @@
-// Teste de layout no viewport do S24 Ultra (384×832), num Chrome headless de verdade.
+// Teste de layout no viewport do S24 Ultra (384×832) e, com --iphone, do iPhone 14 (390×844), num Chrome headless de verdade.
 // O jsdom não calcula layout; aqui medimos getBoundingClientRect pelo DevTools Protocol.
 // Uso: npm run build && npm run test:viewport  (inclui o caso com foto)  (sem dependências: Node 22 + Chrome/Edge instalados)
 import { spawn } from 'node:child_process';
@@ -6,8 +6,10 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const LARGURA = 384;
-const ALTURA = 832;
+// --iphone: iPhone 14 (390×844); padrão: S24 Ultra (384×832).
+const IPHONE = process.argv.includes('--iphone');
+const LARGURA = IPHONE ? 390 : 384;
+const ALTURA = IPHONE ? 844 : 832;
 const PORTA_PREVIEW = 4319;
 const PORTA_CDP = 9333;
 
@@ -268,5 +270,5 @@ if (falhas.length) {
   console.error(`\n${falhas.length} verificação(ões) falharam.`);
   process.exit(1);
 }
-console.log('\nLayout OK em 384×832.');
+console.log(`\nLayout OK em ${LARGURA}×${ALTURA}.`);
 process.exit(0);

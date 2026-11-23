@@ -22,9 +22,12 @@ const toBlob = (canvas: HTMLCanvasElement, tipo: string, qualidade: number) =>
  * createImageBitmap aplica a orientação EXIF de fotos da câmera.
  */
 export async function resizeImage(file: Blob): Promise<ImagemRedimensionada> {
-  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => {
-    throw new Error('Não foi possível ler a imagem');
-  });
+  // Safari antigo recusa as opções de createImageBitmap: tenta sem elas (o Safari já aplica a orientação EXIF).
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
+    .catch(() => createImageBitmap(file))
+    .catch(() => {
+      throw new Error('Não foi possível ler a imagem');
+    });
   const { largura, altura } = fitWithin(bitmap.width, bitmap.height);
   const canvas = document.createElement('canvas');
   canvas.width = largura;
@@ -34,7 +37,7 @@ export async function resizeImage(file: Blob): Promise<ImagemRedimensionada> {
   ctx.drawImage(bitmap, 0, 0, largura, altura);
   bitmap.close?.();
 
-  // Navegador sem encoder WebP devolve PNG (ou null); aí usamos JPEG.
+  // Navegador sem encoder WebP (Safari no iPhone) devolve PNG (ou null); aí usamos JPEG.
   let blob = await toBlob(canvas, 'image/webp', 0.8);
   if (!blob || blob.type !== 'image/webp') blob = await toBlob(canvas, 'image/jpeg', 0.8);
   if (!blob) throw new Error('Falha ao converter a imagem');

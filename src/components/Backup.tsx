@@ -10,6 +10,7 @@ import { pagina } from '../modo';
 import { chaveDia } from '../semana';
 import { entregarArquivo, textoUltimoBackup } from '../backup';
 import { AVISO_FOTOS } from './FotosCorporais';
+import { PacoteExercicios } from './PacoteExercicios';
 
 const TOTAIS: [keyof Previa['totais'], string][] = [
   ['fichas', 'fichas'], ['exercicios', 'exercícios'], ['imagens', 'imagens de exercício'], ['treinos', 'treinos'],
@@ -119,6 +120,7 @@ export function Backup() {
           <Sheet size={20} /> Medidas (CSV)
         </button>
       </div>
+      <PacoteExercicios ocupado={ocupado} setOcupado={setOcupado} />
     </section>
   );
 }

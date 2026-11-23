@@ -152,6 +152,9 @@ export function validarBackup(texto: string): BackupValidado {
     throw new BackupInvalidoError('O arquivo não é um backup do FitTrack (JSON inválido).');
   }
   const cab = z.object({ app: z.literal('fittrack'), schemaVersion: z.number().int().min(1), exportadoEm: iso, appVersion: z.string(), tabelas: z.record(z.unknown()) }).safeParse(bruto);
+  if ((bruto as { tipo?: unknown } | null)?.tipo === 'pacote-exercicios') {
+    throw new BackupInvalidoError('Este arquivo é um pacote de exercícios, não um backup completo. Use "Importar pacote de exercícios".');
+  }
   if (!cab.success) throw new BackupInvalidoError('O arquivo não é um backup do FitTrack.');
   const { schemaVersion, tabelas: t } = cab.data;
   if (schemaVersion > SCHEMA_VERSAO) throw new BackupInvalidoError('Este backup é de uma versão mais nova do app. Atualize o app antes de importar.');
@@ -211,7 +214,7 @@ export const backupRepository = {
     tabelas.exerciseImages = await Promise.all(
       (tabelas.exerciseImages as ExerciseImage[]).map(async (i): Promise<ImagemJson> => ({ ...i, blob: await paraBase64(i.blob) })),
     );
-    return JSON.stringify({ app: 'fittrack', schemaVersion: SCHEMA_VERSAO, appVersion: __APP_VERSION__, exportadoEm: agora.toISOString(), tabelas });
+    return JSON.stringify({ app: 'fittrack', tipo: 'backup', schemaVersion: SCHEMA_VERSAO, appVersion: __APP_VERSION__, exportadoEm: agora.toISOString(), tabelas });
   },
 
   /** CSV das séries de treinos encerrados (concluídos e abandonados); excluídos e treinos ativos ficam fora. */
@@ -260,3 +263,6 @@ export const backupRepository = {
     });
   },
 };
+
+// Compartilhados com o pacote de exercícios (pacote.ts).
+export { paraBase64, deBase64, baseSchema, fichaSchema, imagemSchema, registros };

@@ -48,6 +48,19 @@ describe('resizeImage (canvas simulado)', () => {
     expect(r).toMatchObject({ mimeType: 'image/jpeg', largura: 768, altura: 1024 });
   });
 
+  it('Safari (iPhone): recusa as opções do createImageBitmap e não gera WebP; tenta sem opções e usa JPEG', async () => {
+    simular(false, 4032, 3024);
+    const original = (globalThis as unknown as { createImageBitmap: ReturnType<typeof vi.fn> }).createImageBitmap;
+    const semOpcoes = vi.fn(async (_b: Blob, opcoes?: unknown) => {
+      if (opcoes) throw new TypeError('opções não suportadas');
+      return original();
+    });
+    vi.stubGlobal('createImageBitmap', semOpcoes);
+    const r = await resizeImage(new Blob(['x'], { type: 'image/heic' }));
+    expect(semOpcoes).toHaveBeenCalledTimes(2);
+    expect(r).toMatchObject({ mimeType: 'image/jpeg', largura: 1024, altura: 768 });
+  });
+
   it('arquivo ilegível gera erro amigável', async () => {
     vi.stubGlobal('createImageBitmap', vi.fn(async () => { throw new Error('decode'); }));
     await expect(resizeImage(new Blob(['x']))).rejects.toThrow('Não foi possível ler a imagem');

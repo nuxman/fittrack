@@ -8,6 +8,8 @@ import { settingsRepository } from '../db/repositories/settings';
 import { workoutPlansRepository } from '../db/repositories/workoutPlans';
 import { workoutSessionsRepository as sessoes } from '../db/repositories/workoutSessions';
 import { restDaysRepository } from '../db/repositories/restDays';
+import { exportarPacote } from '../db/repositories/pacote';
+import { exercisesRepository } from '../db/repositories/exercises';
 
 const HOJE = new Date(2026, 0, 14, 10);
 let baixados: string[];
@@ -97,6 +99,40 @@ describe('Configurações → Backup', () => {
     expect(dialogo).toHaveTextContent('Exercícios, registro 1 (videoUrl)');
     expect(await restDaysRepository.list()).toHaveLength(1);
     expect(baixados).toEqual([]);
+  });
+});
+
+describe('Configurações → pacote de exercícios', () => {
+  it('exportar baixa o pacote; importar mostra a prévia, pergunta pela ficha em dia ocupado e junta sem apagar', async () => {
+    abrir('/configuracoes');
+    fireEvent.click(await screen.findByRole('button', { name: 'Exportar pacote de exercícios' }));
+    await waitFor(() => expect(baixados).toEqual(['fittrack-exercicios-2026-01-14.json']));
+
+    await exercisesRepository.create({ nome: 'Exercício do pacote', tipo: 'carga', unidadeCarga: 'kg', grupoPrincipal: 'peito', gruposSecundarios: [], porLado: false });
+    const json = JSON.parse(await exportarPacote({ fichas: true }));
+    json.workoutPlans = json.workoutPlans.filter((p: { diaSemana: number }) => p.diaSemana === 1);
+    json.workoutPlans[0].nome = 'Segunda nova';
+    const ficha = (await workoutPlansRepository.list()).find((p) => p.diaSemana === 1)!;
+    await exercisesRepository.remove((await exercisesRepository.list()).find((e) => e.nome === 'Exercício do pacote')!.id);
+
+    fireEvent.change(screen.getByLabelText('Arquivo do pacote de exercícios'), { target: { files: [arquivo(JSON.stringify(json))] } });
+    const previa = await screen.findByTestId('previa-pacote');
+    expect(previa).toHaveTextContent('0 exercícios novos');
+    expect(previa).toHaveTextContent('1 exercício excluído será restaurado');
+    expect(previa).toHaveTextContent('1 ficha (1 em dia já ocupado)');
+    fireEvent.click(screen.getByRole('button', { name: 'Importar' }));
+    const conflito = await screen.findByRole('dialog', { name: `Segunda (Academia) já tem a ficha "${ficha.nome}"` });
+    fireEvent.click(within(conflito).getByRole('button', { name: 'Pular esta ficha' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Pacote importado.');
+    expect((await workoutPlansRepository.list()).find((p) => p.diaSemana === 1)!.nome).toBe(ficha.nome);
+    expect((await exercisesRepository.list()).some((e) => e.nome === 'Exercício do pacote')).toBe(true);
+  });
+
+  it('backup completo no campo do pacote: recusa com mensagem clara', async () => {
+    const json = await backupRepository.exportar();
+    abrir('/configuracoes');
+    fireEvent.change(await screen.findByLabelText('Arquivo do pacote de exercícios'), { target: { files: [arquivo(json)] } });
+    expect(await screen.findByRole('dialog', { name: 'Pacote não importado' })).toHaveTextContent('Use "Importar backup"');
   });
 });
 
