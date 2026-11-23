@@ -3,10 +3,12 @@ import type {
   BodyMeasurement, BodyPhoto, CardioSession, Equipment, Exercise, ExerciseImage,
   ExerciseSet, RestDay, UserSettings, WorkoutPlan, WorkoutSession,
 } from './types';
-import { buildSeed, LINKS_DO_SEED } from './seed';
-import { normalizeNome } from './normalize';
+import { buildSeed, completarLinkDoSeed } from './seed';
 import { gerarDemo } from './demo';
 import { BANCO_DEMO, BANCO_REAL, nomeDoBanco } from '../modo';
+
+/** Versão atual do schema Dexie (vai no backup como schemaVersion). Subir junto com cada this.version(n). */
+export const SCHEMA_VERSAO = 2;
 
 export class FitTrackDB extends Dexie {
   equipment!: Table<Equipment, string>;
@@ -39,12 +41,7 @@ export class FitTrackDB extends Dexie {
     });
     // v2: links de busca no YouTube para os exercícios da ficha inicial que ainda não têm link.
     // Banco novo não passa por aqui (o populate já cria com link).
-    this.version(2).stores({}).upgrade((tx) =>
-      tx.table<Exercise, string>('exercises').toCollection().modify((e) => {
-        const link = LINKS_DO_SEED.get(normalizeNome(e.nome));
-        if (link && !e.videoUrl) e.videoUrl = link;
-      }),
-    );
+    this.version(2).stores({}).upgrade((tx) => tx.table<Exercise, string>('exercises').toCollection().modify(completarLinkDoSeed));
     // Roda só na criação do banco, dentro da transação de upgrade: atômico,
     // aberturas concorrentes (outras abas/instâncias) não duplicam a ficha.
     this.on('populate', async (tx) => {

@@ -64,6 +64,12 @@ export const linkDeBusca = (nome: string) =>
 /** Nome normalizado → link, para todos os exercícios da ficha inicial. */
 export const LINKS_DO_SEED = new Map(FICHA.flatMap((d) => d.itens.map(([ex]) => [normalizeNome(ex.nome), linkDeBusca(ex.nome)] as const)));
 
+/** Upgrade da v2 (banco e backup antigos): exercício do seed sem link recebe o link de busca; link cadastrado nunca é sobrescrito. */
+export function completarLinkDoSeed(e: Pick<Exercise, 'nome' | 'videoUrl'>) {
+  const link = LINKS_DO_SEED.get(normalizeNome(e.nome));
+  if (link && !e.videoUrl) e.videoUrl = link;
+}
+
 /** Monta os registros da ficha inicial; nomes iguais (normalizados) viram um único Exercise. */
 export function buildSeed() {
   const exercicios = new Map<string, Exercise>();

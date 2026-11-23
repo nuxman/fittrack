@@ -5,6 +5,7 @@ import { useAsync } from '../useAsync';
 import { isPersisted } from '../storage';
 import { AlertasDescanso } from '../components/AlertasDescanso';
 import { MetaPeso } from '../components/MetaPeso';
+import { Backup } from '../components/Backup';
 import { useDialog } from '../components/ConfirmDialog';
 import { sairDemo } from '../modo';
 import { demoRepository } from '../db/repositories/demo';
@@ -39,6 +40,7 @@ export function Configuracoes() {
                 : 'Não persistente: o navegador pode apagar os dados se faltar espaço.'}
         </p>
       </section>
+      <Backup />
       <MetaPeso />
       <AlertasDescanso />
       <section className="card space-y-3" aria-label="Modo demonstração">

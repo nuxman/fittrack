@@ -14,6 +14,7 @@ import type { LocalTreino, WorkoutPlan, WorkoutSession } from '../db/types';
 import { DIAS } from '../dias';
 import { chaveDia, concluidasNaSemana, contadorSemana, diasDaSemana, sugestao } from '../semana';
 import { formatarDuracao, volumeKg } from '../sessao';
+import { lembrarBackup } from '../backup';
 import { direcaoMeta, resumoPeso, textoMeta, textoVariacao } from '../medidas';
 
 const LETRAS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
@@ -43,6 +44,11 @@ export function Inicio() {
           <ResumoSemana painel={painel} agora={agora} />
           <BlocoPeso painel={painel} />
           <UltimoTreino painel={painel} />
+          {lembrarBackup(painel.settings.ultimoBackupEm, painel.sessoes.some((s) => s.status === 'concluida'), agora) && (
+            <Link to="/configuracoes#backup" className="block text-center text-sm text-primary-400 underline" data-testid="lembrete-backup">
+              Faça um backup dos seus dados
+            </Link>
+          )}
         </>
       )}
     </Page>

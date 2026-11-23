@@ -196,6 +196,8 @@ export interface UserSettings extends BaseRecord {
   /** Opcional (0.13.1): direção da meta, gravada ao salvar. Meta antiga sem direção: ver direcaoMeta em medidas.ts. */
   metaDirecao?: DirecaoMeta;
   cardioPadrao: CardioPadrao;
+  /** Opcional (0.16.0): quando o último backup foi exportado (ISO). Não é restaurado pela importação. */
+  ultimoBackupEm?: string;
   /**
    * Opcionais, lidos com valor padrão (sem migração): avisoNotificacoesVisto ?? false;
    * somDescanso ?? true, avisoAntecipadoSeg ?? 10, contagem321 ?? true, volumeAlerta ?? 'alto' (ver opcoesSom).

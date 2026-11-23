@@ -5,7 +5,7 @@ import { createRepository } from './base';
 
 const base = createRepository<Equipment>(db.equipment);
 
-const schema = z.object({
+export const equipmentSchema = z.object({
   nome: z.string().trim().min(1, 'Informe o nome do aparelho').transform((s) => s.replace(/\s+/g, ' ')),
   observacoes: z.string().trim(),
 });
@@ -23,11 +23,11 @@ export const equipmentRepository = {
   get: base.get,
   list: async () => (await base.list()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
   exerciciosQueUsam,
-  create: (dados: Pick<Equipment, 'nome' | 'observacoes'>) => base.create(schema.parse(dados)),
+  create: (dados: Pick<Equipment, 'nome' | 'observacoes'>) => base.create(equipmentSchema.parse(dados)),
   async update(id: string, dados: Partial<Pick<Equipment, 'nome' | 'observacoes'>>): Promise<Equipment> {
     const atual = await base.get(id);
     if (!atual) throw new Error('Aparelho não encontrado');
-    return base.update(id, schema.parse({ ...atual, ...dados }));
+    return base.update(id, equipmentSchema.parse({ ...atual, ...dados }));
   },
   /** Bloqueado enquanto algum exercício usar o aparelho. */
   remove(id: string): Promise<void> {

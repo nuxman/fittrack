@@ -14,7 +14,7 @@ const opcional = (min: number, max: number, rotulo: string) =>
   z.number().min(min, `${rotulo}: de ${min} a ${max}`).max(max, `${rotulo}: de ${min} a ${max}`).nullable();
 
 /** Validação de tudo que é gravado num cardio (avulso ou correção do ligado ao treino). */
-const cardioSchema = z.object({
+export const cardioSchema = z.object({
   modalidade: z.enum(MODALIDADES_CARDIO),
   duracaoMin: z.number().int('Duração (min): de 1 a 300').min(1, 'Duração (min): de 1 a 300').max(300, 'Duração (min): de 1 a 300'),
   velocidadeKmh: opcional(0, 30, 'Velocidade (km/h)'),

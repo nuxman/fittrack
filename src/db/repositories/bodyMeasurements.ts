@@ -24,7 +24,7 @@ export type DadosMedida = Pick<BodyMeasurement, 'data' | 'pesoKg' | 'cinturaCm' 
 const faixa = ([min, max]: readonly [number, number], rotulo: string) =>
   z.number().min(min, `${rotulo}: de ${min} a ${max}`).max(max, `${rotulo}: de ${min} a ${max}`).nullable();
 
-const medidaSchema = z
+export const medidaSchema = z
   .object({
     data: z
       .string()
