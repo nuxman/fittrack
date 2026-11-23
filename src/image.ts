@@ -17,18 +17,18 @@ const toBlob = (canvas: HTMLCanvasElement, tipo: string, qualidade: number) =>
   new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, tipo, qualidade));
 
 /**
- * Redimensiona no canvas para no máximo 1024 px no maior lado e reencoda em WebP 0.8
+ * Redimensiona no canvas para no máximo `max` px (1024; foto do perfil: 512) no maior lado e reencoda em WebP 0.8
  * (JPEG 0.8 se o navegador não gerar WebP). O arquivo original nunca é devolvido.
  * createImageBitmap aplica a orientação EXIF de fotos da câmera.
  */
-export async function resizeImage(file: Blob): Promise<ImagemRedimensionada> {
+export async function resizeImage(file: Blob, max = MAX_LADO): Promise<ImagemRedimensionada> {
   // Safari antigo recusa as opções de createImageBitmap: tenta sem elas (o Safari já aplica a orientação EXIF).
   const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
     .catch(() => createImageBitmap(file))
     .catch(() => {
       throw new Error('Não foi possível ler a imagem');
     });
-  const { largura, altura } = fitWithin(bitmap.width, bitmap.height);
+  const { largura, altura } = fitWithin(bitmap.width, bitmap.height, max);
   const canvas = document.createElement('canvas');
   canvas.width = largura;
   canvas.height = altura;

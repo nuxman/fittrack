@@ -1,6 +1,6 @@
 /** Dados fictícios do banco de demonstração: cerca de 4 semanas de treinos concluídos, cargas subindo aos poucos, cardio pós-treino e avulso. */
 import type {
-  BaseRecord, BodyMeasurement, CardioSession, Equipment, Exercise, ExerciseSet, GrupoMuscular, SnapshotItem, WorkoutPlan, WorkoutSession,
+  BaseRecord, BodyMeasurement, CardioSession, Equipment, Exercise, Profile, ExerciseSet, GrupoMuscular, SnapshotItem, WorkoutPlan, WorkoutSession,
 } from './types';
 
 /** Carga inicial (kg) por grupo principal; sobe 2,5 kg por semana (5 kg nos de perna). */
@@ -112,5 +112,7 @@ export function gerarDemo(exercises: Exercise[], planos: WorkoutPlan[], agora = 
     for (const e of exercises) if (exercicios.includes(e.nome)) ligacoes.push([e.id, a.id]);
     return a;
   });
-  return { sessions, sets, cardio, medidas, aparelhos, ligacoes };
+  // Perfil fictício, sem foto.
+  const perfil = registro<Profile>({ nome: 'Alex', nascimento: '1988-05-20', alturaCm: 178, objetivo: 'Ganhar força e manter o peso.' }, criadoEm);
+  return { sessions, sets, cardio, medidas, aparelhos, ligacoes, perfil };
 }

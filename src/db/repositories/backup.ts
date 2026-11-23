@@ -3,7 +3,7 @@ import { db, SCHEMA_VERSAO } from '../db';
 import {
   GRUPOS_MUSCULARES, LOCAIS_TREINO, MODALIDADES_CARDIO, TIPOS_EXERCICIO, UNIDADES_CARGA,
   type BaseRecord, type BodyMeasurement, type CardioSession, type Equipment, type Exercise, type ExerciseImage,
-  type ExerciseSet, type RestDay, type UserSettings, type WorkoutPlan, type WorkoutSession,
+  type ExerciseSet, type Profile, type RestDay, type UserSettings, type WorkoutPlan, type WorkoutSession,
 } from '../types';
 import { exerciseSchema } from './exercises';
 import { equipmentSchema } from './equipment';
@@ -13,6 +13,7 @@ import { validarFicha } from './workoutPlans';
 import { completarLinkDoSeed } from '../seed';
 import { settingsRepository } from './settings';
 import { csvMedidas, csvSeries } from '../../csv';
+import { MAX_FOTO_PERFIL, perfilSchema } from './profile';
 
 /**
  * Backup JSON (Etapa 6a): todas as tabelas, inclusive registros excluídos (soft delete); imagens de exercício
@@ -20,6 +21,7 @@ import { csvMedidas, csvSeries } from '../../csv';
  */
 
 type ImagemJson = Omit<ExerciseImage, 'blob'> & { blob: string };
+type PerfilJson = Omit<Profile, 'foto'> & { foto?: Omit<NonNullable<Profile['foto']>, 'blob'> & { blob: string } };
 
 export interface Tabelas {
   equipment: Equipment[];
@@ -32,6 +34,7 @@ export interface Tabelas {
   bodyMeasurements: BodyMeasurement[];
   restDays: RestDay[];
   settings: UserSettings[];
+  profile: Profile[];
 }
 
 export interface BackupValidado {
@@ -124,7 +127,7 @@ const settingsSchema = z.object({
 
 const NOME_TABELA: Record<keyof Tabelas, string> = {
   equipment: 'Aparelhos', exercises: 'Exercícios', exerciseImages: 'Imagens', workoutPlans: 'Fichas', workoutSessions: 'Treinos',
-  exerciseSets: 'Séries', cardioSessions: 'Cardio', bodyMeasurements: 'Medidas', restDays: 'Descansos', settings: 'Configurações',
+  exerciseSets: 'Séries', cardioSessions: 'Cardio', bodyMeasurements: 'Medidas', restDays: 'Descansos', settings: 'Configurações', profile: 'Perfil',
 };
 
 /**
@@ -177,6 +180,24 @@ export function validarBackup(texto: string): BackupValidado {
     if (e instanceof BackupInvalidoError) throw e;
     throw new BackupInvalidoError('Imagens: conteúdo inválido');
   }
+  // Perfil (v3): backup anterior não tem a tabela.
+  let profile: Profile[] = [];
+  if (schemaVersion >= 3 || t.profile !== undefined) {
+    const fotoPerfil = z.object({
+      blob: z.string().regex(/^[A-Za-z0-9+/]*={0,2}$/, 'imagem inválida'),
+      mimeType: z.enum(['image/webp', 'image/jpeg']),
+      largura: inteiro(1, MAX_FOTO_PERFIL),
+      altura: inteiro(1, MAX_FOTO_PERFIL),
+    });
+    profile = registros<PerfilJson>('profile', t.profile, perfilSchema, z.object({ foto: fotoPerfil.optional() })).map((p) => {
+      if (!p.foto) return p as Profile;
+      try {
+        return { ...p, foto: { ...p.foto, blob: deBase64(p.foto.blob, p.foto.mimeType) } };
+      } catch {
+        throw new BackupInvalidoError('Perfil: foto inválida');
+      }
+    });
+  }
   return {
     schemaVersion,
     exportadoEm: cab.data.exportadoEm,
@@ -192,6 +213,7 @@ export function validarBackup(texto: string): BackupValidado {
       bodyMeasurements: registros('bodyMeasurements', t.bodyMeasurements, medidaSchema),
       restDays: registros('restDays', t.restDays, z.object({ data: dia, observacoes: z.string() })),
       settings,
+      profile,
     },
   };
 }
@@ -213,6 +235,9 @@ export const backupRepository = {
     );
     tabelas.exerciseImages = await Promise.all(
       (tabelas.exerciseImages as ExerciseImage[]).map(async (i): Promise<ImagemJson> => ({ ...i, blob: await paraBase64(i.blob) })),
+    );
+    tabelas.profile = await Promise.all(
+      (tabelas.profile as Profile[]).map(async (p): Promise<PerfilJson> => (p.foto ? { ...p, foto: { ...p.foto, blob: await paraBase64(p.foto.blob) } } : (p as PerfilJson))),
     );
     return JSON.stringify({ app: 'fittrack', tipo: 'backup', schemaVersion: SCHEMA_VERSAO, appVersion: __APP_VERSION__, exportadoEm: agora.toISOString(), tabelas });
   },

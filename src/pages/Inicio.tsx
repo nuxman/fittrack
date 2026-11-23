@@ -15,6 +15,7 @@ import { DIAS } from '../dias';
 import { chaveDia, concluidasNaSemana, contadorSemana, diasDaSemana, sugestao } from '../semana';
 import { formatarDuracao, volumeKg } from '../sessao';
 import { lembrarBackup } from '../backup';
+import { FotoExercicio } from '../components/FotoExercicio';
 import { direcaoMeta, resumoPeso, textoMeta, textoVariacao } from '../medidas';
 
 const LETRAS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
@@ -31,9 +32,12 @@ export function Inicio() {
   return (
     <Page title="Início">
       <SeletorLocal valor={local} onMudar={(l) => void setLocal(l)} />
-      <p className="text-lg text-neutral-300">
-        {saudacao(agora.getHours())}! {agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-      </p>
+      <Link to="/perfil" className="flex min-h-12 items-center gap-3" aria-label="Meu perfil" data-testid="saudacao">
+        {painel?.perfil?.foto && <FotoExercicio blob={painel.perfil.foto.blob} className="h-11 w-11 shrink-0 !rounded-full" cobrir alt="Foto do perfil" />}
+        <p className="text-lg text-neutral-300">
+          {saudacao(agora.getHours())}{painel?.perfil?.nome ? `, ${painel.perfil.nome}` : ''}! {agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </p>
+      </Link>
       {!painel ? (
         <p>Carregando…</p>
       ) : (

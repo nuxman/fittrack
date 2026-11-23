@@ -4,13 +4,13 @@ import type { GrupoMuscular } from '../db/types';
 import { FotoExercicio } from './FotoExercicio';
 
 /** Foto (do exercício ou corporal); toque amplia em tela cheia. Sem foto, não renderiza nada. `rotulo`: nome acessível do botão. */
-export function FotoAmpliavel({ blob, grupo, className, alt, rotulo = 'Ampliar foto' }: { blob?: Blob; grupo?: GrupoMuscular; className: string; alt?: string; rotulo?: string }) {
+export function FotoAmpliavel({ blob, grupo, className, alt, rotulo = 'Ampliar foto', cobrir }: { blob?: Blob; grupo?: GrupoMuscular; className: string; alt?: string; rotulo?: string; cobrir?: boolean }) {
   const [ampliada, setAmpliada] = useState(false);
   if (!blob) return null;
   return (
     <>
       <button type="button" className="shrink-0" aria-label={rotulo} onClick={() => setAmpliada(true)}>
-        <FotoExercicio blob={blob} grupo={grupo} className={className} alt={alt} />
+        <FotoExercicio blob={blob} grupo={grupo} className={className} alt={alt} cobrir={cobrir} />
       </button>
       {ampliada && <TelaCheia blob={blob} grupo={grupo} alt={alt} onFechar={() => setAmpliada(false)} />}
     </>

@@ -167,7 +167,7 @@ describe('migração v2: links de busca no YouTube', () => {
 
     const novo = new FitTrackDB(nome);
     await novo.open();
-    expect(novo.verno).toBe(2);
+    expect(novo.verno).toBe(3);
     const porNome = new Map((await novo.exercises.toArray()).map((e) => [e.nome, e]));
     expect(porNome.get('Leg press')!.videoUrl).toBe(linkDeBusca('Leg press'));
     expect(porNome.get('Rosca martelo')!.videoUrl).toBe('https://exemplo.com/rosca');
@@ -175,6 +175,31 @@ describe('migração v2: links de busca no YouTube', () => {
     expect([...porNome.values()].filter((e) => e.videoUrl === undefined)).toHaveLength(1);
     // Migração não dispara o populate: nenhuma ficha criada.
     expect(await novo.workoutPlans.count()).toBe(0);
+    novo.close();
+    await Dexie.delete(nome);
+  });
+});
+
+describe('migração v3: tabela do perfil', () => {
+  it('banco v2 abre na v3 com a tabela do perfil vazia e os dados intactos', async () => {
+    const nome = `fittrack-v2-${crypto.randomUUID()}`;
+    const antigo = new Dexie(nome);
+    antigo.version(2).stores({
+      equipment: 'id, nome', exercises: 'id, nome, grupoPrincipal, equipmentId', exerciseImages: 'id, exerciseId',
+      workoutPlans: 'id, diaSemana', workoutSessions: 'id, planId, status, iniciadaEm', exerciseSets: 'id, sessionId, exerciseId, concluidaEm',
+      cardioSessions: 'id, data', bodyMeasurements: 'id, data', bodyPhotos: 'id, measurementId', restDays: 'id, data', settings: 'id',
+    });
+    const seed = buildSeed();
+    await antigo.table('exercises').bulkAdd(seed.exercises);
+    await antigo.table('settings').add(seed.settings);
+    antigo.close();
+
+    const novo = new FitTrackDB(nome);
+    await novo.open();
+    expect(novo.verno).toBe(3);
+    expect(await novo.profile.count()).toBe(0);
+    expect(await novo.exercises.count()).toBe(seed.exercises.length);
+    expect((await novo.settings.toArray())[0]).toEqual(seed.settings);
     novo.close();
     await Dexie.delete(nome);
   });

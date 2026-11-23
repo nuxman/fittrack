@@ -61,6 +61,11 @@ describe('resizeImage (canvas simulado)', () => {
     expect(r).toMatchObject({ mimeType: 'image/jpeg', largura: 1024, altura: 768 });
   });
 
+  it('limite menor (foto do perfil, 512 px)', async () => {
+    simular(true, 4000, 3000);
+    expect(await resizeImage(new Blob(['x']), 512)).toMatchObject({ largura: 512, altura: 384 });
+  });
+
   it('arquivo ilegível gera erro amigável', async () => {
     vi.stubGlobal('createImageBitmap', vi.fn(async () => { throw new Error('decode'); }));
     await expect(resizeImage(new Blob(['x']))).rejects.toThrow('Não foi possível ler a imagem');

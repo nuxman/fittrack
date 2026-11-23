@@ -22,6 +22,9 @@ export function Configuracoes() {
 
   return (
     <Page title="Configurações">
+      <Link to="/perfil" className="card flex min-h-16 items-center justify-between text-lg font-semibold">
+        Meu perfil <ChevronRight className="text-neutral-500" />
+      </Link>
       <Link to="/exercicios" className="card flex min-h-16 items-center justify-between text-lg font-semibold">
         Exercícios <ChevronRight className="text-neutral-500" />
       </Link>

@@ -12,17 +12,19 @@ import { bodyMeasurementsRepository as medidas } from './repositories/bodyMeasur
 import { bodyPhotosRepository as fotos } from './repositories/bodyPhotos';
 import { restDaysRepository } from './repositories/restDays';
 import { settingsRepository } from './repositories/settings';
+import { profileRepository } from './repositories/profile';
 import { diasSemBackup, lembrarBackup, textoUltimoBackup } from '../backup';
 
 const HOJE = new Date(2026, 0, 14, 10);
-const TABELAS = ['equipment', 'exercises', 'exerciseImages', 'workoutPlans', 'workoutSessions', 'exerciseSets', 'cardioSessions', 'bodyMeasurements', 'restDays', 'settings'] as const;
+const TABELAS = ['equipment', 'exercises', 'exerciseImages', 'workoutPlans', 'workoutSessions', 'exerciseSets', 'cardioSessions', 'bodyMeasurements', 'restDays', 'settings', 'profile'] as const;
 
 /** Conteúdo de todas as tabelas, com os blobs das imagens como bytes (comparável com toEqual). */
 async function fotografar() {
   const r: Record<string, unknown[]> = {};
   for (const t of TABELAS) {
     const l = await db.table(t).toArray();
-    r[t] = await Promise.all(l.map(async (x) => (x.blob ? { ...x, blob: [...new Uint8Array(await (x.blob as Blob).arrayBuffer())], tipo: (x.blob as Blob).type } : x)));
+    const bytes = async (b: Blob) => ({ bytes: [...new Uint8Array(await b.arrayBuffer())], tipo: b.type });
+    r[t] = await Promise.all(l.map(async (x) => (x.blob ? { ...x, blob: await bytes(x.blob) } : x.foto ? { ...x, foto: { ...x.foto, blob: await bytes(x.foto.blob) } } : x)));
     r[t]!.sort((a, b) => String((a as { id: string }).id).localeCompare((b as { id: string }).id));
   }
   return r;
@@ -45,6 +47,7 @@ async function popular() {
   const extra = await exercisesRepository.create({ nome: 'Exercício excluído', tipo: 'carga', unidadeCarga: 'kg', grupoPrincipal: 'peito', gruposSecundarios: [], porLado: false });
   await exercisesRepository.remove(extra.id);
   await settingsRepository.update({ metaPesoKg: 80, metaDirecao: 'perder' });
+  await profileRepository.salvar({ nome: 'Rô', alturaCm: 180, objetivo: 'força' }, { blob: new Blob([new Uint8Array([7, 7, 7])], { type: 'image/jpeg' }), mimeType: 'image/jpeg', largura: 512, altura: 384 });
   return { m };
 }
 

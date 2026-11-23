@@ -177,6 +177,21 @@ export interface BodyPhoto extends BaseRecord {
   blob: Blob;
 }
 
+export const SEXOS = ['feminino', 'masculino', 'outro'] as const;
+export type Sexo = (typeof SEXOS)[number];
+
+/** Perfil (0.19.0): um por aparelho, todos os campos opcionais. Sem IMC nem cálculo de saúde. */
+export interface Profile extends BaseRecord {
+  nome?: string;
+  /** AAAA-MM-DD. */
+  nascimento?: string;
+  alturaCm?: number;
+  sexo?: Sexo;
+  objetivo?: string;
+  /** Foto redimensionada (no máximo 512 px), WebP ou JPEG. Removida: campo ausente. */
+  foto?: { blob: Blob; mimeType: string; largura: number; altura: number };
+}
+
 export interface RestDay extends BaseRecord {
   data: string;
   observacoes: string;

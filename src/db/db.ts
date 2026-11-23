@@ -1,14 +1,14 @@
 import Dexie, { type Table } from 'dexie';
 import type {
   BodyMeasurement, BodyPhoto, CardioSession, Equipment, Exercise, ExerciseImage,
-  ExerciseSet, RestDay, UserSettings, WorkoutPlan, WorkoutSession,
+  ExerciseSet, Profile, RestDay, UserSettings, WorkoutPlan, WorkoutSession,
 } from './types';
 import { buildSeed, completarLinkDoSeed } from './seed';
 import { gerarDemo } from './demo';
 import { BANCO_DEMO, BANCO_REAL, nomeDoBanco } from '../modo';
 
 /** Versão atual do schema Dexie (vai no backup como schemaVersion). Subir junto com cada this.version(n). */
-export const SCHEMA_VERSAO = 2;
+export const SCHEMA_VERSAO = 3;
 
 export class FitTrackDB extends Dexie {
   equipment!: Table<Equipment, string>;
@@ -22,6 +22,7 @@ export class FitTrackDB extends Dexie {
   bodyPhotos!: Table<BodyPhoto, string>;
   restDays!: Table<RestDay, string>;
   settings!: Table<UserSettings, string>;
+  profile!: Table<Profile, string>;
 
   constructor(name = BANCO_REAL) {
     super(name);
@@ -42,6 +43,8 @@ export class FitTrackDB extends Dexie {
     // v2: links de busca no YouTube para os exercícios da ficha inicial que ainda não têm link.
     // Banco novo não passa por aqui (o populate já cria com link).
     this.version(2).stores({}).upgrade((tx) => tx.table<Exercise, string>('exercises').toCollection().modify(completarLinkDoSeed));
+    // v3 (0.19.0): tabela do perfil (um registro, criado ao salvar o perfil pela primeira vez; nada a preencher).
+    this.version(3).stores({ profile: 'id' });
     // Roda só na criação do banco, dentro da transação de upgrade: atômico,
     // aberturas concorrentes (outras abas/instâncias) não duplicam a ficha.
     this.on('populate', async (tx) => {
@@ -57,6 +60,7 @@ export class FitTrackDB extends Dexie {
         await tx.table('cardioSessions').bulkAdd(demo.cardio);
         await tx.table('bodyMeasurements').bulkAdd(demo.medidas);
         await tx.table('equipment').bulkAdd(demo.aparelhos);
+        await tx.table('profile').add(demo.perfil);
         for (const [exerciseId, equipmentId] of demo.ligacoes) await tx.table('exercises').update(exerciseId, { equipmentId });
         // Meta de peso de exemplo (Configurações), para o bloco de peso do Início mostrar "faltam X kg".
         await tx.table('settings').update(seed.settings.id, { metaPesoKg: 80, metaDirecao: 'perder' });

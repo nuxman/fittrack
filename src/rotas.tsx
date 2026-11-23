@@ -24,6 +24,7 @@ import { Medidas } from './pages/medidas/Medidas';
 import { MedidaEditor } from './pages/medidas/MedidaEditor';
 import { CompararFotos } from './pages/medidas/CompararFotos';
 import { AparelhoEditor, Aparelhos } from './pages/Aparelhos';
+import { Perfil } from './pages/Perfil';
 
 // Evolução e Recharts sob demanda: não pesam a abertura do app.
 const Evolucao = lazy(() => import('./pages/evolucao/Evolucao'));
@@ -81,6 +82,7 @@ export const ROTAS: RouteObject[] = [
       { path: '/medidas/:id', element: <MedidaEditor /> },
       { path: '/aparelhos', element: <Aparelhos /> },
       { path: '/aparelhos/:id', element: <AparelhoEditor /> },
+      { path: '/perfil', element: <Perfil /> },
       { path: '/configuracoes', element: <Configuracoes /> },
     ],
   },

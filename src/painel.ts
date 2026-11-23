@@ -7,11 +7,12 @@ import { cardioSessionsRepository } from './db/repositories/cardioSessions';
 import { restDaysRepository } from './db/repositories/restDays';
 import { bodyMeasurementsRepository } from './db/repositories/bodyMeasurements';
 import { settingsRepository } from './db/repositories/settings';
+import { profileRepository } from './db/repositories/profile';
 import { SEMANA } from './dias';
 
 /** Dados do Início e da aba Treinar, numa leitura só. */
 export async function carregarPainel() {
-  const [planos, sessoes, exercicios, imagens, cardio, descansos, settings, ativa, seriesPorSessao, medidas] = await Promise.all([
+  const [planos, sessoes, exercicios, imagens, cardio, descansos, settings, ativa, seriesPorSessao, medidas, perfil] = await Promise.all([
     workoutPlansRepository.list(),
     workoutSessionsRepository.list(),
     exercisesRepository.list(),
@@ -22,6 +23,7 @@ export async function carregarPainel() {
     workoutSessionsRepository.ativa(),
     exerciseSetsRepository.contagemPorSessao(),
     bodyMeasurementsRepository.list(),
+    profileRepository.get(),
   ]);
   const ultima = sessoes.filter((s) => s.status === 'concluida').sort((a, b) => b.iniciadaEm.localeCompare(a.iniciadaEm))[0];
   return {
@@ -34,6 +36,7 @@ export async function carregarPainel() {
     descansos,
     medidas,
     settings,
+    perfil,
     ativa,
     ultima: ultima && { sessao: ultima, sets: await exerciseSetsRepository.listarDaSessao(ultima.id) },
   };
