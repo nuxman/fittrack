@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Download, Upload } from 'lucide-react';
+import { Download, Sheet, Upload } from 'lucide-react';
 import { useDialog } from './ConfirmDialog';
 import { useAsync } from '../useAsync';
 import { settingsRepository } from '../db/repositories/settings';
@@ -38,6 +38,16 @@ export function Backup() {
         await backupRepository.marcarExportado(agora);
         recarregar();
       }
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  const exportarCsv = async (qual: 'series' | 'medidas') => {
+    setOcupado(true);
+    try {
+      const conteudo = qual === 'series' ? await backupRepository.csvSeries() : await backupRepository.csvMedidas();
+      await entregarArquivo(`fittrack-${qual}-${chaveDia(new Date())}.csv`, conteudo, true, 'text/csv');
     } finally {
       setOcupado(false);
     }
@@ -100,6 +110,15 @@ export function Backup() {
       <button type="button" className="btn-secondary w-full" disabled={ocupado} onClick={() => input.current?.click()}>
         <Upload size={22} /> Importar backup
       </button>
+      <p className="text-sm text-neutral-400">Planilhas (CSV) para abrir no Excel ou no Google Planilhas. Não servem para restaurar.</p>
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" className="btn-secondary px-2" disabled={ocupado} onClick={() => void exportarCsv('series')}>
+          <Sheet size={20} /> Séries (CSV)
+        </button>
+        <button type="button" className="btn-secondary px-2" disabled={ocupado} onClick={() => void exportarCsv('medidas')}>
+          <Sheet size={20} /> Medidas (CSV)
+        </button>
+      </div>
     </section>
   );
 }

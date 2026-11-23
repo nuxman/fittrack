@@ -19,8 +19,8 @@ export const lembrarBackup = (ultimoBackupEm: string | undefined, temTreino: boo
 };
 
 /** Compartilha o arquivo (Drive, WhatsApp, e-mail) quando o navegador aceita; senão, baixa. Cancelar o compartilhamento devolve false. */
-export async function entregarArquivo(nome: string, conteudo: string, compartilhar = true): Promise<boolean> {
-  const arquivo = new File([conteudo], nome, { type: 'application/json' });
+export async function entregarArquivo(nome: string, conteudo: string, compartilhar = true, tipo = 'application/json'): Promise<boolean> {
+  const arquivo = new File([conteudo], nome, { type: tipo });
   if (compartilhar && navigator.canShare?.({ files: [arquivo] })) {
     try {
       await navigator.share({ files: [arquivo], title: nome });

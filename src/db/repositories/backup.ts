@@ -12,6 +12,7 @@ import { medidaSchema } from './bodyMeasurements';
 import { validarFicha } from './workoutPlans';
 import { completarLinkDoSeed } from '../seed';
 import { settingsRepository } from './settings';
+import { csvMedidas, csvSeries } from '../../csv';
 
 /**
  * Backup JSON (Etapa 6a): todas as tabelas, inclusive registros excluídos (soft delete); imagens de exercício
@@ -212,6 +213,19 @@ export const backupRepository = {
     );
     return JSON.stringify({ app: 'fittrack', schemaVersion: SCHEMA_VERSAO, appVersion: __APP_VERSION__, exportadoEm: agora.toISOString(), tabelas });
   },
+
+  /** CSV das séries de treinos encerrados (concluídos e abandonados); excluídos e treinos ativos ficam fora. */
+  async csvSeries(): Promise<string> {
+    const [sessoes, series, exercicios] = await Promise.all([
+      db.workoutSessions.filter((s) => s.deletedAt === null && (s.status === 'concluida' || s.status === 'abandonada')).toArray(),
+      db.exerciseSets.filter((x) => x.deletedAt === null).toArray(),
+      db.exercises.toArray(),
+    ]);
+    const nomes = new Map(exercicios.map((e) => [e.id, e.nome]));
+    return csvSeries(sessoes, series, (id) => nomes.get(id));
+  },
+
+  csvMedidas: async () => csvMedidas(await db.bodyMeasurements.filter((m) => m.deletedAt === null).toArray()),
 
   /** Exportado com sucesso: lembrete do último backup (Configurações e Início). */
   marcarExportado: (agora = new Date()) => settingsRepository.update({ ultimoBackupEm: agora.toISOString() }).then(() => undefined),

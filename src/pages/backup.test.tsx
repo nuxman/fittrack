@@ -76,6 +76,16 @@ describe('Configurações → Backup', () => {
     expect(await restDaysRepository.list()).toHaveLength(0);
   });
 
+  it('CSV de séries e de medidas: baixa os arquivos sem mexer na data do último backup', async () => {
+    abrir('/configuracoes');
+    fireEvent.click(await screen.findByRole('button', { name: 'Séries (CSV)' }));
+    await waitFor(() => expect(baixados).toEqual(['fittrack-series-2026-01-14.csv']));
+    fireEvent.click(screen.getByRole('button', { name: 'Medidas (CSV)' }));
+    await waitFor(() => expect(baixados).toHaveLength(2));
+    expect(baixados[1]).toBe('fittrack-medidas-2026-01-14.csv');
+    expect((await settingsRepository.get()).ultimoBackupEm).toBeUndefined();
+  });
+
   it('importar arquivo inválido: avisa e não altera nada', async () => {
     const b = JSON.parse(await backupRepository.exportar());
     b.tabelas.exercises[0].videoUrl = 'javascript:alert(1)';
