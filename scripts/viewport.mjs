@@ -276,6 +276,23 @@ if (!comFoto && !comDemo) {
   await ate(() => avaliar(`!!document.querySelector('figure .recharts-line-curve')`), 'gráfico da Evolução');
   conferir('evolução: linha do gráfico desenhada', await avaliar(`(() => { const w = document.querySelector('figure .recharts-line-curve').getBoundingClientRect().width; return w > 100 || 'largura ' + w; })()`));
   conferir('evolução: sem rolagem horizontal', await avaliar(`document.documentElement.scrollWidth <= innerWidth || 'scrollWidth ' + document.documentElement.scrollWidth`));
+
+  // Offline (Etapa 7): espera o service worker ativo, corta a rede e recarrega; o app e a Evolução (chunks sob demanda,
+  // com o Recharts) abrem do precache.
+  await ate(() => avaliar(`navigator.serviceWorker.ready.then((r) => !!r.active)`), 'service worker ativo', 30000);
+  conferir('PWA: manifest com ícones 192 e 512', await avaliar(`fetch('manifest.webmanifest').then((r) => r.json()).then((m) => ['192x192', '512x512'].every((t) => m.icons.some((i) => i.sizes === t)) || 'ícones: ' + m.icons.map((i) => i.sizes))`));
+  conferir('PWA: apple-touch-icon e meta da Tela de Início do iOS', await avaliar(`!!document.querySelector('link[rel="apple-touch-icon"]') && document.querySelector('meta[name="apple-mobile-web-app-capable"]')?.content === 'yes' || 'ausentes'`));
+  await cdp('Network.enable');
+  await cdp('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  await avaliar(`location.hash = '#/'; location.reload(), true`);
+  await ate(() => avaliar(`!!document.querySelector('[data-testid="saudacao"]')`), 'Início offline', 20000);
+  conferir('offline: Início abre sem rede', true);
+  await avaliar(`location.hash = '#/evolucao', true`);
+  await ate(() => avaliar(`!!document.querySelector('a[href^="#/evolucao/"]')`), 'Evolução offline', 20000);
+  await avaliar(`document.querySelector('a[href^="#/evolucao/"]').click(), true`);
+  await ate(() => avaliar(`!!document.querySelector('figure .recharts-line-curve')`), 'gráfico offline', 20000);
+  conferir('offline: Evolução e gráfico (partes sob demanda) abrem sem rede', true);
+  await cdp('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
 }
 
 ws.close();

@@ -24,6 +24,7 @@ import { Medidas } from './pages/medidas/Medidas';
 import { MedidaEditor } from './pages/medidas/MedidaEditor';
 import { CompararFotos } from './pages/medidas/CompararFotos';
 import { AparelhoEditor, Aparelhos } from './pages/Aparelhos';
+import { AvisoAtualizacao } from './components/AvisoAtualizacao';
 import { Perfil } from './pages/Perfil';
 
 // Evolução e Recharts sob demanda: não pesam a abertura do app.
@@ -41,6 +42,7 @@ function Raiz() {
   return (
     <ConfirmDialogProvider>
       <FaixaDemo />
+      <AvisoAtualizacao />
       <Outlet />
       <RetomarSessao />
       <BottomNav />
