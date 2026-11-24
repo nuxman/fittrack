@@ -8,6 +8,7 @@ import { exerciseSetsRepository as series } from '../db/repositories/exerciseSet
 import { exercisesRepository } from '../db/repositories/exercises';
 import { cardioSessionsRepository } from '../db/repositories/cardioSessions';
 import { settingsRepository } from '../db/repositories/settings';
+import { restDaysRepository } from '../db/repositories/restDays';
 
 // Quarta-feira, 7 de janeiro de 2026, 10h (semana de 5 a 11).
 const QUARTA = new Date(2026, 0, 7, 10);
@@ -63,6 +64,38 @@ describe('Início', () => {
     expect(screen.getAllByTestId('card-ficha')[0]).toHaveTextContent('Pendente de segunda');
     fireEvent.click(linhas[0]!);
     await waitFor(async () => expect((await sessoes.ativa())?.planSnapshot.nome).toBe('Peito e tríceps'));
+  });
+
+  it('calendário das últimas 5 semanas: treino, cardio, descanso e hoje; tocar abre o treino ou a lista do dia', async () => {
+    // 22/12 (segunda, 3 semanas atrás): um treino. 05/01: dois treinos. 06/01: cardio avulso. 23/12: descanso.
+    await concluir(1, new Date(2025, 11, 22, 18));
+    await concluir(1, new Date(2026, 0, 5, 7));
+    await concluir(2, new Date(2026, 0, 5, 19));
+    vi.setSystemTime(QUARTA);
+    const avulso = await cardioSessionsRepository.create({
+      modalidade: 'esteira', duracaoMin: 15, velocidadeKmh: null, inclinacaoNivel: null, distanciaKm: null, rpe: null, observacoes: '', data: '2026-01-06',
+    });
+    await restDaysRepository.alternar('2025-12-23');
+    const { router } = abrir('/');
+    const cal = await screen.findByTestId('calendario');
+    const dias = within(cal).getAllByTestId('dia-calendario');
+    expect(dias).toHaveLength(35);
+    // Começa na segunda de 4 semanas antes (08/12/2025) e termina no domingo desta semana (11/01).
+    expect(dias[0]).toContainElement(within(cal).getByLabelText(/^Segunda 8 de dezembro/));
+    expect(dias[34]).toContainElement(within(cal).getByLabelText(/^Domingo 11 de janeiro/));
+    expect(within(cal).getByLabelText('Quarta 7 de janeiro, hoje')).toBeInTheDocument();
+    expect(within(cal).getByLabelText('Terça 23 de dezembro, descanso')).toBeInTheDocument();
+    expect(within(cal).getByLabelText('Terça 6 de janeiro, cardio')).toHaveAttribute('href', `/historico/cardio/${avulso.id}`);
+
+    const s22 = (await sessoes.list()).find((s) => s.iniciadaEm.startsWith('2025-12-22'))!;
+    expect(within(cal).getByLabelText('Segunda 22 de dezembro, treino')).toHaveAttribute('href', `/historico/${s22.id}`);
+    // Dois treinos no dia: a lista do dia no Histórico, também pela faixa da semana.
+    expect(within(screen.getByRole('region', { name: 'Semana' })).getAllByRole('link')[0]).toHaveAttribute('href', '/historico?dia=2026-01-05');
+    fireEvent.click(within(cal).getByLabelText('Segunda 5 de janeiro, treino'));
+    await waitFor(() => expect(router.state.location.search).toBe('?dia=2026-01-05'));
+    expect(await screen.findByTestId('filtro-dia')).toHaveTextContent('segunda-feira, 5 de janeiro');
+    await waitFor(() => expect(screen.getAllByTestId('card-historico')).toHaveLength(2));
+    expect(screen.queryByTestId('card-cardio')).not.toBeInTheDocument();
   });
 
   it('minutos de cardio lidos das CardioSession da semana; check no dia', async () => {

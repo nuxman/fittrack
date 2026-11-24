@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { Desfazer } from '../../components/Desfazer';
 import { HeartPulse, Plus } from 'lucide-react';
 import { Page } from '../../components/Page';
@@ -23,7 +23,7 @@ type Item = { tipo: 'treino'; em: number; sessao: WorkoutSession } | { tipo: 'ca
 const kg = (n: number) => `${n.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} kg`;
 const ddmm = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
-async function carregar() {
+async function carregar(dia: string | null) {
   const [sessoes, sets, cardio] = await Promise.all([
     workoutSessionsRepository.list(),
     exerciseSetsRepository.porSessao(),
@@ -35,7 +35,9 @@ async function carregar() {
   const itens: Item[] = [
     ...encerradas.map((s) => ({ tipo: 'treino' as const, em: Date.parse(s.iniciadaEm), sessao: s })),
     ...cardio.filter((c) => !c.sessionId).map((c) => ({ tipo: 'cardio' as const, em: emDe(c), cardio: c })),
-  ].sort((a, b) => b.em - a.em);
+  ]
+    .filter((i) => !dia || chaveDia(new Date(i.em)) === dia)
+    .sort((a, b) => b.em - a.em);
   const semanas = new Map<string, Item[]>();
   for (const i of itens) {
     const k = chaveDia(inicioSemana(new Date(i.em)));
@@ -46,7 +48,9 @@ async function carregar() {
 
 /** Treinos encerrados (concluídos e abandonados) e cardios avulsos, agrupados por semana (segunda a domingo). */
 export function Historico() {
-  const [dados, recarregar] = useAsync(carregar);
+  // ?dia=AAAA-MM-DD (vindo do calendário do Início): só os registros daquele dia.
+  const dia = useSearchParams()[0].get('dia');
+  const [dados, recarregar] = useAsync(() => carregar(dia), [dia]);
   const excluido = useLocation().state as EstadoHistorico | null;
   const registrar = (
     <Link to="/historico/cardio/novo" className="btn-secondary w-full">
@@ -66,7 +70,14 @@ export function Historico() {
         </div>
       ) : (
         <>
-          {registrar}
+          {dia ? (
+            <p className="card flex items-center justify-between gap-2" data-testid="filtro-dia">
+              <span>{deChave(dia).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+              <Link to="/historico" className="text-sm text-primary-400 underline">Ver tudo</Link>
+            </p>
+          ) : (
+            registrar
+          )}
           {dados.semanas.map((lista) => {
             const ini = inicioSemana(new Date(lista[0]!.em));
             const fim = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate() + 6);

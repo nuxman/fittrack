@@ -1,4 +1,4 @@
-import type { GrupoMuscular, LocalTreino, UserSettings, WorkoutPlan, WorkoutSession } from './db/types';
+import type { CardioSession, GrupoMuscular, LocalTreino, RestDay, UserSettings, WorkoutPlan, WorkoutSession } from './db/types';
 import { localDe } from './db/repositories/workoutPlans';
 import { SEMANA } from './dias';
 
@@ -179,4 +179,46 @@ export function diasDaSemana(agora: Date): { data: Date; chave: string }[] {
     const data = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate() + k);
     return { data, chave: chaveDia(data) };
   });
+}
+
+export interface MarcasDia {
+  /** Treinos concluídos do dia. */
+  treinos: string[];
+  /** Cardios avulsos do dia. */
+  avulsos: string[];
+  /** Qualquer cardio (ligado ou avulso). */
+  cardio: boolean;
+  descanso: boolean;
+}
+
+/** O que houve em cada dia (chave 'AAAA-MM-DD'). */
+export function marcasPorDia(painel: {
+  sessoes: Pick<WorkoutSession, 'id' | 'status' | 'iniciadaEm'>[];
+  cardio: Pick<CardioSession, 'id' | 'data' | 'sessionId'>[];
+  descansos: Pick<RestDay, 'data'>[];
+}): Map<string, MarcasDia> {
+  const m = new Map<string, MarcasDia>();
+  const de = (k: string) => {
+    let d = m.get(k);
+    if (!d) m.set(k, (d = { treinos: [], avulsos: [], cardio: false, descanso: false }));
+    return d;
+  };
+  for (const s of painel.sessoes) if (s.status === 'concluida') de(chaveDia(new Date(s.iniciadaEm))).treinos.push(s.id);
+  for (const c of painel.cardio) {
+    const d = de(c.data);
+    d.cardio = true;
+    if (!c.sessionId) d.avulsos.push(c.id);
+  }
+  for (const r of painel.descansos) de(r.data).descanso = true;
+  return m;
+}
+
+/** Tocar num dia: o treino (ou cardio avulso) do dia; com mais de um, a lista do dia no Histórico. */
+export function destinoDoDia(marcas: Map<string, MarcasDia>, chave: string): string | undefined {
+  const d = marcas.get(chave);
+  if (!d) return undefined;
+  if (d.treinos.length + d.avulsos.length > 1) return `/historico?dia=${chave}`;
+  if (d.treinos[0]) return `/historico/${d.treinos[0]}`;
+  if (d.avulsos[0]) return `/historico/cardio/${d.avulsos[0]}`;
+  return undefined;
 }

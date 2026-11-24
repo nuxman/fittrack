@@ -4,6 +4,7 @@ import { Check, ChevronRight, Moon, Play, Plus, Scale } from 'lucide-react';
 import { Page } from '../components/Page';
 import { CardFicha } from '../components/CardFicha';
 import { FichasDaSemana } from '../components/FichasDaSemana';
+import { Calendario } from '../components/Calendario';
 import { CriarFicha, SeletorLocal } from '../components/SeletorLocal';
 import { useAsync } from '../useAsync';
 import { textoAviso, useIniciar } from '../useIniciar';
@@ -13,7 +14,7 @@ import { localDe, NOME_LOCAL } from '../db/repositories/workoutPlans';
 import { restDaysRepository } from '../db/repositories/restDays';
 import type { LocalTreino, WorkoutPlan, WorkoutSession } from '../db/types';
 import { DIAS } from '../dias';
-import { chaveDia, concluidasNaSemana, contadorSemana, diasDaSemana, sugestao } from '../semana';
+import { chaveDia, concluidasNaSemana, contadorSemana, destinoDoDia, diasDaSemana, marcasPorDia, sugestao } from '../semana';
 import { formatarDuracao, volumeKg } from '../sessao';
 import { lembrarBackup } from '../backup';
 import { FotoExercicio } from '../components/FotoExercicio';
@@ -49,6 +50,7 @@ export function Inicio() {
           <FichasDaSemana painel={painel} local={local} agora={agora} iniciando={iniciando} onIniciar={iniciar} />
           <ResumoSemana painel={painel} agora={agora} />
           <BlocoPeso painel={painel} />
+          <Calendario painel={painel} agora={agora} />
           <UltimoTreino painel={painel} />
           {lembrarBackup(painel.settings.ultimoBackupEm, painel.sessoes.some((s) => s.status === 'concluida'), agora) && (
             <Link to="/configuracoes#backup" className="block text-center text-sm text-primary-400 underline" data-testid="lembrete-backup">
@@ -67,6 +69,7 @@ function FaixaSemana({ painel, agora }: { painel: Painel; agora: Date }) {
   const descanso = new Set(painel.descansos.map((d) => d.data));
   const hoje = chaveDia(agora);
   const { feitos, planejados } = contadorSemana(painel.planos, painel.sessoes, agora);
+  const marcas = marcasPorDia(painel);
   return (
     <section className="card space-y-3" aria-label="Semana">
       <ol className="grid grid-cols-7 gap-1 text-center">
@@ -74,18 +77,25 @@ function FaixaSemana({ painel, agora }: { painel: Painel; agora: Date }) {
           const feito = treinos.has(chave) || cardio.has(chave);
           const folga = !feito && descanso.has(chave);
           const eHoje = chave === hoje;
-          return (
-            <li
-              key={chave}
-              data-testid="dia-semana"
-              aria-label={`${DIAS[data.getDay()]} ${data.getDate()}${feito ? ', treino feito' : ''}${folga ? ', descanso' : ''}${eHoje ? ', hoje' : ''}`}
-              className={`flex flex-col items-center gap-1 rounded-xl py-1 ${eHoje ? 'bg-surface-raised ring-2 ring-primary-400' : ''}`}
-            >
+          const destino = destinoDoDia(marcas, chave);
+          const classe = `flex flex-col items-center gap-1 rounded-xl py-1 ${eHoje ? 'bg-surface-raised ring-2 ring-primary-400' : ''}`;
+          const conteudo = (
+            <>
               <span className="text-xs text-neutral-400">{eHoje ? 'Hoje' : LETRAS[k]}</span>
               <span className="font-semibold">{data.getDate()}</span>
               <span className="flex h-5 items-center">
                 {feito ? <Check size={18} className="text-primary-400" /> : folga ? <Moon size={16} className="text-neutral-400" /> : null}
               </span>
+            </>
+          );
+          return (
+            <li
+              key={chave}
+              data-testid="dia-semana"
+              aria-label={`${DIAS[data.getDay()]} ${data.getDate()}${feito ? ', treino feito' : ''}${folga ? ', descanso' : ''}${eHoje ? ', hoje' : ''}`}
+            >
+              {/* Tocar num dia com treino abre o Histórico daquele dia. */}
+              {destino ? <Link to={destino} className={classe}>{conteudo}</Link> : <div className={classe}>{conteudo}</div>}
             </li>
           );
         })}

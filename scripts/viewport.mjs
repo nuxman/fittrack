@@ -124,8 +124,6 @@ if (comDemo) {
   await cdp('Page.reload');
   await ate(() => avaliar(`!window.__antiga && !!document.querySelector('[data-testid="faixa-demo"]')`), 'faixa da demonstração');
 }
-await cdp('Page.navigate', { url: `${URL_APP}#/treinar` });
-
 // Funções usadas dentro da página.
 const AJUDA = `
   window.__q = (sel) => document.querySelector(sel);
@@ -147,6 +145,18 @@ const conferir = (nome, valor) => {
   console.log(`${ok ? '✓' : '✗'} ${nome}${ok ? '' : ` — ${valor}`}`);
   if (!ok) falhas.push(nome);
 };
+
+// Início: calendário das últimas 5 semanas (35 dias) sem rolagem horizontal, dias com pelo menos 40 px de largura.
+// Na demonstração, os dias têm treinos (links para o Histórico).
+await cdp('Page.navigate', { url: `${URL_APP}#/` });
+await ate(() => avaliar(`location.hash === '#/' && document.querySelectorAll('[data-testid="dia-calendario"]').length === 35`), 'calendário do Início');
+conferir('Início: calendário sem rolagem horizontal', await avaliar(`document.documentElement.scrollWidth <= innerWidth || 'scrollWidth ' + document.documentElement.scrollWidth`));
+conferir('Início: dias do calendário com 40 px ou mais', await avaliar(`(() => {
+  const w = Math.min(...[...document.querySelectorAll('[data-testid="dia-calendario"]')].map((d) => d.getBoundingClientRect().width));
+  return w >= 40 || 'menor dia: ' + Math.round(w) + ' px';
+})()`));
+if (comDemo) conferir('demonstração: dias com treino abrem o Histórico', await avaliar(`document.querySelectorAll('[data-testid="dia-calendario"] a[href^="#/historico"]').length >= 15 || 'poucos links'`));
+await cdp('Page.navigate', { url: `${URL_APP}#/treinar` });
 
 // Espera a aba Treinar de fato: o Início também tem "Iniciar treino" (ex.: na demonstração, que recarrega no Início).
 await ate(() => avaliar(`${AJUDA}; location.hash === '#/treinar' && !!__q('[data-testid="card-ficha"]') && !!__botao('Iniciar') && !!__q('a[href="#/historico/cardio/novo"]')`), 'aba Treinar');
