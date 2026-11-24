@@ -177,6 +177,9 @@ await avaliar(`__botao('Iniciar').click(), true`);
 await ate(() => avaliar(`${AJUDA}; location.hash === '#/sessao' && !!__botao('Finalizar treino') && !!document.querySelector('[data-testid="item-sessao"] a')`), 'visão geral');
 conferir('visão geral: "Finalizar treino" visível sem rolar', await avaliar(`${AJUDA}; __visivel(__botao('Finalizar treino'))`));
 conferir('visão geral: sem navegação inferior', await avaliar(`!document.querySelector('nav[aria-label="Navegação principal"]')`));
+// Barras de comparação com o treino anterior (na demonstração há treino anterior da ficha; fora dela, "Primeiro treino").
+await ate(() => avaliar(`!!document.querySelector('[data-testid="comparacao-anterior"]')`), 'comparação com o anterior');
+if (comDemo) conferir('demonstração: barras do treino anterior', await avaliar(`document.querySelectorAll('[data-testid="comparacao-anterior"] [role="progressbar"]').length >= 2 || 'sem barras'`));
 
 // Abre o primeiro exercício (tela de execução).
 await avaliar(`document.querySelector('[data-testid="item-sessao"] a').click(), true`);
@@ -199,6 +202,7 @@ const medirExecucao = async (etapa) => {
   conferir(`${etapa}: "Concluir série" visível`, r.concluir);
   conferir(`${etapa}: botão de vídeo ao lado do nome visível`, r.video);
   conferir(`${etapa}: página sem rolagem`, r.rolagem === 0 && r.conteudoRolado === 0 ? true : `scrollTop=${r.rolagem}/${r.conteudoRolado}`);
+  conferir(`${etapa}: comparação com o anterior visível`, await avaliar(`${AJUDA}; __visivel(__q('[data-testid="comparacao-compacta"]'))`));
   return r;
 };
 

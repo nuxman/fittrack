@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ExerciseSet, SnapshotItem, StatusSessao, TipoExercicio, UnidadeCarga, WorkoutSession } from './db/types';
-import { compararPontos, exerciciosComSeries, pontoNaSessao, pontosDoExercicio, porMedida, recordes, treinoAnterior } from './evolucao';
+import { compararPontos, exerciciosComSeries, pontoNaSessao, pontosDoExercicio, porMedida, recordes, totaisTreino, treinoAnterior, variacaoPct } from './evolucao';
 
 const item = (exerciseId: string, tipo: TipoExercicio = 'carga', unidadeCarga: UnidadeCarga = 'kg', porLado = false) =>
   ({ exerciseId, nome: exerciseId, tipo, unidadeCarga, porLado, grupoPrincipal: 'peito' }) as SnapshotItem;
@@ -127,5 +127,21 @@ describe('comparação com o treino anterior da ficha', () => {
     const lista = [s('a', 'seg', 5), s('b', 'seg', 12, 'abandonada'), s('c', 'ter', 13), s('d', 'seg', 19), s('e', 'seg', 26)];
     expect(treinoAnterior(lista, lista[3]!)?.id).toBe('a');
     expect(treinoAnterior(lista, lista[0]!)).toBeUndefined();
+  });
+});
+
+describe('comparação com o treino anterior (0.23.0)', () => {
+  it('totais: carga e volume só em kg; repetições de todos os tipos com porLado × 2; tempo fora das reps', () => {
+    const itens = [item('sup'), item('leg', 'carga', 'placa'), item('bird', 'peso_corporal', 'kg', true), item('prancha', 'tempo')];
+    const sets = [set('a', 'sup', 40, 10), set('a', 'sup', 45, 8), set('a', 'leg', 7, 12), set('a', 'bird', null, 10), set('a', 'prancha', null, 60)];
+    expect(totaisTreino(sets, itens)).toEqual({ cargaKg: 85, volumeKg: 760, reps: 10 + 8 + 12 + 20 });
+    expect(totaisTreino([set('b', 'bird', null, 5)], itens)).toEqual({ cargaKg: null, volumeKg: null, reps: 10 });
+  });
+
+  it('variação em %: "+4%", "−2%", "igual"; sem base, null', () => {
+    expect(variacaoPct(104, 100)).toBe('+4%');
+    expect(variacaoPct(98, 100)).toBe('−2%');
+    expect(variacaoPct(100.2, 100)).toBe('igual');
+    expect(variacaoPct(10, 0)).toBeNull();
   });
 });

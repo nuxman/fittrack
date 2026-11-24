@@ -10,6 +10,7 @@ import { EvolucaoCarga } from '../../components/EvolucaoCarga';
 import { VerExecucao, VideoIcone } from '../../components/VerExecucao';
 import { GrupoIcone } from '../../components/GrupoIcone';
 import { AparelhoNaSessao } from './AparelhoNaSessao';
+import { ComparacaoAnterior } from '../../components/ComparacaoAnterior';
 import { ContagemDescanso, FolhaDescanso } from '../../components/RestTimer';
 import { useDialog } from '../../components/ConfirmDialog';
 import { exerciseSetsRepository } from '../../db/repositories/exerciseSets';
@@ -35,7 +36,7 @@ export function SessaoExecucao() {
  * descanso (só quando ativa) e "Concluir série". O que se usa a cada série cabe sem rolar.
  */
 function Execucao({ item }: { item: SnapshotItem }) {
-  const { sessao, sets, exercicios, imagens, ultimas, vibrar, settings, agir, recarregar } = useSessao();
+  const { sessao, sets, exercicios, imagens, ultimas, vibrar, settings, agir, recarregar, anterior } = useSessao();
   const { confirmar } = useDialog();
   const exercicio = exercicios.get(item.exerciseId);
   const ultima = ultimas.get(item.exerciseId);
@@ -129,6 +130,7 @@ function Execucao({ item }: { item: SnapshotItem }) {
             <AparelhoNaSessao item={item} />
             <p className="text-neutral-300">{prescricaoSessao(item)}</p>
             <p className="text-sm text-neutral-400">Última carga: {ultima ? formatarSerie(ultima, item) : 'sem registro'}</p>
+            <ComparacaoAnterior sets={sets} itens={sessao.planSnapshot.itens} anterior={anterior} compacto />
           </div>
           <VideoIcone nome={item.nome} url={exercicio?.videoUrl} />
         </section>

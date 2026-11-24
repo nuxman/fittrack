@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Flag } from 'lucide-react';
 import { useSessao } from './SessaoLayout';
 import { EscolhaRpe } from '../../components/EscolhaRpe';
+import { ComparacaoAnterior } from '../../components/ComparacaoAnterior';
 import { useDialog } from '../../components/ConfirmDialog';
 import { workoutSessionsRepository } from '../../db/repositories/workoutSessions';
 import { workoutPlansRepository } from '../../db/repositories/workoutPlans';
@@ -11,7 +12,7 @@ import { formatarDuracao, mudancasNaSessao, progresso, pulados, tempoAtivoEm } f
 
 /** Finalizar com RPE (0–10) e observações. ?fim=<timestamp> encerra no horário da última série. */
 export function SessaoFinalizar() {
-  const { sessao, sets } = useSessao();
+  const { sessao, sets, anterior } = useSessao();
   const navigate = useNavigate();
   const { escolher } = useDialog();
   const [params] = useSearchParams();
@@ -73,6 +74,7 @@ export function SessaoFinalizar() {
         </p>
         {fim && <p className="text-sm text-neutral-400">Encerrado no horário da última série.</p>}
       </div>
+      <ComparacaoAnterior sets={sets} itens={sessao.planSnapshot.itens} anterior={anterior} />
 
       <EscolhaRpe
         valor={rpe}

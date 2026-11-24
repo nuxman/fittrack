@@ -160,3 +160,35 @@ export function treinoAnterior<S extends Sessao & Pick<WorkoutSession, 'planId'>
     .sort((a, b) => a.iniciadaEm.localeCompare(b.iniciadaEm))
     .at(-1);
 }
+
+/** Totais de um treino para comparar com o anterior: carga total (soma das cargas em kg), volume (kg) e repetições. */
+export interface TotaisTreino {
+  /** Soma das cargas das séries em kg (placa e peso corporal fora); null sem séries em kg. */
+  cargaKg: number | null;
+  volumeKg: number | null;
+  /** Repetições de todos os tipos (porLado × 2; tempo fora, não são repetições). */
+  reps: number;
+}
+
+export function totaisTreino(
+  sets: Pick<ExerciseSet, 'exerciseId' | 'carga' | 'reps'>[],
+  itens: Pick<SnapshotItem, 'exerciseId' | 'tipo' | 'unidadeCarga' | 'porLado'>[],
+): TotaisTreino {
+  const porId = new Map(itens.map((i) => [i.exerciseId, i]));
+  let cargaKg: number | null = null;
+  let reps = 0;
+  for (const s of sets) {
+    const i = porId.get(s.exerciseId);
+    if (!i) continue;
+    if (i.tipo === 'carga' && i.unidadeCarga === 'kg' && s.carga != null) cargaKg = (cargaKg ?? 0) + s.carga;
+    if (i.tipo !== 'tempo') reps += totalReps(s, i);
+  }
+  return { cargaKg, volumeKg: volumeKg(sets, itens), reps };
+}
+
+/** Variação de hoje sobre o anterior: "+4%", "−2%" ou "igual" (arredondado; sem base, null). */
+export function variacaoPct(hoje: number, anterior: number): string | null {
+  if (!anterior) return null;
+  const p = Math.round(((hoje - anterior) / anterior) * 100);
+  return p === 0 ? 'igual' : `${p > 0 ? '+' : '−'}${Math.abs(p)}%`;
+}

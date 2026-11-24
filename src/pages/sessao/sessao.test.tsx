@@ -440,3 +440,47 @@ describe('mudanças durante a sessão (3b.3)', () => {
     expect(screen.queryByRole('group', { name: 'Aplicar também na ficha?' })).not.toBeInTheDocument();
   });
 });
+
+describe('comparação com o treino anterior (0.23.0)', () => {
+  it('sem anterior: "Primeiro treino desta ficha" e só os totais de hoje', async () => {
+    await sessoes.iniciar((await doDia(1)).id);
+    abrir('/sessao');
+    const c = await screen.findByTestId('comparacao-anterior');
+    expect(c).toHaveTextContent('Primeiro treino desta ficha');
+    expect(within(c).queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  it('barras de hoje contra o último concluído da ficha; enchem a cada série; aparecem na execução e no Finalizar', async () => {
+    const plano = await doDia(1);
+    // Treino anterior concluído: 2 séries de 40 kg × 10 no supino (carga 80, volume 800, 20 reps).
+    const a = await sessoes.iniciar(plano.id);
+    const sup = a.planSnapshot.itens[0]!.exerciseId;
+    await series.registrar({ sessionId: a.id, exerciseId: sup, carga: 40, reps: 10 });
+    await series.registrar({ sessionId: a.id, exerciseId: sup, carga: 40, reps: 10 });
+    await sessoes.finalizar(a.id, { rpe: 7, observacoes: '' });
+
+    const s = await sessoes.iniciar(plano.id);
+    await series.registrar({ sessionId: s.id, exerciseId: sup, carga: 42, reps: 10 });
+    const { router } = abrir('/sessao');
+    const c = await screen.findByTestId('comparacao-anterior');
+    expect(c).toHaveTextContent(/Hoje \/ treino de \d\d\/\d\d/);
+    const [carga, volume, reps] = within(c).getAllByTestId('barra-comparacao');
+    expect(carga).toHaveTextContent('Carga total42/80 kg−47%');
+    expect(volume).toHaveTextContent('Volume420/800 kg−47%');
+    expect(reps).toHaveTextContent('Repetições10/20−50%');
+    expect(within(volume!).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '53');
+
+    // Segunda série na execução: a barra enche; a linha compacta mostra o volume.
+    await act(() => router.navigate(`/sessao/${sup}`));
+    await titulo('Supino máquina');
+    expect(screen.getByTestId('comparacao-compacta')).toHaveTextContent('Volume: 420 kg / 800 kg no anterior');
+    fireEvent.change(screen.getByLabelText('Carga (kg)'), { target: { value: '42' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Concluir série' }));
+    await waitFor(() => expect(screen.getByTestId('comparacao-compacta')).toHaveTextContent('Volume: 840 kg / 800 kg no anterior'));
+
+    await act(() => router.navigate('/sessao/finalizar'));
+    const f = await screen.findByTestId('comparacao-anterior');
+    expect(within(f).getAllByTestId('barra-comparacao')[1]).toHaveTextContent('Volume840/800 kg+5%');
+    expect(within(f).getAllByTestId('barra-comparacao')[2]).toHaveTextContent('Repetições20/20igual');
+  });
+});

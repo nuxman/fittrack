@@ -12,6 +12,7 @@ import { settingsRepository } from '../../db/repositories/settings';
 import { equipmentRepository } from '../../db/repositories/equipment';
 import type { Equipment, Exercise, ExerciseSet, WorkoutSession } from '../../db/types';
 import { formatarDuracao, progresso, pulados, tempoAtivoEm } from '../../sessao';
+import { totaisTreino, treinoAnterior } from '../../evolucao';
 
 function porId<T>(ids: string[], vals: (T | undefined)[]): Map<string, T> {
   const m = new Map<string, T>();
@@ -26,14 +27,18 @@ async function carregar() {
   const sessao = await workoutSessionsRepository.ativa();
   if (!sessao) return null;
   const ids = sessao.planSnapshot.itens.map((i) => i.exerciseId);
-  const [sets, exs, imgs, ultimas, settings, aparelhos] = await Promise.all([
+  const [sets, exs, imgs, ultimas, settings, aparelhos, sessoes] = await Promise.all([
     exerciseSetsRepository.listarDaSessao(sessao.id),
     Promise.all(ids.map((id) => exercisesRepository.get(id))),
     Promise.all(ids.map((id) => exerciseImagesRepository.getForExercise(id))),
     Promise.all(ids.map((id) => exerciseSetsRepository.ultimaDoExercicio(id))),
     settingsRepository.get(),
     equipmentRepository.list(),
+    workoutSessionsRepository.list(),
   ]);
+  // Último treino concluído da mesma ficha (base das barras de comparação); totais pelo planSnapshot dele.
+  const ant = treinoAnterior(sessoes, sessao);
+  const anterior = ant && { iniciadaEm: ant.iniciadaEm, totais: totaisTreino(await exerciseSetsRepository.listarDaSessao(ant.id), ant.planSnapshot.itens) };
   const aparelhoPorId = new Map(aparelhos.map((a) => [a.id, a]));
   return {
     sessao,
@@ -44,6 +49,7 @@ async function carregar() {
     /** Aparelho de cada exercício (por exerciseId). */
     aparelhos: porId<Equipment>(ids, exs.map((e) => (e?.equipmentId ? aparelhoPorId.get(e.equipmentId) : undefined))),
     settings,
+    anterior,
     vibrar: settings.interface.vibrar,
   };
 }

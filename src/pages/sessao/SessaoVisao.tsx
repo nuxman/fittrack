@@ -4,13 +4,14 @@ import { EstadoTela, useSessao } from './SessaoLayout';
 import { FotoExercicio } from '../../components/FotoExercicio';
 import { VideoIcone } from '../../components/VerExecucao';
 import { AparelhoNaSessao } from './AparelhoNaSessao';
+import { ComparacaoAnterior } from '../../components/ComparacaoAnterior';
 import { workoutSessionsRepository } from '../../db/repositories/workoutSessions';
 import { formatarSerie, prescricaoSessao, pulados, seriesFeitas, statusExercicio, textoTrocado, type StatusExercicio } from '../../sessao';
 
 const ROTULO: Record<Exclude<StatusExercicio, 'parcial'>, string> = { pendente: 'Pendente', concluido: 'Concluído', pulado: 'Pulado' };
 
 export function SessaoVisao() {
-  const { sessao, sets, exercicios, imagens, ultimas, agir } = useSessao();
+  const { sessao, sets, exercicios, imagens, ultimas, agir, anterior } = useSessao();
   const navigate = useNavigate();
   const pul = pulados(sessao);
   const itens = [...sessao.planSnapshot.itens].sort((a, b) => a.ordem - b.ordem);
@@ -18,6 +19,7 @@ export function SessaoVisao() {
   return (
     <>
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
+      <ComparacaoAnterior sets={sets} itens={sessao.planSnapshot.itens} anterior={anterior} />
       <ul className="space-y-2">
         {itens.map((i) => {
           const st = statusExercicio(i, sets, pul);
