@@ -12,6 +12,7 @@ import { exerciseImagesRepository } from '../db/repositories/exerciseImages';
 import { exerciseSetsRepository } from '../db/repositories/exerciseSets';
 import { workoutPlansRepository } from '../db/repositories/workoutPlans';
 import { equipmentRepository } from '../db/repositories/equipment';
+import { Etiqueta } from '../components/Aparelho';
 import { formatarPrescricao } from '../format';
 import { formatarSerie } from '../sessao';
 
@@ -46,7 +47,12 @@ export function ExercicioDetalhe() {
       )}
       <section className="card space-y-1" aria-label="Prescrição">
         {item && <p className="text-lg">Na ficha: {formatarPrescricao(item, ex)} · descanso {item.descansoSeg} s</p>}
-        {aparelho && <p className="text-neutral-300" data-testid="aparelho">Aparelho: {aparelho.nome}{aparelho.observacoes && ` · ${aparelho.observacoes}`}</p>}
+        {aparelho && (
+          <p className="flex flex-wrap items-center gap-x-2 text-neutral-300" data-testid="aparelho">
+            Aparelho: {aparelho.nome}{aparelho.observacoes && ` · ${aparelho.observacoes}`}
+            {(aparelho.cor || aparelho.numero) && <Etiqueta aparelho={aparelho} className="rounded-full bg-surface-raised px-2 py-0.5" />}
+          </p>
+        )}
         <p className="text-neutral-300">Última carga: {ultima ? formatarSerie(ultima, ex) : 'sem registro'}</p>
       </section>
       <VerExecucao nome={ex.nome} url={ex.videoUrl} />

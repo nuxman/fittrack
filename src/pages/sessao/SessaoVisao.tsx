@@ -3,6 +3,7 @@ import { Flag, Pencil, SkipForward, Undo2 } from 'lucide-react';
 import { EstadoTela, useSessao } from './SessaoLayout';
 import { FotoExercicio } from '../../components/FotoExercicio';
 import { VideoIcone } from '../../components/VerExecucao';
+import { AparelhoNaSessao } from './AparelhoNaSessao';
 import { workoutSessionsRepository } from '../../db/repositories/workoutSessions';
 import { formatarSerie, prescricaoSessao, pulados, seriesFeitas, statusExercicio, textoTrocado, type StatusExercicio } from '../../sessao';
 
@@ -48,6 +49,9 @@ export function SessaoVisao() {
                   <SkipForward size={20} /> Pular
                 </button>
               )}
+              <div className="w-full">
+                <AparelhoNaSessao item={i} />
+              </div>
               <Link to={`/exercicios/${i.exerciseId}`} className="btn-secondary min-h-11 w-full py-1 text-base" aria-label={`Editar exercício ${i.nome}`}>
                 <Pencil size={18} /> Editar exercício
               </Link>

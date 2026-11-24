@@ -1,6 +1,6 @@
 /** Dados fictícios do banco de demonstração: cerca de 4 semanas de treinos concluídos, cargas subindo aos poucos, cardio pós-treino e avulso. */
 import type {
-  BaseRecord, BodyMeasurement, CardioSession, Equipment, Exercise, Profile, ExerciseSet, GrupoMuscular, SnapshotItem, WorkoutPlan, WorkoutSession,
+  BaseRecord, BodyMeasurement, CardioSession, CorAparelho, Equipment, Exercise, Profile, ExerciseSet, GrupoMuscular, SnapshotItem, WorkoutPlan, WorkoutSession,
 } from './types';
 
 /** Carga inicial (kg) por grupo principal; sobe 2,5 kg por semana (5 kg nos de perna). */
@@ -10,10 +10,10 @@ const CARGA_INICIAL: Partial<Record<GrupoMuscular, number>> = {
 };
 const PERNA: GrupoMuscular[] = ['quadríceps', 'posterior de coxa', 'glúteos', 'panturrilha'];
 const SEMANAS = 4;
-const APARELHOS: [string, string, string[]][] = [
-  ['Leg press 45°', 'Máquina do fundo, perto da janela', ['Leg press']],
-  ['Polia alta', 'Estação dupla de cabos', ['Tríceps polia barra reta', 'Tríceps corda', 'Puxada frontal']],
-  ['Cadeira extensora/flexora', 'Máquina combinada; trocar o encosto', ['Cadeira extensora', 'Cadeira flexora']],
+const APARELHOS: [string, string, CorAparelho, string, string[]][] = [
+  ['Leg press 45°', 'Máquina do fundo, perto da janela', 'azul', '12', ['Leg press']],
+  ['Polia alta', 'Estação dupla de cabos', 'verde', '7', ['Tríceps polia barra reta', 'Tríceps corda', 'Puxada frontal']],
+  ['Cadeira extensora/flexora', 'Máquina combinada; trocar o encosto', 'azul', '3', ['Cadeira extensora', 'Cadeira flexora']],
 ];
 const DIA_MS = 864e5;
 
@@ -107,8 +107,8 @@ export function gerarDemo(exercises: Exercise[], planos: WorkoutPlan[], agora = 
   // Alguns aparelhos ligados a exercícios da ficha (pelo nome do seed).
   const criadoEm = inicio.toISOString();
   const ligacoes: [string, string][] = [];
-  const aparelhos = APARELHOS.map(([nome, observacoes, exercicios]) => {
-    const a = registro<Equipment>({ nome, observacoes }, criadoEm);
+  const aparelhos = APARELHOS.map(([nome, observacoes, cor, numero, exercicios]) => {
+    const a = registro<Equipment>({ nome, observacoes, cor, numero }, criadoEm);
     for (const e of exercises) if (exercicios.includes(e.nome)) ligacoes.push([e.id, a.id]);
     return a;
   });

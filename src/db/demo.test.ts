@@ -78,6 +78,7 @@ describe('dados fictícios', () => {
 
     // Aparelhos: 3, ligados a 6 exercícios do seed.
     expect(aparelhos).toHaveLength(3);
+    expect(aparelhos.every((a) => a.cor && a.numero)).toBe(true);
     expect(ligacoes).toHaveLength(6);
     expect(ligacoes.every(([e, a]) => seed.exercises.some((x) => x.id === e) && aparelhos.some((x) => x.id === a))).toBe(true);
 

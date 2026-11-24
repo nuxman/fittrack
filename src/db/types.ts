@@ -7,9 +7,17 @@ export interface BaseRecord {
 
 export type NewRecord<T extends BaseRecord> = Omit<T, keyof BaseRecord>;
 
+/** Cor do aparelho (padrão de academias: azul = pernas, laranja = peito/costas/ombros, verde = braços, vermelho = abdômen/core/lombar). */
+export const CORES_APARELHO = ['azul', 'laranja', 'verde', 'vermelho'] as const;
+export type CorAparelho = (typeof CORES_APARELHO)[number];
+
 export interface Equipment extends BaseRecord {
   nome: string;
   observacoes: string;
+  /** Opcional (0.21.0); ausente = sem cor. */
+  cor?: CorAparelho;
+  /** Número na academia, texto curto (ex.: "12"). Opcional (0.21.0). */
+  numero?: string;
 }
 
 export const GRUPOS_MUSCULARES = [

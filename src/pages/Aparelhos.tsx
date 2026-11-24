@@ -6,8 +6,9 @@ import { Page } from '../components/Page';
 import { useDialog } from '../components/ConfirmDialog';
 import { useAsync } from '../useAsync';
 import { useAvisoNaoSalvo } from '../useAvisoNaoSalvo';
-import { AparelhoEmUsoError, equipmentRepository } from '../db/repositories/equipment';
-import type { Equipment } from '../db/types';
+import { AparelhoEmUsoError, equipmentRepository, NOME_COR } from '../db/repositories/equipment';
+import { CORES_APARELHO, type CorAparelho, type Equipment } from '../db/types';
+import { Etiqueta } from '../components/Aparelho';
 
 /** /aparelhos: aparelhos cadastrados, em ordem alfabética. */
 export function Aparelhos() {
@@ -28,6 +29,7 @@ export function Aparelhos() {
               <Link to={`/aparelhos/${a.id}`} className="card flex items-center gap-3" data-testid="item-aparelho">
                 <div className="min-w-0 flex-1">
                   <p className="text-lg font-semibold">{a.nome}</p>
+                  {(a.cor || a.numero) && <Etiqueta aparelho={a} />}
                   {a.observacoes && <p className="truncate text-sm text-neutral-400">{a.observacoes}</p>}
                 </div>
                 <ChevronRight size={22} className="shrink-0 text-neutral-500" />
@@ -54,10 +56,12 @@ function FormAparelho({ a }: { a?: Equipment }) {
   const { confirmar, avisar } = useDialog();
   const [nome, setNome] = useState(a?.nome ?? '');
   const [obs, setObs] = useState(a?.observacoes ?? '');
+  const [cor, setCor] = useState<CorAparelho | undefined>(a?.cor);
+  const [numero, setNumero] = useState(a?.numero ?? '');
   const [erro, setErro] = useState('');
   const [sujo, setSujo] = useState(false);
   const liberar = useAvisoNaoSalvo(sujo);
-  const mexeu = (set: (v: string) => void) => (v: string) => {
+  const mexeu = <T,>(set: (v: T) => void) => (v: T) => {
     set(v);
     setSujo(true);
     setErro('');
@@ -65,7 +69,7 @@ function FormAparelho({ a }: { a?: Equipment }) {
 
   const salvar = async () => {
     try {
-      const d = { nome, observacoes: obs };
+      const d = { nome, observacoes: obs, cor, numero };
       if (a) await equipmentRepository.update(a.id, d);
       else await equipmentRepository.create(d);
       liberar();
@@ -92,6 +96,20 @@ function FormAparelho({ a }: { a?: Equipment }) {
       <label className="block">
         <span className="text-lg font-semibold">Nome</span>
         <input className="input mt-2" value={nome} onChange={(e) => mexeu(setNome)(e.target.value)} />
+      </label>
+      <fieldset>
+        <legend className="text-lg font-semibold">Cor</legend>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {[...CORES_APARELHO, undefined].map((c) => (
+            <button key={c ?? 'sem'} type="button" aria-pressed={cor === c} className={`${cor === c ? 'btn-primary' : 'btn-secondary'} px-2`} onClick={() => mexeu(setCor)(c)}>
+              {c ? NOME_COR[c] : 'Sem cor'}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+      <label className="block">
+        <span className="text-lg font-semibold">Número</span>
+        <input className="input mt-2" value={numero} maxLength={10} placeholder="Ex.: 12" onChange={(e) => mexeu(setNumero)(e.target.value)} />
       </label>
       <label className="block">
         <span className="text-lg font-semibold">Observações</span>

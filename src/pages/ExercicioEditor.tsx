@@ -12,6 +12,8 @@ import {
 } from '../db/repositories/exercises';
 import { exerciseImagesRepository } from '../db/repositories/exerciseImages';
 import { equipmentRepository } from '../db/repositories/equipment';
+import { DialogoAparelho } from '../components/Aparelho';
+import { Plus } from 'lucide-react';
 import { resizeImage } from '../image';
 
 type Form = NewRecord<Exercise>;
@@ -34,7 +36,8 @@ export function ExercicioEditor() {
   const [imagem, recarregarImagem] = useAsync(
     () => (id ? exerciseImagesRepository.getForExercise(id) : Promise.resolve(undefined)), [id],
   );
-  const [aparelhos] = useAsync(() => equipmentRepository.list());
+  const [aparelhos, recarregarAparelhos] = useAsync(() => equipmentRepository.list());
+  const [novoAparelho, setNovoAparelho] = useState(false);
   const [form, setForm] = useState<Form>(VAZIO);
   const [erros, setErros] = useState<string[]>([]);
   const [processandoFoto, setProcessandoFoto] = useState(false);
@@ -171,6 +174,21 @@ export function ExercicioEditor() {
           {aparelhos?.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
         </select>
       </label>
+      <button type="button" className="btn-secondary w-full" onClick={() => setNovoAparelho(true)}>
+        <Plus size={20} /> Escolher ou criar aparelho
+      </button>
+      {novoAparelho && (
+        <DialogoAparelho
+          grupo={form.grupoPrincipal || exercicio?.grupoPrincipal || undefined}
+          atualId={form.equipmentId}
+          onEscolher={(a) => {
+            setNovoAparelho(false);
+            recarregarAparelhos();
+            set('equipmentId', a?.id);
+          }}
+          onFechar={() => setNovoAparelho(false)}
+        />
+      )}
 
       <label className="flex min-h-14 items-center gap-3">
         <input type="checkbox" className="h-6 w-6 accent-amber-400" checked={form.porLado} onChange={(e) => set('porLado', e.target.checked)} />

@@ -9,6 +9,7 @@ import { Anotacoes } from '../../components/Anotacoes';
 import { EvolucaoCarga } from '../../components/EvolucaoCarga';
 import { VerExecucao, VideoIcone } from '../../components/VerExecucao';
 import { GrupoIcone } from '../../components/GrupoIcone';
+import { AparelhoNaSessao } from './AparelhoNaSessao';
 import { ContagemDescanso, FolhaDescanso } from '../../components/RestTimer';
 import { useDialog } from '../../components/ConfirmDialog';
 import { exerciseSetsRepository } from '../../db/repositories/exerciseSets';
@@ -125,6 +126,7 @@ function Execucao({ item }: { item: SnapshotItem }) {
           )}
           <div className="min-w-0 flex-1">
             <h2 className="text-xl font-bold leading-tight">{item.nome}</h2>
+            <AparelhoNaSessao item={item} />
             <p className="text-neutral-300">{prescricaoSessao(item)}</p>
             <p className="text-sm text-neutral-400">Última carga: {ultima ? formatarSerie(ultima, item) : 'sem registro'}</p>
           </div>

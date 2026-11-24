@@ -9,7 +9,8 @@ import { exerciseSetsRepository } from '../../db/repositories/exerciseSets';
 import { exercisesRepository } from '../../db/repositories/exercises';
 import { exerciseImagesRepository } from '../../db/repositories/exerciseImages';
 import { settingsRepository } from '../../db/repositories/settings';
-import type { Exercise, ExerciseSet, WorkoutSession } from '../../db/types';
+import { equipmentRepository } from '../../db/repositories/equipment';
+import type { Equipment, Exercise, ExerciseSet, WorkoutSession } from '../../db/types';
 import { formatarDuracao, progresso, pulados, tempoAtivoEm } from '../../sessao';
 
 function porId<T>(ids: string[], vals: (T | undefined)[]): Map<string, T> {
@@ -25,19 +26,23 @@ async function carregar() {
   const sessao = await workoutSessionsRepository.ativa();
   if (!sessao) return null;
   const ids = sessao.planSnapshot.itens.map((i) => i.exerciseId);
-  const [sets, exs, imgs, ultimas, settings] = await Promise.all([
+  const [sets, exs, imgs, ultimas, settings, aparelhos] = await Promise.all([
     exerciseSetsRepository.listarDaSessao(sessao.id),
     Promise.all(ids.map((id) => exercisesRepository.get(id))),
     Promise.all(ids.map((id) => exerciseImagesRepository.getForExercise(id))),
     Promise.all(ids.map((id) => exerciseSetsRepository.ultimaDoExercicio(id))),
     settingsRepository.get(),
+    equipmentRepository.list(),
   ]);
+  const aparelhoPorId = new Map(aparelhos.map((a) => [a.id, a]));
   return {
     sessao,
     sets,
     exercicios: porId<Exercise>(ids, exs),
     imagens: porId<Blob>(ids, imgs.map((i) => (i && i.blob.size > 0 ? i.blob : undefined))),
     ultimas: porId<ExerciseSet>(ids, ultimas),
+    /** Aparelho de cada exercício (por exerciseId). */
+    aparelhos: porId<Equipment>(ids, exs.map((e) => (e?.equipmentId ? aparelhoPorId.get(e.equipmentId) : undefined))),
     settings,
     vibrar: settings.interface.vibrar,
   };
