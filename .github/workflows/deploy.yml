@@ -29,7 +29,8 @@ jobs:
       - run: npm run lint
       - run: npx vitest run
       - run: npx vite build
-      # Layout da execução no viewport do S24 Ultra (384×832), em Chrome headless (já vem no runner).
+      # Chrome headless (já vem no runner): layout em 384×832 (S24 Ultra) e 390×844 (iPhone), com foto e no modo
+      # demonstração; manifest, meta do iOS e o app (com as partes sob demanda) abrindo offline pelo service worker.
       - run: npm run test:viewport
         env:
           CHROME_PATH: /usr/bin/google-chrome
