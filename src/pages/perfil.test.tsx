@@ -59,13 +59,26 @@ describe('perfil (repositório)', () => {
     expect(JSON.parse(await exportarPacote())).not.toHaveProperty('profile');
   });
 
-  it('backup de versão sem perfil (schema 2) importa sem perfil; perfil inválido é recusado', async () => {
+  it('backup sem perfil (anterior à 0.19.0) mantém o perfil atual e avisa; backup com perfil substitui', async () => {
     const b = JSON.parse(await backupRepository.exportar());
     b.schemaVersion = 2;
     delete b.tabelas.profile;
+    await profileRepository.salvar({ nome: 'Rô' }, foto());
+    const semPerfil = validarBackup(JSON.stringify(b));
+    expect((await backupRepository.previa(semPerfil)).perfilMantido).toBe(true);
+    await backupRepository.importar(semPerfil);
+    expect(await profileRepository.get()).toMatchObject({ nome: 'Rô', foto: { largura: 512 } });
+
+    await profileRepository.salvar({ nome: 'Outro' });
+    const comPerfil = validarBackup(await backupRepository.exportar());
     await profileRepository.salvar({ nome: 'Rô' });
-    await backupRepository.importar(validarBackup(JSON.stringify(b)));
-    expect(await profileRepository.get()).toBeUndefined();
+    expect((await backupRepository.previa(comPerfil)).perfilMantido).toBe(false);
+    await backupRepository.importar(comPerfil);
+    expect((await profileRepository.get())!.nome).toBe('Outro');
+    expect(await db.profile.count()).toBe(1);
+  });
+
+  it('perfil inválido no backup é recusado', async () => {
 
     const c = JSON.parse(await backupRepository.exportar());
     c.tabelas.profile = [{ id: 'p', createdAt: 'x', updatedAt: 'x', deletedAt: null, alturaCm: 999 }];

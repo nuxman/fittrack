@@ -34,7 +34,8 @@ export interface Tabelas {
   bodyMeasurements: BodyMeasurement[];
   restDays: RestDay[];
   settings: UserSettings[];
-  profile: Profile[];
+  /** Ausente em backup anterior à 0.19.0: o perfil atual é mantido. */
+  profile?: Profile[];
 }
 
 export interface BackupValidado {
@@ -49,6 +50,8 @@ export interface Previa {
   totais: { fichas: number; exercicios: number; imagens: number; treinos: number; series: number; cardios: number; medidas: number; descansos: number };
   /** Fotos corporais deste aparelho cuja medição não está no backup: serão apagadas. */
   fotosApagadas: number;
+  /** Backup sem a tabela do perfil (anterior à 0.19.0): o perfil deste aparelho fica. */
+  perfilMantido: boolean;
 }
 
 export class BackupInvalidoError extends Error {}
@@ -181,8 +184,8 @@ export function validarBackup(texto: string): BackupValidado {
     throw new BackupInvalidoError('Imagens: conteúdo inválido');
   }
   // Perfil (v3): backup anterior não tem a tabela.
-  let profile: Profile[] = [];
-  if (schemaVersion >= 3 || t.profile !== undefined) {
+  let profile: Profile[] | undefined;
+  if (t.profile !== undefined) {
     const fotoPerfil = z.object({
       blob: z.string().regex(/^[A-Za-z0-9+/]*={0,2}$/, 'imagem inválida'),
       mimeType: z.enum(['image/webp', 'image/jpeg']),
@@ -267,6 +270,7 @@ export const backupRepository = {
         treinos: ativos(t.workoutSessions), series: ativos(t.exerciseSets), cardios: ativos(t.cardioSessions), medidas: ativos(t.bodyMeasurements), descansos: ativos(t.restDays),
       },
       fotosApagadas: (await fotosForaDoBackup(b)).filter((f) => f.deletedAt === null && f.blob.size > 0).length,
+      perfilMantido: t.profile === undefined,
     };
   },
 
@@ -279,11 +283,12 @@ export const backupRepository = {
       const atual = await settingsRepository.get();
       await db.bodyPhotos.bulkDelete((await fotosForaDoBackup(b)).map((f) => f.id));
       for (const t of TABELAS) {
+        if (b.tabelas[t] === undefined) continue; // perfil ausente no backup: mantém o atual
         await db.table(t).clear();
         const lista = t === 'settings'
           ? b.tabelas.settings.map((s) => ({ ...s, interface: { ...s.interface, localHoje: atual.interface.localHoje }, ultimoBackupEm: atual.ultimoBackupEm }))
           : b.tabelas[t];
-        await db.table(t).bulkAdd(lista);
+        await db.table(t).bulkAdd(lista!);
       }
     });
   },

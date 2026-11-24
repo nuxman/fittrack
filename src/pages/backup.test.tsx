@@ -72,10 +72,19 @@ describe('Configurações → Backup', () => {
     expect(within(dialogo).getByTestId('previa-backup')).toHaveTextContent('5 fichas');
     expect(dialogo).toHaveTextContent('0 dias de descanso');
     expect(dialogo).toHaveTextContent('fittrack-antes-da-importacao');
+    expect(dialogo).not.toHaveTextContent('O perfil atual será mantido');
     fireEvent.click(within(dialogo).getByRole('button', { name: 'Substituir dados' }));
     await waitFor(() => expect(recarregar).toHaveBeenCalled());
     expect(baixados).toEqual(['fittrack-antes-da-importacao-2026-01-14.json']);
     expect(await restDaysRepository.list()).toHaveLength(0);
+  });
+
+  it('importar backup sem perfil (anterior à 0.19.0): a pré-visualização avisa que o perfil atual será mantido', async () => {
+    const b = JSON.parse(await backupRepository.exportar());
+    delete b.tabelas.profile;
+    abrir('/configuracoes');
+    fireEvent.change(await screen.findByLabelText('Arquivo do backup'), { target: { files: [arquivo(JSON.stringify(b))] } });
+    expect(await screen.findByRole('dialog')).toHaveTextContent('O perfil atual será mantido');
   });
 
   it('CSV de séries e de medidas: baixa os arquivos sem mexer na data do último backup', async () => {

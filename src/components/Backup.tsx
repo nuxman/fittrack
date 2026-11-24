@@ -68,6 +68,7 @@ export function Backup() {
               {TOTAIS.map(([k, rotulo]) => <li key={k}>{p.totais[k]} {rotulo}</li>)}
             </ul>
             {p.fotosApagadas > 0 && <p className="text-red-400">{p.fotosApagadas} {p.fotosApagadas === 1 ? 'foto corporal será apagada' : 'fotos corporais serão apagadas'} (não estão no backup).</p>}
+            {p.perfilMantido && <p>O perfil atual será mantido (backup sem perfil).</p>}
             <p>Antes de substituir, um backup dos dados atuais é baixado automaticamente (fittrack-antes-da-importacao).</p>
           </div>
         ),
