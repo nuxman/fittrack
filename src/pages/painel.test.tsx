@@ -50,6 +50,21 @@ describe('Início', () => {
     expect(screen.getByTestId('ultimo-treino')).toHaveTextContent('400 kg de volume');
   });
 
+  it('"Fichas da semana": ficha de outro dia não cobre; faltantes em destaque; tocar inicia', async () => {
+    // Segunda: fez a ficha de terça (adiantada). Na quarta, segunda continua faltando.
+    vi.setSystemTime(new Date(2026, 0, 5, 10));
+    await concluir(2, new Date(2026, 0, 5, 10));
+    vi.setSystemTime(QUARTA);
+    abrir('/');
+    const linhas = within(await screen.findByTestId('fichas-da-semana')).getAllByTestId('ficha-da-semana');
+    expect(linhas.map((l) => l.textContent!.trim())).toEqual([
+      'SegPeito e trícepsfaltando', 'TerPernas A e abdômenfeita em seg', 'QuaCostas e bícepsfaltando', 'QuiOmbros e corefaltando', 'SexPernas B e corpo inteirofaltando',
+    ]);
+    expect(screen.getAllByTestId('card-ficha')[0]).toHaveTextContent('Pendente de segunda');
+    fireEvent.click(linhas[0]!);
+    await waitFor(async () => expect((await sessoes.ativa())?.planSnapshot.nome).toBe('Peito e tríceps'));
+  });
+
   it('minutos de cardio lidos das CardioSession da semana; check no dia', async () => {
     await cardioSessionsRepository.create({
       modalidade: 'esteira', duracaoMin: 15, velocidadeKmh: null, inclinacaoNivel: null, distanciaKm: null, rpe: null, observacoes: '', data: '2026-01-06',

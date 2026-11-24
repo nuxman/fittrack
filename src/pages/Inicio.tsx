@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Check, ChevronRight, Moon, Play, Plus, Scale } from 'lucide-react';
 import { Page } from '../components/Page';
 import { CardFicha } from '../components/CardFicha';
+import { FichasDaSemana } from '../components/FichasDaSemana';
 import { CriarFicha, SeletorLocal } from '../components/SeletorLocal';
 import { useAsync } from '../useAsync';
 import { textoAviso, useIniciar } from '../useIniciar';
@@ -45,6 +46,7 @@ export function Inicio() {
           <FaixaSemana painel={painel} agora={agora} />
           <Sugerido painel={painel} local={local} agora={agora} iniciando={iniciando} onIniciar={iniciar} />
           <DescansoHoje painel={painel} agora={agora} onMudou={recarregar} />
+          <FichasDaSemana painel={painel} local={local} agora={agora} iniciando={iniciando} onIniciar={iniciar} />
           <ResumoSemana painel={painel} agora={agora} />
           <BlocoPeso painel={painel} />
           <UltimoTreino painel={painel} />

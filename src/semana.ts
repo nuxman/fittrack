@@ -34,18 +34,43 @@ export function concluidasNaSemana<S extends Sessao>(sessoes: S[], agora: Date):
 export const feita = (plano: Ficha, sessoes: Sessao[], agora: Date) =>
   concluidasNaSemana(sessoes, agora).some((s) => s.planId === plano.id);
 
-/**
- * Pendentes do local: fichas com dia anterior a hoje nesta semana, não feitas, cujo dia não teve
- * nenhum treino concluído (casa ou academia). Da mais antiga para a mais recente.
- */
-export function pendentes<F extends Ficha>(planos: F[], sessoes: Sessao[], local: LocalTreino, agora: Date): F[] {
+/** Ficha de academia coberta por um treino em CASA concluído no dia dela, nesta semana (só casa cobre). */
+function cobertaPorCasa(p: Ficha, semana: Sessao[]) {
+  return localDe(p) === 'academia' && semana.some((s) => localDe(s.planSnapshot) === 'casa' && new Date(s.iniciadaEm).getDay() === p.diaSemana);
+}
+
+export interface FichaDaSemana<F> {
+  plano: F;
+  /** Início da sessão concluída mais antiga dela nesta semana. */
+  feitaEm?: Date;
+  /** Academia: treino em casa concluído no dia dela. */
+  emCasa: boolean;
+  /** Dia anterior a hoje. */
+  passou: boolean;
+}
+
+/** "Fichas da semana": cada ficha do local, na ordem da semana, com o que já foi feito. */
+export function fichasDaSemana<F extends Ficha>(planos: F[], sessoes: Sessao[], local: LocalTreino, agora: Date): FichaDaSemana<F>[] {
   const semana = concluidasNaSemana(sessoes, agora);
-  const diasComTreino = new Set(semana.map((s) => new Date(s.iniciadaEm).getDay()));
   const hoje = SEMANA.indexOf(agora.getDay());
   return planos
-    .filter((p) => localDe(p) === local && SEMANA.indexOf(p.diaSemana) < hoje)
-    .filter((p) => !diasComTreino.has(p.diaSemana) && !semana.some((s) => s.planId === p.id))
-    .sort((a, b) => SEMANA.indexOf(a.diaSemana) - SEMANA.indexOf(b.diaSemana));
+    .filter((p) => localDe(p) === local)
+    .sort((a, b) => SEMANA.indexOf(a.diaSemana) - SEMANA.indexOf(b.diaSemana))
+    .map((plano) => {
+      const primeira = semana.filter((s) => s.planId === plano.id).sort((a, b) => a.iniciadaEm.localeCompare(b.iniciadaEm))[0];
+      return { plano, feitaEm: primeira && new Date(primeira.iniciadaEm), emCasa: cobertaPorCasa(plano, semana), passou: SEMANA.indexOf(plano.diaSemana) < hoje };
+    });
+}
+
+/**
+ * Pendentes do local: fichas com dia anterior a hoje nesta semana, não concluídas nesta semana (em qualquer dia).
+ * Fazer a ficha de outro dia não cobre; só um treino em casa no dia cobre a ficha de academia desse dia.
+ * Da mais antiga para a mais recente.
+ */
+export function pendentes<F extends Ficha>(planos: F[], sessoes: Sessao[], local: LocalTreino, agora: Date): F[] {
+  return fichasDaSemana(planos, sessoes, local, agora)
+    .filter((f) => f.passou && !f.feitaEm && !f.emCasa)
+    .map((f) => f.plano);
 }
 
 export const fimDeSemana = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
@@ -77,15 +102,14 @@ export function sugestao<F extends Ficha, S extends Sessao>(planos: F[], sessoes
 /**
  * "X de Y treinos esta semana": Y = dias com ficha de academia; X = desses dias, os cobertos: a ficha
  * de academia do dia foi concluída nesta semana (em qualquer dia) ou houve treino em casa concluído
- * naquele dia da semana. X nunca passa de Y.
+ * naquele dia da semana (mesma regra das pendências). X nunca passa de Y.
  */
 export function contadorSemana(planos: Ficha[], sessoes: Sessao[], agora: Date) {
   const semana = concluidasNaSemana(sessoes, agora);
   const feitas = new Set(semana.map((s) => s.planId));
-  const diasEmCasa = new Set(semana.filter((s) => localDe(s.planSnapshot) === 'casa').map((s) => new Date(s.iniciadaEm).getDay()));
   const academia = planos.filter((p) => localDe(p) === 'academia');
   return {
-    feitos: new Set(academia.filter((p) => feitas.has(p.id) || diasEmCasa.has(p.diaSemana)).map((p) => p.diaSemana)).size,
+    feitos: new Set(academia.filter((p) => feitas.has(p.id) || cobertaPorCasa(p, semana)).map((p) => p.diaSemana)).size,
     planejados: new Set(academia.map((p) => p.diaSemana)).size,
   };
 }

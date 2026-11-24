@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GrupoMuscular, LocalTreino, StatusSessao } from './db/types';
-import { avisoGrupoSeguido, chaveDia, contadorSemana, duracaoEstimadaSeg, inicioSemana, localEscolhido, pendentes, sugestao } from './semana';
+import { avisoGrupoSeguido, chaveDia, contadorSemana, duracaoEstimadaSeg, fichasDaSemana, inicioSemana, localEscolhido, pendentes, sugestao } from './semana';
 
 // Semana de 2026-01-05 (segunda) a 2026-01-11 (domingo).
 const dia = (d: number, h = 10) => new Date(2026, 0, d, h);
@@ -65,6 +65,40 @@ describe('regra de sugestão', () => {
   it('sábado e domingo: pendentes são opcionais; sem pendentes, dia de descanso', () => {
     const r = sugestao(ACADEMIA, [], 'academia', dia(SAB));
     expect(r).toMatchObject({ tipo: 'pendente', opcional: true });
+  });
+});
+
+describe('pendências: só a própria ficha (ou casa no dia) cobre (0.20.0)', () => {
+  it('fazer a ficha de outro dia não cobre a ficha do dia', () => {
+    // Terça: fez a ficha de segunda (atrasada). A de terça continua pendente na quarta.
+    const s = [sessao('seg', dia(TER))];
+    expect(ids(pendentes(ACADEMIA, s, 'academia', dia(QUA)))).toEqual(['ter']);
+    expect(contadorSemana(ACADEMIA, s, dia(QUA)).feitos).toBe(1);
+  });
+
+  it('treino em casa no dia cobre a ficha de academia desse dia', () => {
+    const s = [sessao('casa-x', dia(SEG))];
+    expect(ids(pendentes(ACADEMIA, s, 'academia', dia(QUA)))).toEqual(['ter']);
+    expect(contadorSemana(ACADEMIA, s, dia(QUA)).feitos).toBe(1);
+  });
+
+  it('ordem invertida na semana: cada ficha feita conta uma vez; nenhuma pendente', () => {
+    const s = [sessao('qua', dia(SEG)), sessao('ter', dia(TER)), sessao('seg', dia(QUA))];
+    expect(pendentes(ACADEMIA, s, 'academia', dia(QUI))).toEqual([]);
+    expect(contadorSemana(ACADEMIA, s, dia(QUI)).feitos).toBe(3);
+    expect(fichasDaSemana(ACADEMIA, s, 'academia', dia(QUI)).map((f) => [f.plano.id, f.feitaEm?.getDay()])).toEqual([
+      ['seg', 3], ['ter', 2], ['qua', 1], ['qui', undefined], ['sex', undefined],
+    ]);
+  });
+
+  it('sábado: mostra as faltantes mesmo tendo treinado em todos os dias úteis', () => {
+    // Seg a sex com treino todo dia, mas repetindo fichas: faltam quinta e sexta.
+    const s = [sessao('seg', dia(SEG)), sessao('ter', dia(TER)), sessao('qua', dia(QUA)), sessao('seg', dia(QUI)), sessao('ter', dia(SEX))];
+    expect(ids(pendentes(ACADEMIA, s, 'academia', dia(SAB)))).toEqual(['qui', 'sex']);
+    expect(sugestao(ACADEMIA, s, 'academia', dia(SAB))).toMatchObject({ tipo: 'pendente', plano: ACADEMIA[3], opcional: true });
+    const lista = fichasDaSemana(ACADEMIA, s, 'academia', dia(SAB));
+    expect(lista.filter((f) => !f.feitaEm && !f.emCasa).map((f) => f.plano.id)).toEqual(['qui', 'sex']);
+    expect(contadorSemana(ACADEMIA, s, dia(SAB))).toEqual({ feitos: 3, planejados: 5 });
   });
 });
 

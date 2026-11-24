@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { HeartPulse, Play, Plus } from 'lucide-react';
 import { Page } from '../components/Page';
 import { CardFicha } from '../components/CardFicha';
+import { FichasDaSemana } from '../components/FichasDaSemana';
 import { CriarFicha, SeletorLocal } from '../components/SeletorLocal';
 import { useAsync } from '../useAsync';
 import { useIniciar } from '../useIniciar';
@@ -24,7 +25,8 @@ export function Fichas() {
 
   const { ativa } = painel;
   const doLocal = painel.planos.filter((p) => localDe(p) === local);
-  const s = sugestao(painel.planos, painel.sessoes, local, new Date());
+  const agora = new Date();
+  const s = sugestao(painel.planos, painel.sessoes, local, agora);
   const sugeridoId = s.tipo === 'hoje' || s.tipo === 'pendente' ? s.plano.id : undefined;
   const motivo = s.tipo === 'pendente' ? `Sugerido · pendente${s.opcional ? ' (opcional)' : ''}` : 'Sugerido · hoje';
   // Sugerido primeiro; o resto na ordem da semana.
@@ -40,6 +42,7 @@ export function Fichas() {
         </Link>
       )}
       {s.tipo === 'concluido' && <ConcluidoHoje sessao={s.sessao} rotulo="Sugerido" />}
+      <FichasDaSemana painel={painel} local={local} agora={agora} iniciando={iniciando} onIniciar={(p) => void iniciar(p)} />
       {ordenados.map((p) => (
         <CardFicha
           key={p.id}
