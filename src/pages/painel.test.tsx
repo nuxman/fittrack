@@ -63,7 +63,9 @@ describe('Início', () => {
     ]);
     expect(screen.getAllByTestId('card-ficha')[0]).toHaveTextContent('Pendente de segunda');
     fireEvent.click(linhas[0]!);
-    await waitFor(async () => expect((await sessoes.ativa())?.planSnapshot.nome).toBe('Peito e tríceps'));
+    // Espera a sessão abrir na tela: a carga dela não pode sobrar para o próximo teste (que apaga o banco).
+    expect(await screen.findAllByTestId('item-sessao')).toHaveLength(5);
+    expect((await sessoes.ativa())?.planSnapshot.nome).toBe('Peito e tríceps');
   });
 
   it('calendário das últimas 5 semanas: treino, cardio, descanso e hoje; tocar abre o treino ou a lista do dia', async () => {

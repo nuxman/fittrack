@@ -10,6 +10,7 @@ import { exercisesRepository } from '../../db/repositories/exercises';
 import { exerciseImagesRepository } from '../../db/repositories/exerciseImages';
 import { settingsRepository } from '../../db/repositories/settings';
 import { equipmentRepository } from '../../db/repositories/equipment';
+import { bancoFechado } from '../../db/db';
 import type { Equipment, Exercise, ExerciseSet, WorkoutSession } from '../../db/types';
 import { formatarDuracao, progresso, pulados, tempoAtivoEm } from '../../sessao';
 import { totaisTreino, treinoAnterior } from '../../evolucao';
@@ -82,7 +83,12 @@ export function SessaoLayout() {
   const [dados, setDados] = useState<Awaited<ReturnType<typeof carregar>>>();
   // Aguardável: quem age e navega (ex.: substituir exercício) só segue com os dados novos.
   const recarregar = useCallback(async () => setDados(await carregar()), []);
-  useEffect(() => void recarregar(), [recarregar]);
+  useEffect(() => {
+    // Banco fechado durante a carga (recomeçar a demonstração recarrega a página logo depois): nada a mostrar.
+    recarregar().catch((e: unknown) => {
+      if (!bancoFechado(e)) throw e;
+    });
+  }, [recarregar]);
   // Wake Lock só com a sessão em andamento: solto ao pausar, finalizar, abandonar ou sair de /sessao.
   const wake = useWakeLock(dados?.sessao.status === 'em_andamento');
 
