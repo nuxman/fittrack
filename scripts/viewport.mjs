@@ -164,6 +164,21 @@ conferir('Início: dias do calendário com 40 px ou mais', await avaliar(`(() =>
   return w >= 40 || 'menor dia: ' + Math.round(w) + ' px';
 })()`));
 if (comDemo) conferir('demonstração: dias com treino abrem o Histórico', await avaliar(`document.querySelectorAll('[data-testid="dia-calendario"] a[href^="#/historico"]').length >= 15 || 'poucos links'`));
+// Registrar cardio: seletor de modalidades em grade (3 + 2), rótulos sem quebrar linha, botões com 44 px ou mais.
+await cdp('Page.navigate', { url: `${URL_APP}#/historico/cardio/novo` });
+await ate(() => avaliar(`${AJUDA}; location.hash === '#/historico/cardio/novo' && !!__botao('Elíptico')`), 'Registrar cardio');
+conferir('cardio: modalidades sem quebrar linha e com 44 px ou mais', await avaliar(`(() => {
+  const nomes = ['Esteira', 'Bicicleta', 'Caminhada', 'Escada', 'Elíptico'];
+  const botoes = nomes.map((n) => [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === n));
+  if (botoes.some((b) => !b)) return 'botões ausentes';
+  const ruins = botoes.filter((b) => {
+    const r = b.getBoundingClientRect();
+    const texto = document.createRange();
+    texto.selectNodeContents(b);
+    return r.height < 44 || texto.getClientRects().length > 1 || r.right > innerWidth;
+  });
+  return ruins.length === 0 || 'com problema: ' + ruins.map((b) => b.textContent.trim() + ' (' + Math.round(b.getBoundingClientRect().height) + ' px)').join(', ');
+})()`));
 await cdp('Page.navigate', { url: `${URL_APP}#/treinar` });
 
 // Espera a aba Treinar de fato: o Início também tem "Iniciar treino" (ex.: na demonstração, que recarrega no Início).

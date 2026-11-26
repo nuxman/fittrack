@@ -135,10 +135,52 @@ describe('cardio avulso: telas', () => {
     expect(await cardios.get(c!.id)).not.toHaveProperty('andares');
   });
 
+  it('elíptico avulso: grava com velocidade, nível e distância; card "Elíptico · 20 min · 3,1 km"; edita e troca de modalidade', async () => {
+    const { router } = abrir('/historico/cardio/novo');
+    // Vindo da escada, os andares são limpos ao escolher o elíptico.
+    fireEvent.click(await screen.findByRole('button', { name: 'Escada' }));
+    fireEvent.change(screen.getByLabelText('Andares'), { target: { value: '45' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Elíptico' }));
+    expect(screen.queryByLabelText('Andares')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Elíptico' })).toHaveAttribute('aria-pressed', 'true');
+    const nivel = screen.getByLabelText('Nível');
+    expect(nivel).toHaveAttribute('placeholder', 'ex.: "nível 10"');
+    fireEvent.change(screen.getByLabelText('Duração (min)'), { target: { value: '20' } });
+    fireEvent.change(nivel, { target: { value: 'nível 10' } });
+    fireEvent.change(screen.getByLabelText('Velocidade (km/h)'), { target: { value: '9,3' } });
+    fireEvent.change(screen.getByLabelText('Distância (km)'), { target: { value: '3,1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar cardio' }));
+    await vi.waitFor(async () => expect(await cardios.list()).toHaveLength(1));
+    const [c] = await cardios.list();
+    expect(c).toMatchObject({ modalidade: 'eliptico', duracaoMin: 20, velocidadeKmh: 9.3, distanciaKm: 3.1, inclinacaoNivel: { valor: 10, rotulo: 'nível 10' } });
+    expect(c).not.toHaveProperty('andares');
+
+    await act(() => router.navigate('/historico'));
+    expect(await screen.findByTestId('card-cardio')).toHaveTextContent('Elíptico');
+    expect(screen.getByTestId('card-cardio')).toHaveTextContent('20 min · 3,1 km');
+
+    // Editar: campos preenchidos; mudar a distância muda o card.
+    fireEvent.click(screen.getByTestId('card-cardio'));
+    expect(await screen.findByLabelText('Velocidade (km/h)')).toHaveValue('9,3');
+    expect(screen.getByLabelText('Nível')).toHaveValue('nível 10');
+    fireEvent.change(screen.getByLabelText('Distância (km)'), { target: { value: '3,4' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await vi.waitFor(async () => expect(await cardios.get(c!.id)).toMatchObject({ distanciaKm: 3.4 }));
+    expect(await screen.findByTestId('card-cardio')).toHaveTextContent('20 min · 3,4 km');
+
+    // Trocar para escada: velocidade e distância não são gravadas.
+    fireEvent.click(screen.getByTestId('card-cardio'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Escada' }));
+    expect(screen.queryByLabelText('Distância (km)')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await vi.waitFor(async () => expect(await cardios.get(c!.id)).toMatchObject({ modalidade: 'escada', velocidadeKmh: null, distanciaKm: null }));
+  });
+
   it('o banco recusa escada com distância e andares fora da escada', async () => {
     const base = { duracaoMin: 20, velocidadeKmh: null, inclinacaoNivel: null, rpe: null, observacoes: '', data: '2026-01-07' };
     await expect(cardios.registrarAvulso({ ...base, modalidade: 'escada', distanciaKm: 1 })).rejects.toThrow('Escada não tem');
     await expect(cardios.registrarAvulso({ ...base, modalidade: 'esteira', distanciaKm: null, andares: 10 })).rejects.toThrow('andares só na escada');
+    await expect(cardios.registrarAvulso({ ...base, modalidade: 'eliptico', distanciaKm: null, andares: 10 })).rejects.toThrow('andares só na escada');
   });
 
   it('erro de validação aparece na tela, sem gravar', async () => {

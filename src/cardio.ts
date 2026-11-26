@@ -3,9 +3,13 @@ import { ESQUECIDA_MS, parseNumero } from './sessao';
 
 /** Regras puras do cardio (pós-treino, avulso e evolução). */
 
-export const NOME_MODALIDADE: Record<ModalidadeCardio, string> = { esteira: 'Esteira', bicicleta: 'Bicicleta', caminhada: 'Caminhada', escada: 'Escada' };
+export const NOME_MODALIDADE: Record<ModalidadeCardio, string> = { esteira: 'Esteira', bicicleta: 'Bicicleta', caminhada: 'Caminhada', escada: 'Escada', eliptico: 'Elíptico' };
 
 /** Escada: nível e andares; sem velocidade nem distância. As outras: velocidade e distância; sem andares. */
+/** Rótulo do campo de inclinação/nível: escada e elíptico usam o nível do aparelho (elíptico: resistência). */
+/** Exemplo do campo de inclinação/nível por modalidade. */
+export const EXEMPLO_NIVEL: Record<ModalidadeCardio, string> = { esteira: 'nível 7', bicicleta: 'nível 7', caminhada: 'nível 7', escada: 'nível 8', eliptico: 'nível 10' };
+export const rotuloNivel = (m: ModalidadeCardio) => (m === 'escada' || m === 'eliptico' ? 'Nível' : 'Inclinação');
 export const ehEscada = (m: ModalidadeCardio) => m === 'escada';
 
 /** Linha do cardio ligado no Histórico: "+ Esteira 15 min". */
@@ -53,7 +57,7 @@ export function validarCardio(r: RascunhoCardio): DadosCardio {
   const rotulo = r.inclinacao.trim().replace(/\s+/g, ' ');
   if (rotulo) {
     const n = rotulo.match(/\d+([.,]\d+)?/);
-    if (!n) throw new Error(ehEscada(r.modalidade) ? 'Nível: inclua o número (ex.: "nível 8")' : 'Inclinação: inclua o número (ex.: "nível 7")');
+    if (!n) throw new Error(`${rotuloNivel(r.modalidade)}: inclua o número (ex.: "${EXEMPLO_NIVEL[r.modalidade]}")`);
     inclinacaoNivel = { valor: parseNumero(n[0]), rotulo };
   }
   const fc = opcional(r.fc, 'FC média', 30, 250, true);

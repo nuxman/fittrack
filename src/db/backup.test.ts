@@ -40,7 +40,7 @@ async function popular() {
   const s = await sessoes.iniciar(ficha.id);
   await series.registrar({ sessionId: s.id, exerciseId: s.planSnapshot.itens[0]!.exerciseId, carga: 40, reps: 10 });
   await sessoes.finalizar(s.id, { rpe: 7, observacoes: 'ok' });
-  await cardioSessionsRepository.registrarAvulso({ modalidade: 'esteira', duracaoMin: 15, velocidadeKmh: 6, inclinacaoNivel: { valor: 7, rotulo: 'nível 7' }, distanciaKm: 1.5, rpe: 5, observacoes: '', data: '2026-01-13' });
+  await cardioSessionsRepository.registrarAvulso({ modalidade: 'eliptico', duracaoMin: 15, velocidadeKmh: 9, inclinacaoNivel: { valor: 10, rotulo: 'nível 10' }, distanciaKm: 2.2, rpe: 5, observacoes: '', data: '2026-01-13' });
   const m = await medidas.registrar({ data: '2026-01-14', pesoKg: 84, cinturaCm: 90, observacoes: '' });
   await fotos.adicionar(m.id, new Blob([new Uint8Array(10)], { type: 'image/webp' }));
   await restDaysRepository.alternar('2026-01-12');

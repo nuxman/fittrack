@@ -153,8 +153,8 @@ export interface Inclinacao {
   rotulo: string;
 }
 
-/** Lista fixa. 'escada' (0.11.0) é valor novo, sem migração: registros antigos não mudam. */
-export const MODALIDADES_CARDIO = ['esteira', 'bicicleta', 'caminhada', 'escada'] as const;
+/** Lista fixa. 'escada' (0.11.0) e 'eliptico' (1.1.0) são valores novos, sem migração: registros antigos não mudam. */
+export const MODALIDADES_CARDIO = ['esteira', 'bicicleta', 'caminhada', 'escada', 'eliptico'] as const;
 export type ModalidadeCardio = (typeof MODALIDADES_CARDIO)[number];
 
 export interface CardioSession extends BaseRecord {

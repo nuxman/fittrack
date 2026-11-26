@@ -49,6 +49,14 @@ export function gerarDemo(exercises: Exercise[], planos: WorkoutPlan[], agora = 
         : { ...comum, modalidade: 'caminhada', duracaoMin: 35 + semana * 5, velocidadeKmh: 5.2, inclinacaoNivel: null, distanciaKm: Math.round((35 + semana * 5) * 5.2 / 6) / 10 },
       manha));
     }
+    // Elíptico avulso nos domingos das semanas pares, de manhã.
+    if (dia.getDay() === 0 && semana % 2 === 0) {
+      const duracaoMin = 20 + semana * 2;
+      cardio.push(registro<CardioSession>({
+        modalidade: 'eliptico', duracaoMin, velocidadeKmh: 9, inclinacaoNivel: { valor: 10, rotulo: 'nível 10' }, distanciaKm: Math.round(duracaoMin * 9 / 6) / 10,
+        rpe: 6, observacoes: '', data: chaveDia(dia),
+      }, new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), 9).toISOString()));
+    }
     // Duas faltas: quinta da 2ª semana e terça da 4ª.
     if (!plano || (semana === 1 && dia.getDay() === 4) || (semana === 3 && dia.getDay() === 2)) continue;
 

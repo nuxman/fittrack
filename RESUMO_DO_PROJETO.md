@@ -2,7 +2,7 @@
 
 > Documento para quem vai continuar o trabalho sem acesso às conversas anteriores.
 > A **especificação completa e oficial** está em `CLAUDE.md` (raiz). Em caso de conflito, o `CLAUDE.md` vale.
-> Situação em 26/11/2026: versão **1.0.1** (as 8 etapas concluídas; 1.0.1 = conteúdo abaixo da barra de status do iPhone), deploy confirmado com sucesso no GitHub Actions.
+> Situação em 26/11/2026: versão **1.1.0** (as 8 etapas concluídas; 1.1.0 = modalidade de cardio "elíptico"), deploy confirmado com sucesso no GitHub Actions.
 
 ---
 
@@ -14,7 +14,7 @@ Ele permite:
 - montar fichas de treino por dia da semana (academia ou casa);
 - executar o treino na academia, registrando carga e repetições de cada série, com cronômetro de descanso e alerta sonoro;
 - saber qual treino fazer hoje (incluindo treinos pendentes da semana);
-- registrar cardio depois do treino ou avulso (esteira, bicicleta, caminhada, escada);
+- registrar cardio depois do treino ou avulso (esteira, bicicleta, caminhada, escada, elíptico);
 - consultar e corrigir o histórico de treinos;
 - ver a evolução (gráficos e recordes de exercícios, cardio e corpo);
 - registrar medidas (peso, cintura) e fotos corporais;
@@ -161,7 +161,7 @@ src/pages/evolucao/                     Aba Evolução (lista, detalhe com gráf
 src/components/EvolucaoCarga.tsx        Seção recolhível "Evolução de carga" (execução e detalhe do exercício); carrega o mini gráfico só ao abrir
 
 src/test/setup.ts, src/test/abrir.tsx   Configuração dos testes e helper para montar o app numa rota
-src/**/*.test.ts(x)                     308 testes (regras da semana, sessão, banco, cardio, medidas, backup, pacote, telas, som, imagem)
+src/**/*.test.ts(x)                     310 testes (regras da semana, sessão, banco, cardio, medidas, backup, pacote, telas, som, imagem)
 ```
 
 Rotas (com `#`): `/`, `/treinar`, `/sessao`, `/sessao/:exerciseId`, `/sessao/finalizar`, `/cardio/:sessionId`, `/fichas/nova`, `/fichas/:id`, `/exercicios`, `/exercicios/novo`, `/exercicios/:id`, `/exercicio/:id`, `/historico`, `/historico/cardio/novo`, `/historico/cardio/:id`, `/historico/:id`, `/medidas`, `/medidas/nova`, `/medidas/comparar`, `/medidas/:id`, `/evolucao` (`?ver=cardio|corpo`), `/evolucao/:id`, `/aparelhos`, `/aparelhos/novo`, `/aparelhos/:id`, `/perfil`, `/configuracoes`.
@@ -188,7 +188,7 @@ npm run lint             # eslint .
 npm test                 # vitest run
 npm run build            # tsc + vite build (gera dist/)
 npm run preview          # serve o dist/
-npm run test:viewport    # layout em Chrome headless: 384×832 (normal, --com-foto, --demo) e 390×844 (--iphone --com-foto, --iphone --demo, com a barra de status forçada em 47 px); precisa do build e de Chrome (CHROME_PATH se necessário)
+npm run test:viewport    # layout em Chrome headless: 384×832 (normal, --com-foto, --demo) e 390×844 (--iphone --com-foto, --iphone --demo, com a barra de status forçada em 47 px); confere também o seletor de modalidades do cardio; precisa do build e de Chrome (CHROME_PATH se necessário)
 gh run list --limit 3    # conferir o deploy depois do push
 gh run watch             # acompanhar o deploy em andamento
 ```
@@ -230,6 +230,7 @@ Publicação: `git push` no `master` dispara `.github/workflows/deploy.yml`. No 
 - **Etapa 7** (0.24.0): PWA instalável e offline (manifest, ícones, meta do iOS, precache das partes sob demanda, aviso de nova versão).
 - **Etapa 8** (1.0.0): README e revisão do workflow.
 - **Correção 1.0.1**: no iPhone instalado (viewport-fit=cover, status bar black-translucent), conteúdo, diálogos, X da foto e faixa da demonstração ficam abaixo da barra de status; conferido no test:viewport com a barra forçada em 47 px.
+- **1.1.0**: modalidade de cardio "elíptico" (campos da bicicleta; o campo de inclinação se chama "Nível", resistência), no avulso e no pós-treino; card próprio na Evolução → Cardio; seletor de modalidades em 3 colunas; elíptico avulso nos domingos das semanas pares na demonstração.
 - CI/CD funcionando (último deploy: sucesso).
 
 ---
@@ -246,9 +247,8 @@ Publicação: `git push` no `master` dispara `.github/workflows/deploy.yml`. No 
 
 Cada item com versão, `git push` e deploy confirmado próprios:
 
-1. **1.1.0**: modalidade de cardio "elíptico".
-2. Depois da Etapa 5 (decidido não fazer agora): "Iniciar cardio" avulso com cronômetro, reaproveitando a tela do cardio pós-treino.
-3. Futuro sem etapa: login e sincronização entre aparelhos (Supabase) — **não fazer até o usuário pedir**. Sem nutrição.
+1. Depois da Etapa 5 (decidido não fazer agora): "Iniciar cardio" avulso com cronômetro, reaproveitando a tela do cardio pós-treino.
+2. Futuro sem etapa: login e sincronização entre aparelhos (Supabase) — **não fazer até o usuário pedir**. Sem nutrição.
 
 ---
 

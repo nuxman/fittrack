@@ -112,6 +112,26 @@ describe('aba Evolução → Cardio', () => {
     expect(linhas[2]).toHaveTextContent('05/0115 min1,4 km5,5 km/hnível 7');
   });
 
+  it('elíptico: card próprio com gráficos de duração, distância e velocidade; recordes de duração e distância', async () => {
+    await cardio('2026-01-04', 'eliptico', { duracaoMin: 20, distanciaKm: 3.1, velocidadeKmh: 9.3, inclinacaoNivel: { valor: 10, rotulo: 'nível 10' } });
+    await cardio('2026-01-11', 'eliptico', { duracaoMin: 25, distanciaKm: 3, velocidadeKmh: 7.2 });
+    await cardio('2026-01-12', 'escada', { andares: 30 });
+    await verCardio();
+    const sec = await screen.findByRole('region', { name: 'Elíptico' });
+    expect(sec).toHaveTextContent('2 sessões');
+    for (const nome of ['Duração por sessão', 'Distância por sessão', 'Velocidade média']) expect(within(sec).getByRole('figure', { name: nome })).toBeInTheDocument();
+    expect(within(sec).queryByRole('figure', { name: 'Andares por sessão' })).not.toBeInTheDocument();
+    expect(within(sec).getAllByTestId('recorde-cardio').map((r) => r.textContent)).toEqual([
+      'Maior duração: 25 min em 11/01',
+      'Maior distância: 3,1 km em 04/01',
+    ]);
+    const linhas = within(within(sec).getByRole('table')).getAllByRole('row');
+    expect(linhas[0]).toHaveTextContent('Nível');
+    expect(linhas[2]).toHaveTextContent('nível 10');
+    // Ordem da lista fixa: escada antes do elíptico.
+    expect(screen.getAllByTestId('cardio-modalidade').map((s) => s.getAttribute('aria-label'))).toEqual(['Escada', 'Elíptico']);
+  });
+
   it('escada: gráficos de duração e andares, sem distância e velocidade; recordes de duração e andares', async () => {
     await cardio('2026-01-05', 'escada', { duracaoMin: 15, andares: 40, inclinacaoNivel: { valor: 8, rotulo: 'nível 8' } });
     await cardio('2026-01-10', 'escada', { duracaoMin: 18, andares: 45 });

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { HeartPulse, Trophy } from 'lucide-react';
 import { useAsync } from '../../useAsync';
 import { cardioSessionsRepository } from '../../db/repositories/cardioSessions';
-import { cardioPorModalidade, ehEscada, NOME_MODALIDADE, recordesCardio } from '../../cardio';
+import { cardioPorModalidade, NOME_MODALIDADE, recordesCardio, rotuloNivel } from '../../cardio';
 import { num } from '../../components/CampoSerie';
 import { ddmm, seriesCardio } from './dados';
 import { Grafico } from './Grafico';
@@ -59,7 +59,7 @@ export function EvolucaoCardio() {
                   <tr>
                     <th className="py-1 font-normal">Data</th>
                     {series.map((s) => <th key={s.titulo} className="py-1 font-normal">{s.titulo.replace(/ por sessão$/, '').replace(/ média$/, '')}</th>)}
-                    <th className="py-1 font-normal">{ehEscada(m) ? 'Nível' : 'Inclinação'}</th>
+                    <th className="py-1 font-normal">{rotuloNivel(m)}</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -58,9 +58,14 @@ describe('dados fictícios', () => {
     expect(ligados.every((c) => sessions.some((s) => s.id === c.sessionId))).toBe(true);
     // Cardio avulso aos sábados (sem treino), antes de hoje.
     const avulsos = cardio.filter((c) => !c.sessionId);
-    expect(avulsos).toHaveLength(4);
-    expect(avulsos.every((c) => new Date(`${c.data}T12:00`).getDay() === 6 && c.data < '2026-11-18')).toBe(true);
-    expect(avulsos.map((c) => c.modalidade)).toEqual(['caminhada', 'escada', 'caminhada', 'escada']);
+    const sabados = avulsos.filter((c) => new Date(`${c.data}T12:00`).getDay() === 6);
+    expect(sabados.map((c) => c.modalidade)).toEqual(['caminhada', 'escada', 'caminhada', 'escada']);
+    expect(avulsos.every((c) => c.data < '2026-11-18')).toBe(true);
+    // Elíptico avulso nos domingos das semanas pares, com velocidade, distância e nível.
+    const elipticos = avulsos.filter((c) => c.modalidade === 'eliptico');
+    expect(elipticos).toHaveLength(2);
+    expect(elipticos.every((c) => new Date(`${c.data}T12:00`).getDay() === 0 && c.velocidadeKmh! > 0 && c.distanciaKm! > 0 && c.inclinacaoNivel?.rotulo === 'nível 10' && c.andares === undefined)).toBe(true);
+    expect(avulsos).toHaveLength(6);
     const escadas = avulsos.filter((c) => c.modalidade === 'escada');
     expect(escadas.every((c) => c.andares! > 0 && c.velocidadeKmh === null && c.distanciaKm === null)).toBe(true);
 
