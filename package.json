@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:viewport": "node scripts/viewport.mjs && node scripts/viewport.mjs --com-foto && node scripts/viewport.mjs --demo && node scripts/viewport.mjs --iphone --com-foto"
+    "test:viewport": "node scripts/viewport.mjs && node scripts/viewport.mjs --com-foto && node scripts/viewport.mjs --demo && node scripts/viewport.mjs --iphone --com-foto && node scripts/viewport.mjs --iphone --demo"
   },
   "dependencies": {
     "dexie": "^4.4.7",

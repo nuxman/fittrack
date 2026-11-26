@@ -113,6 +113,13 @@ async function avaliar(expr) {
 }
 
 await cdp('Emulation.setDeviceMetricsOverride', { width: LARGURA, height: ALTURA, deviceScaleFactor: 3, mobile: true });
+// --iphone: o Chrome não tem entalhe (env(safe-area-inset-top) = 0); força --sat (index.css) com a barra de status do iPhone 14.
+const SAT = IPHONE ? 47 : 0;
+await cdp('Page.enable');
+if (IPHONE) await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `document.addEventListener('DOMContentLoaded', () => document.documentElement.style.setProperty('--sat', '${SAT}px'))` });
+// Elemento começa abaixo da barra de status (só na rodada do iPhone).
+const abaixoDaBarra = (nome, seletor) =>
+  SAT && avaliar(`${AJUDA}; (() => { const el = ${seletor}; if (!el) return 'ausente'; const t = el.getBoundingClientRect().top; return t >= ${SAT} || 'top=' + Math.round(t); })()`).then((v) => conferir(`iPhone (barra de ${SAT} px): ${nome} abaixo da barra`, v));
 // --demo: modo demonstração ligado (faixa fixa no topo) antes de abrir o app.
 const comDemo = process.argv.includes('--demo');
 if (comDemo) {
@@ -150,6 +157,7 @@ const conferir = (nome, valor) => {
 // Na demonstração, os dias têm treinos (links para o Histórico).
 await cdp('Page.navigate', { url: `${URL_APP}#/` });
 await ate(() => avaliar(`location.hash === '#/' && document.querySelectorAll('[data-testid="dia-calendario"]').length === 35`), 'calendário do Início');
+await abaixoDaBarra('saudação do Início', `__q('[data-testid="saudacao"]')`);
 conferir('Início: calendário sem rolagem horizontal', await avaliar(`document.documentElement.scrollWidth <= innerWidth || 'scrollWidth ' + document.documentElement.scrollWidth`));
 conferir('Início: dias do calendário com 40 px ou mais', await avaliar(`(() => {
   const w = Math.min(...[...document.querySelectorAll('[data-testid="dia-calendario"]')].map((d) => d.getBoundingClientRect().width));
@@ -175,6 +183,8 @@ conferir('aba Treinar: "Iniciar" e "Editar" sem quebrar linha', await avaliar(`(
 await avaliar(`__botao('Iniciar').click(), true`);
 // Espera a visão geral renderizar (a URL muda antes de a sessão carregar do banco).
 await ate(() => avaliar(`${AJUDA}; location.hash === '#/sessao' && !!__botao('Finalizar treino') && !!document.querySelector('[data-testid="item-sessao"] a')`), 'visão geral');
+await abaixoDaBarra('cabeçalho da sessão', `__q('[data-testid="tela-sessao"] header')`);
+if (comDemo) await abaixoDaBarra('"Sair" da faixa da demonstração', `__q('[data-testid="faixa-demo"] button')`);
 conferir('visão geral: "Finalizar treino" visível sem rolar', await avaliar(`${AJUDA}; __visivel(__botao('Finalizar treino'))`));
 conferir('visão geral: sem navegação inferior', await avaliar(`!document.querySelector('nav[aria-label="Navegação principal"]')`));
 // Barras de comparação com o treino anterior (na demonstração há treino anterior da ficha; fora dela, "Primeiro treino").
@@ -184,6 +194,7 @@ if (comDemo) conferir('demonstração: barras do treino anterior', await avaliar
 // Abre o primeiro exercício (tela de execução).
 await avaliar(`document.querySelector('[data-testid="item-sessao"] a').click(), true`);
 await ate(() => avaliar(`${AJUDA}; !!__botao('Concluir série')`), 'tela de execução');
+await abaixoDaBarra('voltar da sessão ("Visão geral")', `[...document.querySelectorAll('a')].find((a) => a.textContent.trim() === 'Visão geral')`);
 
 const medirExecucao = async (etapa) => {
   const r = await avaliar(`${AJUDA}; ({
@@ -228,6 +239,13 @@ if (comFoto) {
     return true;
   })()`);
   await ate(() => avaliar(`${AJUDA}; !!__botao('Concluir série') && !!document.querySelector('button[aria-label="Ampliar foto"] img')`), 'execução com foto');
+  if (SAT) {
+    await avaliar(`document.querySelector('button[aria-label="Ampliar foto"]').click(), true`);
+    await ate(() => avaliar(`!!document.querySelector('button[aria-label="Fechar foto"]')`), 'foto ampliada');
+    await abaixoDaBarra('X da foto ampliada', `__q('button[aria-label="Fechar foto"]')`);
+    await avaliar(`document.querySelector('button[aria-label="Fechar foto"]').click(), true`);
+    await ate(() => avaliar(`!document.querySelector('button[aria-label="Fechar foto"]')`), 'foto fechada');
+  }
   conferir('com foto: miniatura com no máximo 120 px de altura', await avaliar(`(() => { const h = document.querySelector('button[aria-label="Ampliar foto"]').getBoundingClientRect().height; return h <= 120 || 'altura ' + h; })()`));
 }
 
