@@ -92,7 +92,7 @@ function TelaCheia({ blob, grupo, alt, onFechar }: { blob: Blob; grupo?: GrupoMu
       >
         <FotoExercicio blob={blob} grupo={grupo} alt={alt} className="h-full w-full bg-black" />
       </div>
-      <button type="button" aria-label="Fechar foto" className="absolute right-4 top-4 rounded-full bg-neutral-800 p-3" onClick={onFechar}>
+      <button type="button" aria-label="Fechar foto" className="absolute right-4 top-[calc(1rem+var(--sat))] rounded-full bg-neutral-800 p-3" onClick={onFechar}>
         <X size={28} />
       </button>
       {zoom.escala === 1 && <p className="absolute inset-x-0 bottom-6 text-center text-sm text-neutral-400">Use dois dedos para ampliar</p>}

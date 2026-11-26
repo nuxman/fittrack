@@ -4,7 +4,7 @@ import { Link, useRouteError } from 'react-router-dom';
 export function ErroTela({ titulo = 'Algo deu errado.' }: { titulo?: string }) {
   console.error(useRouteError());
   return (
-    <main role="alert" className="mx-auto max-w-xl space-y-4 px-4 pb-nav pt-6">
+    <main role="alert" className="mx-auto max-w-xl space-y-4 px-4 pb-nav pt-[calc(1.5rem+var(--sat-livre))]">
       <h1 className="text-2xl font-bold text-primary-400">{titulo}</h1>
       <p className="text-neutral-300">Verifique a internet e tente de novo. Seus dados continuam salvos no aparelho.</p>
       <button type="button" className="btn-primary w-full" onClick={() => window.location.reload()}>

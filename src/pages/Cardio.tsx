@@ -23,7 +23,7 @@ export function Cardio() {
     async () => ({ sessao: await workoutSessionsRepository.get(sessionId), settings: await settingsRepository.get() }),
     [sessionId],
   );
-  if (!dados) return <main className="mx-auto max-w-xl px-4 pt-6">Carregando…</main>;
+  if (!dados) return <main className="mx-auto max-w-xl px-4 pt-[calc(1.5rem+var(--sat-livre))]">Carregando…</main>;
   const { sessao, settings } = dados;
   if (!sessao?.cardio) return <Navigate to="/" replace />;
   return <TelaCardio sessao={sessao} cardio={sessao.cardio} settings={settings} recarregar={recarregar} />;
@@ -112,7 +112,7 @@ function TelaCardio({ sessao, cardio, settings, recarregar }: Props) {
   };
 
   return (
-    <main className="mx-auto flex h-[calc(100dvh-var(--demo-h))] max-w-xl flex-col" data-testid="tela-cardio">
+    <main className="mx-auto flex h-[calc(100dvh-var(--faixa))] safe-top max-w-xl flex-col" data-testid="tela-cardio">
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
         <h1 className="text-3xl font-bold text-primary-400">Cardio</h1>
         <p className="text-sm text-neutral-400">Depois de {sessao.planSnapshot.nome}</p>

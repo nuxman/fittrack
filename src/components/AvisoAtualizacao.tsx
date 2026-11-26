@@ -10,7 +10,7 @@ export function AvisoAtualizacao() {
   useEffect(() => ouvirNovaVersao((a) => setAtualizar(() => a)), []);
   if (!atualizar) return null;
   return (
-    <div className="fixed inset-x-0 top-[var(--demo-h)] z-40 flex justify-center px-4 pt-2" role="status" data-testid="aviso-atualizacao">
+    <div className="fixed inset-x-0 top-[var(--topo)] z-40 flex justify-center px-4 pt-2" role="status" data-testid="aviso-atualizacao">
       <button
         type="button"
         disabled={atualizando}

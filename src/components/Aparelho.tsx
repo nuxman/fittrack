@@ -44,7 +44,7 @@ export function DialogoAparelho({ grupo, atualId, onEscolher, onFechar }: {
   };
 
   return (
-    <div className="fixed inset-0 z-30 overflow-y-auto bg-surface-base p-4 pb-8" role="dialog" aria-label="Aparelho">
+    <div className="fixed inset-0 z-30 overflow-y-auto bg-surface-base p-4 pb-8 pt-[calc(1rem+var(--sat))]" role="dialog" aria-label="Aparelho">
       <div className="mx-auto max-w-xl space-y-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-xl font-bold text-primary-400">{criando ? 'Novo aparelho' : 'Aparelho'}</h2>

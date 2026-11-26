@@ -6,10 +6,20 @@
 :root { --nav-h: 4rem; --demo-h: 0px; }
 /* Faixa do modo demonstração: a tela da sessão desconta a altura dela (ver main.tsx). */
 :root[data-demo] { --demo-h: 2.5rem; }
+/* Barra de status e entalhe do iPhone (app instalado com viewport-fit=cover e status bar black-translucent).
+   Android e navegador comum: 0. --topo = tudo o que fica por cima do conteúdo (entalhe + faixa da demonstração). */
+:root { --sat: env(safe-area-inset-top, 0px); --topo: calc(var(--sat) + var(--demo-h)); --sat-livre: var(--sat); }
+/* Na demonstração, a faixa (no fluxo, no topo) já cobre o entalhe: o conteúdo abaixo dela não desconta de novo. */
+:root[data-demo] { --sat-livre: 0px; }
+/* Altura que a faixa da demonstração ocupa no fluxo (as telas de altura total descontam). */
+:root { --faixa: 0px; }
+:root[data-demo] { --faixa: var(--topo); }
 
 @layer components {
   /* Área de gestos do Android: usa o inset do sistema, com mínimo de 8 px. */
   .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 8px); }
+  /* Topo: conteúdo começa abaixo da barra de status do iPhone. */
+  .safe-top { padding-top: var(--sat-livre); }
   /* Conteúdo termina acima da barra inferior. */
   .pb-nav { padding-bottom: calc(var(--nav-h) + max(env(safe-area-inset-bottom), 8px) + 1.5rem); }
 

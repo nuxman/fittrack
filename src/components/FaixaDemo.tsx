@@ -6,7 +6,7 @@ export function FaixaDemo() {
   if (!demoRepository.ativo()) return null;
   return (
     <div
-      className="sticky top-0 z-30 flex h-[var(--demo-h)] items-center justify-center gap-2 bg-primary-400 text-sm font-semibold text-neutral-950"
+      className="sticky top-0 z-30 flex h-[var(--topo)] items-center pt-[var(--sat)] justify-center gap-2 bg-primary-400 text-sm font-semibold text-neutral-950"
       role="status"
       data-testid="faixa-demo"
     >
