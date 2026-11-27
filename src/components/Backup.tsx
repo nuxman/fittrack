@@ -4,7 +4,7 @@ import { Download, Sheet, Upload } from 'lucide-react';
 import { useDialog } from './ConfirmDialog';
 import { useAsync } from '../useAsync';
 import { settingsRepository } from '../db/repositories/settings';
-import { backupRepository, BackupInvalidoError, validarBackup, type Previa } from '../db/repositories/backup';
+import { backupRepository, BackupInvalidoError, conferirTamanho, validarBackup, type Previa } from '../db/repositories/backup';
 import { demoRepository } from '../db/repositories/demo';
 import { pagina } from '../modo';
 import { chaveDia } from '../semana';
@@ -57,6 +57,7 @@ export function Backup() {
   const importar = async (f: File) => {
     setOcupado(true);
     try {
+      conferirTamanho(f.size);
       const b = validarBackup(await f.text());
       const p = await backupRepository.previa(b);
       const ok = await escolher({

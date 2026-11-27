@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { PackageOpen, PackagePlus } from 'lucide-react';
 import { useDialog } from './ConfirmDialog';
-import { BackupInvalidoError } from '../db/repositories/backup';
+import { BackupInvalidoError, conferirTamanho } from '../db/repositories/backup';
 import { exportarPacote, importarPacote, previaPacote, validarPacote } from '../db/repositories/pacote';
 import { chaveDia } from '../semana';
 import { entregarArquivo } from '../backup';
@@ -28,6 +28,7 @@ export function PacoteExercicios({ ocupado, setOcupado }: { ocupado: boolean; se
     setOcupado(true);
     setMsg('');
     try {
+      conferirTamanho(f.size);
       const pacote = validarPacote(await f.text());
       const p = await previaPacote(pacote);
       const ok = await escolher({

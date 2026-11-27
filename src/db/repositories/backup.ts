@@ -149,6 +149,12 @@ function registros<T>(tabela: keyof Tabelas, lista: unknown, ...regras: z.ZodTyp
   });
 }
 
+/** Limite do arquivo importado (bytes): bem acima de um backup real, impede travar a aba com um arquivo gigante. */
+export const LIMITE_ARQUIVO = 200 * 1024 * 1024;
+export function conferirTamanho(bytes: number) {
+  if (bytes > LIMITE_ARQUIVO) throw new BackupInvalidoError('O arquivo é grande demais (mais de 200 MB).');
+}
+
 /** Lê e valida o JSON do backup. Lança BackupInvalidoError com a mensagem em português. */
 export function validarBackup(texto: string): BackupValidado {
   let bruto: unknown;

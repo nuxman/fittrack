@@ -27,6 +27,11 @@ describe('CSV', () => {
     expect(campo('linha 1\nlinha 2')).toBe('"linha 1\nlinha 2"');
     expect(campo(82.5)).toBe('82,5');
     expect(campo(null)).toBe('');
+    expect(campo('=HYPERLINK("x")')).toBe(`"'=HYPERLINK(""x"")"`);
+    expect(campo('+1')).toBe("'+1");
+    expect(campo('-2')).toBe("'-2");
+    expect(campo('@soma')).toBe("'@soma");
+    expect(campo(-2.5)).toBe('-2,5');
     const csv = montarCsv(['a', 'b'], [[1.5, 'x;y']]);
     expect(csv.startsWith(BOM)).toBe(true);
     expect(csv).toBe(`${BOM}a;b\r\n1,5;"x;y"\r\n`);

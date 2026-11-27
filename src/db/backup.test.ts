@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db, SCHEMA_VERSAO } from './db';
-import { backupRepository, BackupInvalidoError, validarBackup } from './repositories/backup';
+import { backupRepository, BackupInvalidoError, conferirTamanho, LIMITE_ARQUIVO, validarBackup } from './repositories/backup';
 import { exercisesRepository } from './repositories/exercises';
 import { exerciseImagesRepository } from './repositories/exerciseImages';
 import { equipmentRepository } from './repositories/equipment';
@@ -119,6 +119,8 @@ describe('backup JSON', () => {
       f(b);
       return () => validarBackup(JSON.stringify(b));
     };
+    expect(() => conferirTamanho(LIMITE_ARQUIVO + 1)).toThrow(/grande demais/);
+    expect(() => conferirTamanho(LIMITE_ARQUIVO)).not.toThrow();
     expect(mudar((b) => { b.tabelas.exercises[0]!.videoUrl = 'javascript:alert(1)'; })).toThrow(BackupInvalidoError);
     expect(mudar((b) => { b.tabelas.exercises[0]!.videoUrl = 'javascript:alert(1)'; })).toThrow(/Exercícios, registro 1 \(videoUrl\)/);
     expect(mudar((b) => { b.tabelas.exercises[0]!.grupoPrincipal = 'pescoço'; })).toThrow(/Exercícios, registro 1/);

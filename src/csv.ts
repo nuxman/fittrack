@@ -7,7 +7,8 @@ const BOM = '﻿';
 /** Escapa um campo: com ';', aspas ou quebra de linha, vai entre aspas (aspas duplicadas). */
 export function campo(v: string | number | null | undefined): string {
   if (v === null || v === undefined) return '';
-  const s = typeof v === 'number' ? String(v).replace('.', ',') : v;
+  // Texto começando com = + - @ (ou tab/CR) viraria fórmula na planilha: vai como texto, com ' na frente.
+  const s = typeof v === 'number' ? String(v).replace('.', ',') : /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
   return /[;"\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
